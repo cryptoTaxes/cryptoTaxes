@@ -1,0 +1,12 @@
+// For any exchange, price in base coin is calculated using the market with highest priority.
+// One line for each market and priority. 
+// Market name on the left.
+// Priority on the right.
+
+EURO    -> 1000
+BITCOIN -> 900
+USD     -> 800
+USDT    -> 700
+ETH     -> 600
+LTC     -> 500
+NXT     -> 400

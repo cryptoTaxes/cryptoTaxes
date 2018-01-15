@@ -1,0 +1,14 @@
+// Different names for markets at coinmarketcap.com
+// One line for each market. 
+// Used to download historical prices.
+
+BCH   -> bitcoin-cash
+BTC   -> bitcoin
+ETH   -> ethereum
+LTC   -> litecoin
+NXT   -> nxt
+STRAT -> stratis
+USDT  -> tether
+VTC   -> vertcoin
+XRP   -> ripple
+ZEC   -> zcash

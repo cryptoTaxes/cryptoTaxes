@@ -1,0 +1,12 @@
+// Different names for markets at kraken.com
+// One line for each market. 
+// Kraken market names on the left (separated by commas).
+// Normalized market name on the right.
+
+BCH       -> BCH
+EUR, ZEUR -> EURO
+XXBT      -> BTC
+XETC      -> ETC
+XETH      -> ETH
+XLTC      -> LTC
+XXRP      -> XRP

@@ -1,0 +1,16 @@
+// Normalizations for different names for same market
+// One line for each market. 
+// Alternative market names on the left (separated by commas) .
+// Normalized market name on the right.
+
+BITCOIN       -> BTC
+EURO          -> EUR
+DOLAR, DOLLAR -> USD
+DOGES         -> DOGE
+MYR           -> XMY
+VNL           -> XVC
+STR           -> XLM
+BCC           -> BCH
+XG            -> GOAL
+
+
