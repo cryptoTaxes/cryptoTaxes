@@ -1,0 +1,223 @@
+1. 2014-01-22 08:22:12. Exchange 300 EUR -> 0.4898 BTC. Fee = 0 BTC. LocalBTC xxxxxxx/Lxxxxxxxxxxxxx
+LOSS:           0 EUR
+
+2. 2014-04-11 09:54:09. Exchange 0.0345 BTC -> 10000 NLG. Fee = 0.00008625 BTC. Bittrex xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+LOSS:           -11.44303 EUR
+
+3. 2014-04-22 03:49:23. Exchange 10000 NLG -> 0.0137655 BTC. Fee = 0.00003449 BTC. Bittrex yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+LOSS:           -4.75251 EUR
+
+4. 2014-07-10 12:00:00. Exchange 0.02499989 BTC -> 409.7 VIA. Fee = 0 BTC. General VIA Crowdsale
+LOSS:           -3.93271 EUR
+
+================================================================================
+2014
+================================================================================
+
+End of year portfolio
+================================================================================
+Market        Amount           Total Cost
+================================================================================
+BTC:           0.44407         268.49215 EUR at      604.62272 EUR/BTC        BTC            0.444066       268.49215 EUR  (0.430300, 612.4949 EUR, LocalBTC, 2014-01-22), (0.013766, 358.54382 EUR, Bittrex, 2014-04-22)
+VIA:         409.70000           11.3796 EUR at        0.02778 EUR/VIA        VIA          409.700000         11.3796 EUR  (409.700000, 0.02778 EUR, General, 2014-07-10)
+================================================================================
+Portfolio total cost: 279.87175 EUR
+
+Gains per market
+Total: 0 EUR
+
+Looses per market
+NLG:             4.75251 EUR          4.75251 EUR
+BTC:            15.37573 EUR         20.12825 EUR
+Total: 20.12825 EUR
+
+================================================================================
+Realized gains/looses
+================================================================================
+Cost bases per market
+EUR:                   0 EUR                0 EUR
+NLG:             9.68805 EUR          9.68805 EUR
+BTC:            36.44338 EUR         46.13143 EUR
+Total: 46.13143 EUR
+
+Sell values per market
+NLG:             4.93553 EUR          4.93553 EUR
+BTC:            21.06765 EUR         26.00318 EUR
+Total: 26.00318 EUR
+
+-20.12825 EUR
+
+
+Realized Gains per market
+BTC:           -15.37573 EUR        -15.37573 EUR
+NLG:            -4.75251 EUR        -20.12825 EUR
+EUR:                   0 EUR        -20.12825 EUR
+Total: -20.12825 EUR
+
+
+Total paid fees: 0.03665 EUR
+
+Total gains:     0 EUR
+Total losses:    20.12825 EUR
+Net result:      -20.12825 EUR
+
+================================================================================
+2015
+================================================================================
+
+1. 2015-05-02 03:32:21. Exchange 0.00014889 BTC -> 114.53645412 CC. Fee = 0 CC. Yobit
+LOSS:           -0.06012 EUR
+
+2. 2015-05-05 09:11:32. Exchange 111 CC -> 0.00028416 BTC. Fee = 0 BTC. Yobit
+GAIN:           0.03012 EUR
+
+3. 2015-05-13 01:33:07. Exchange 0.063518 BTC -> 5243.25591398 GPH. Fee = 0.00012678 BTC. C-CEX
+LOSS:           -25.38163 EUR
+
+4. 2015-05-13 01:47:37. Exchange 0.036282 BTC -> 4014.34988913 GPH. Fee = 0.00007242 BTC. C-CEX
+LOSS:           -14.49819 EUR
+
+5. 2015-05-22 02:26:22. Exchange 0.1150466 BTC -> 7524.01813761 XLM. Fee = 0.00023009 BTC. Poloniex xxxxxxxx0
+LOSS:           -45.98673 EUR
+
+6. 2015-05-29 10:10:15. Exchange 0.10967267 BTC -> 7172.56387027 XLM. Fee = 0.00021935 BTC. Poloniex xxxxxxxx1
+LOSS:           -43.56466 EUR
+
+7. 2015-06-11 01:28:33. Exchange 910.39534942 XLM -> 0.0035071 BTC. Fee = 0.00000703 BTC. Poloniex xxxxxxxxx2
+LOSS:           -2.2452 EUR
+
+8. 2015-06-28 09:19:40. Exchange 1000 GPH -> 0.00046906 BTC. Fee = 0.00000094 BTC. C-CEX
+LOSS:           -2.4747 EUR
+
+================================================================================
+2015
+================================================================================
+
+End of year portfolio
+================================================================================
+Market        Amount           Total Cost
+================================================================================
+BTC:           0.12366          70.51587 EUR at      570.25023 EUR/BTC        BTC            0.123658        70.51587 EUR  (0.105632, 612.4949 EUR, LocalBTC, 2014-01-22), (0.013766, 358.54382 EUR, Bittrex, 2014-04-22), (0.000284, 211.95017 EUR, Yobit, 2015-05-05), (0.003507, 204.35363 EUR, Poloniex, 2015-06-11), (0.000469, 222.54954 EUR, C-CEX, 2015-06-28)
+GPH:        8257.60580          18.66808 EUR at        0.00226 EUR/GPH        GPH         8257.605803        18.66808 EUR  (4243.255914, 0.00258 EUR, C-CEX, 2015-05-13), (4014.349889, 0.00192 EUR, C-CEX, 2015-05-13)
+VIA:         409.70000           11.3796 EUR at        0.02778 EUR/VIA        VIA          409.700000         11.3796 EUR  (409.700000, 0.02778 EUR, General, 2014-07-10)
+XLM:       13786.18666          45.12613 EUR at        0.00327 EUR/XLM        XLM        13786.186658        45.12613 EUR  (6613.622788, 0.00325 EUR, Poloniex, 2015-05-22), (7172.563870, 0.00329 EUR, Poloniex, 2015-05-29)
+================================================================================
+Portfolio total cost: 145.69063 EUR
+
+Gains per market
+CC:              0.03012 EUR          0.03012 EUR
+Total: 0.03012 EUR
+
+Looses per market
+XLM:              2.2452 EUR           2.2452 EUR
+GPH:              2.4747 EUR           4.7199 EUR
+BTC:           129.49134 EUR        134.21124 EUR
+Total: 134.21124 EUR
+
+================================================================================
+Realized gains/looses
+================================================================================
+Cost bases per market
+CC:              0.03011 EUR          0.03011 EUR
+GPH:             2.57909 EUR           2.6092 EUR
+XLM:             2.96189 EUR          5.57109 EUR
+BTC:           198.85759 EUR        204.42868 EUR
+Total: 204.42868 EUR
+
+Sell values per market
+CC:              0.06023 EUR          0.06023 EUR
+GPH:             0.10439 EUR          0.16462 EUR
+XLM:             0.71669 EUR          0.88131 EUR
+BTC:            69.36625 EUR         70.24756 EUR
+Total: 70.24756 EUR
+
+-134.18112 EUR
+
+
+Realized Gains per market
+BTC:          -129.49134 EUR       -129.49134 EUR
+GPH:             -2.4747 EUR       -131.96604 EUR
+XLM:             -2.2452 EUR       -134.21124 EUR
+CC:              0.03012 EUR       -134.18112 EUR
+Total: -134.18112 EUR
+
+
+Total paid fees: 0.14051 EUR
+
+Total gains:     0.03012 EUR
+Total losses:    134.21124 EUR
+Net result:      -134.18112 EUR
+
+================================================================================
+2017
+================================================================================
+
+1. 2017-11-20 09:12:39. Exchange 0.05 BCH -> 63.99744 EUR. Fee = 0.10256 EUR. Kraken xxxxxx-xxxxx-xxxxxx/xxxxxx-xxxxx-xxxxxx
+GAIN:           63.99744 EUR
+
+2. 2017-12-03 05:10:24. Exchange 0.36171256 ETH -> 140.93406 EUR. Fee = 0 EUR. GDAX xxxxxxx
+GAIN:           140.93406 EUR
+
+3. 2017-12-09 11:30:44. Exchange 750 NXT -> 59.53601284 STRAT. Fee = 0.30922466 STRAT. Changelly Sxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+GAIN:           381.12279 EUR
+
+4. 2017-12-21 11:11:42. Exchange 10.5 NXT -> 0.00114923 BTC. Fee = 0.00000115 BTC. HitBTC xxxxxxxxx/yyyyyyyyyyy
+GAIN:           15.94636 EUR
+
+================================================================================
+2017
+================================================================================
+
+End of year portfolio
+================================================================================
+Market        Amount           Total Cost
+================================================================================
+BTC:           0.12481          86.46223 EUR at      692.76753 EUR/BTC        BTC            0.124807        86.46223 EUR  (0.105632, 612.4949 EUR, LocalBTC, 2014-01-22), (0.013766, 358.54382 EUR, Bittrex, 2014-04-22), (0.000284, 211.95017 EUR, Yobit, 2015-05-05), (0.003507, 204.35363 EUR, Poloniex, 2015-06-11), (0.000469, 222.54954 EUR, C-CEX, 2015-06-28), (0.001149, 13875.70621 EUR, HitBTC, 2017-12-21)
+EUR:         204.93150          204.9315 EUR at              1 EUR/EUR        EUR          204.931505        204.9315 EUR  (63.997440, 1 EUR, Kraken, 2017-11-20), (140.934065, 1 EUR, GDAX, 2017-12-03)
+GPH:        8257.60580          18.66808 EUR at        0.00226 EUR/GPH        GPH         8257.605803        18.66808 EUR  (4243.255914, 0.00258 EUR, C-CEX, 2015-05-13), (4014.349889, 0.00192 EUR, C-CEX, 2015-05-13)
+STRAT:        59.53601         381.12279 EUR at      6.40155 EUR/STRAT      STRAT           59.536013       381.12279 EUR  (59.536013, 6.40155 EUR, Changelly, 2017-12-09)
+VIA:         409.70000           11.3796 EUR at        0.02778 EUR/VIA        VIA          409.700000         11.3796 EUR  (409.700000, 0.02778 EUR, General, 2014-07-10)
+XLM:       13786.18666          45.12613 EUR at        0.00327 EUR/XLM        XLM        13786.186658        45.12613 EUR  (6613.622788, 0.00325 EUR, Poloniex, 2015-05-22), (7172.563870, 0.00329 EUR, Poloniex, 2015-05-29)
+================================================================================
+Portfolio total cost: 747.69129 EUR
+
+Gains per market
+BCH:            63.99744 EUR         63.99744 EUR
+ETH:           140.93406 EUR         204.9315 EUR
+NXT:           397.06915 EUR        602.00066 EUR
+Total: 602.00066 EUR
+
+Looses per market
+Total: 0 EUR
+
+================================================================================
+Realized gains/looses
+================================================================================
+Cost bases per market
+NXT:                   0 EUR                0 EUR
+ETH:                   0 EUR                0 EUR
+BCH:                   0 EUR                0 EUR
+Total: 0 EUR
+
+Sell values per market
+BCH:            63.99744 EUR         63.99744 EUR
+ETH:           140.93406 EUR         204.9315 EUR
+NXT:           397.06915 EUR        602.00066 EUR
+Total: 602.00066 EUR
+
+602.00066 EUR
+
+
+Realized Gains per market
+BCH:            63.99744 EUR         63.99744 EUR
+ETH:           140.93406 EUR         204.9315 EUR
+NXT:           397.06915 EUR        602.00066 EUR
+Total: 602.00066 EUR
+
+
+Total paid fees: 2.5308 EUR
+
+Total gains:     602.00066 EUR
+Total losses:    0 EUR
+Net result:      602.00066 EUR
+

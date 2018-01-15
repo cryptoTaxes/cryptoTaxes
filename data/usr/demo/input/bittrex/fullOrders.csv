@@ -1,0 +1,3 @@
+﻿OrderUuid,Exchange,Type,Quantity,Limit,CommissionPaid,Price,Opened,Closed
+xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx,BTC-NLG,LIMIT_BUY,10000.00000000,0.00000345,0.00008625,0.03450000,4/11/2014 7:50:37 PM,4/11/2014 7:54:09 PM
+yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy,BTC-NLG,LIMIT_SELL,10000.00000000,0.00000138,0.00003449,0.01379999,4/25/2014 8:55:21 PM,4/22/2014 1:49:23 PM

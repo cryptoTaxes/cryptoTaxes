@@ -1,0 +1,2 @@
+id,created_at,buyer,seller,trade_type,btc_amount,btc_traded,fee_btc,btc_amount_less_fee,btc_final,fiat_amount,fiat_fee,fiat_per_btc,currency,exchange_rate,transaction_released_at,online_provider,reference
+xxxxxxx,2014-01-22 07:22:12+00:00,myname,seller,ONLINE_SELL,0.48980000,0.48980000,0.00,0.48980000,0.48980000,300.00,0.00,612.49,EUR,612.49,2014-01-22 11:34:22+00:00,CASH_DEPOSIT,Lxxxxxxxxxxxxx

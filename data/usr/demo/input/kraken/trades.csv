@@ -1,0 +1,5 @@
+"txid","ordertxid","pair","time","type","ordertype","price","cost","fee","vol","margin","misc","ledgers"
+
+
+"xxxxxx-xxxxx-xxxxxx","xxxxxx-xxxxx-xxxxxx","BCHEUR","2017-11-20 20:12:35.4035","sell","limit",1282.000000,64.100000,0.102560,0.05000000,0.000000,"","xxxxxx-xxxxx-xxxxxx,xxxxxx-xxxxx-xxxxxx"
+
