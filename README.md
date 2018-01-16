@@ -8,7 +8,7 @@ Trading history files should be placed in `data/usr/yourUser/input` folders (whe
 
 In order to run the program, type command `run.bat` in Windows terminal or command `./run.sh` in Linux in terminal.
 
-The following command line parameters can be wirtten after the command:
+The following command line parameters can be written after the command:
 
 * `-user=yourUser`       to run the program for user `yourUser` (whose history must be in `data/usr/yourUser/input` folder).
 
@@ -17,6 +17,8 @@ The following command line parameters can be wirtten after the command:
 * `-currency=curr`       where `curr` can be `euro`, `btc` or `usd`.
 
 * `-download-prices=yes` in order to update prices from [Coinmarketcap](coinmarketcap.com) and [BDE](www.bde.es).
+
+After runnng the program, output report will be produced in folder `data/usr/yourUser/output`.
 
 ## Configuration
 
