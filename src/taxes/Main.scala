@@ -8,7 +8,7 @@ object Main extends App {
   java.util.Locale.setDefault(java.util.Locale.ENGLISH)
 
   val cmdLine = args.mkString(" ")
-  //val cmdLine = "-user=demo -verbosity=10 -currency=euro -download-prices=no"
+  // val cmdLine = "-user=demo -verbosity=10 -currency=euro -download-prices=no"
   Config.config = ParseCommandLine(cmdLine)
 
   if(Config.config.downloadPrices) {

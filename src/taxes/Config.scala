@@ -27,7 +27,7 @@ object Config {
 }
 
 
-object DefaultConfig extends Config( user = "user1"
+object DefaultConfig extends Config( user = "demo"
                                      , verbosityLevel = Verbosity.none
                                      , baseCoin = EuroBaseCoin
                                      , downloadPrices = false

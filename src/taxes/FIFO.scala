@@ -93,13 +93,10 @@ object FIFO {
 
     // All quantities expressed in base coin
     object Realized {
-      var gains = 0.0   // total realized gains (without fees)
-      var looses = 0.0  // total realized looses (including fees)
-      var fees = 0.0    // fees are also deducted from gains and added to looses
-
-      // record realized gains/losses per market
+      // record realized gains/losses/paid fees per market
       val perMarketGains = ValueTracker(baseMarket)
       val perMarketLooses = ValueTracker(baseMarket)
+      val perMarketPaidFees = ValueTracker(baseMarket) // fees are already deducted from gains and added to looses
 
       // Difference between these is realized gains
       val costBases = ValueTracker(baseMarket)  // cost bases of sold coins
@@ -114,10 +111,7 @@ object FIFO {
     def initializeYear(year : Int): Int = {
       Realized.perMarketGains.clear()
       Realized.perMarketLooses.clear()
-
-      Realized.fees = 0.0
-      Realized.gains = 0.0
-      Realized.looses = 0.0
+      Realized.perMarketPaidFees.clear()
 
       Realized.costBases.clear()
       Realized.sellValues.clear()
@@ -210,28 +204,46 @@ object FIFO {
       }
 
       out.println()
+      out.println(Format.header)
       out.println("Gains per market")
+      out.println(Format.header)
       Realized.perMarketGains.printOn(out)
 
       out.println()
+      out.println(Format.header)
       out.println("Looses per market")
+      out.println(Format.header)
       Realized.perMarketLooses.printOn(out)
+
+      out.println()
+      out.println(Format.header)
+      out.println("Paid fees per market")
+      out.println(Format.header)
+      Realized.perMarketPaidFees.printOn(out)
+      out.println()
+
+      out.print("Net result:      ")
+      out.println(Format.asMarket(Realized.perMarketGains.sum - Realized.perMarketLooses.sum, baseMarket))
       out.println()
 
       out.println(Format.header)
       out.println("Realized gains/looses")
       out.println(Format.header)
+      out.println()
+      out.println(Format.header)
       out.println("Cost bases per market")
+      out.println(Format.header)
       Realized.costBases.printOn(out)
       out.println()
+      out.println(Format.header)
       out.println("Sell values per market")
+      out.println(Format.header)
       Realized.sellValues.printOn(out)
       out.println()
-      out.println(Format.asMarket(Realized.sellValues.sum - Realized.costBases.sum, baseMarket))
-      out.println()
 
-      out.println()
+      out.println(Format.header)
       out.println("Realized Gains per market")
+      out.println(Format.header)
       val realizedGains = {
         val keys = Realized.costBases.keys.toSet union Realized.sellValues.keys.toSet
         val list = keys.map(k => (k, Realized.sellValues(k) - Realized.costBases(k)))
@@ -243,13 +255,14 @@ object FIFO {
       realizedGains.printOn(out)
 
       out.println()
-      out.println()
-      out.println("Total paid fees: "+Format.asMarket(Realized.fees, baseMarket))
 
       out.println()
-      out.println("Total gains:     "+Format.asMarket(Realized.gains,baseMarket))
-      out.println("Total losses:    "+Format.asMarket(Realized.looses,baseMarket))
-      out.println("Net result:      "+Format.asMarket(Realized.gains-Realized.looses,baseMarket))
+      out.print("Realized total cost basis:  ")
+      out.println(Format.leftPad(Format.asMarket(Realized.costBases.sum, baseMarket), 20, ' '))
+      out.print("Realized total sell value:  ")
+      out.println(Format.leftPad(Format.asMarket(Realized.sellValues.sum, baseMarket), 20, ' '))
+      out.print("Net result:                 ")
+      out.println(Format.leftPad(Format.asMarket(Realized.sellValues.sum - Realized.costBases.sum, baseMarket), 20, ' '))
       out.println()
 
       if(Config.verbosity(Verbosity.showMoreDetails)) {
@@ -292,7 +305,7 @@ object FIFO {
         else
           exchange.fee * baseCoin.priceInBaseCoin(exchange.feeMarket, exchange.date)
 
-      Realized.fees += feeInBaseCoin
+      Realized.perMarketPaidFees.record(exchange.feeMarket, feeInBaseCoin)
 
       // Total value involved in this operation, expressed in base coin
       val totalInBaseCoin =
@@ -334,10 +347,8 @@ object FIFO {
 
       // Update total gains for soldMarket
       if (gainInBaseCoin > 0) {
-        Realized.gains += gainInBaseCoin
         Realized.perMarketGains.record(soldMarket, gainInBaseCoin)
       } else if (gainInBaseCoin < 0) {
-        Realized.looses += gainInBaseCoin.abs
         Realized.perMarketLooses.record(soldMarket, gainInBaseCoin.abs)
       }
 
@@ -428,11 +439,9 @@ object FIFO {
     def processFee(fee : Fee) {
       val (feeCostInBaseCoin,_) = stocks.remove(fee.market, fee.amount)
 
-      Realized.fees += feeCostInBaseCoin
+      Realized.perMarketPaidFees.record(fee.market, feeCostInBaseCoin)
 
-      // Paying a fee implies loosing paid amount
-      Realized.looses += feeCostInBaseCoin
-
+      // Paying a fee implies loosing paid amount.
       // Update total looses for soldMarket
       Realized.perMarketLooses.record(fee.market, feeCostInBaseCoin)
 
@@ -473,14 +482,12 @@ object FIFO {
 
     def processLoss(loss : Loss) {
       val (feeBasisInBaseCoin,_) = stocks.remove(loss.feeMarket, loss.fee)
-      Realized.fees += feeBasisInBaseCoin
+      Realized.perMarketPaidFees.record(loss.feeMarket, feeBasisInBaseCoin)
 
       val (basisInBaseCoin,_) = stocks.remove(loss.market, loss.amount)
 
       // take fee into account
       val totalLossInBaseCoin = basisInBaseCoin + feeBasisInBaseCoin
-
-      Realized.looses += totalLossInBaseCoin
 
       // Update total looses for loss market
       Realized.perMarketLooses.record(loss.market, totalLossInBaseCoin)
@@ -541,17 +548,16 @@ object FIFO {
 
     def processGain(gain : Gain) {
       val (feeBasisInBaseCoin,_) = stocks.remove(gain.feeMarket, gain.fee)
-      Realized.fees += feeBasisInBaseCoin
+      Realized.perMarketPaidFees.record(gain.feeMarket, feeBasisInBaseCoin)
 
       // Paying a fee implies loosing paid amount
-      Realized.looses += feeBasisInBaseCoin
+      Realized.perMarketLooses.record(gain.feeMarket, feeBasisInBaseCoin)
 
       // Record cost basis of gained coins
       val basePrice = baseCoin.priceInBaseCoin(gain.market, gain.date)
       stocks.add(gain.market, gain.amount, basePrice, gain.exchanger, gain.date)
 
       val gainInBaseCoin = gain.amount*basePrice
-      Realized.gains += gainInBaseCoin
 
       // Update total gains for corresponding market
       Realized.perMarketGains.record(gain.market, gainInBaseCoin)
@@ -834,9 +840,9 @@ object FIFO {
     val startDate = Date(2000,1,1)
     val endDate = Date(2500,12,31)
     var currentYear : Int = operations.head.date.getYear
+    initializeYear(currentYear)
 
     for (operation <- operations if operation.date >= startDate && operation.date <= endDate) {
-
       val newYear = operation.date.getYear
       if(newYear > currentYear) {
         reportYear(currentYear)
@@ -872,4 +878,3 @@ object FIFO {
     Logger.trace("Output generated in file "+outFile+".")
   }
 }
-
