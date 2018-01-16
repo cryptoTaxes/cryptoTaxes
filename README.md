@@ -2,6 +2,8 @@
 Compute your crypto taxes.
 
 ## Usage
+[java Runtime Environment](https://www.java.com/download/) must be previously installed in your computer in order to run this program. 
+
 Download compressed file (.zip extension for Windows or .tar.gz extension for Linux) from [Releases](https://github.com/cryptoTaxes/cryptoTaxes/releases), uncompress downloaded file and open a terminal in uncompressed folder.
 
 Trading history files should be placed in `data/usr/yourUser/input` folders (where `yourUser` is the folder storing your user data). A `demo` user is provided along with his demo history files, so that you can copy the folder structure for new users.
