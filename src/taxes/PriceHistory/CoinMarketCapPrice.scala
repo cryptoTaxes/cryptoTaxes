@@ -47,7 +47,7 @@ object CoinMarketCapPrice extends Initializable {
       case None => Logger.fatal("price for %s at %s not found".format(market, date))
     }
 
-  private def scalpContents(line : String) : String = {
+  private def scrapContents(line : String) : String = {
     val token1 = '>'
     val token2 = '<'
     if(!line.contains(token1)) {
@@ -62,7 +62,7 @@ object CoinMarketCapPrice extends Initializable {
     return contents
   }
 
-  private def scalpPrices(coinMarketCapID: String) : List[String] = {
+  private def scrapPrices(coinMarketCapID: String) : List[String] = {
     val url = "https://coinmarketcap.com/currencies/"+coinMarketCapID+"/historical-data/?start=20130101&end=20500101"
     val src = Source.fromURL(url)
 
@@ -77,11 +77,11 @@ object CoinMarketCapPrice extends Initializable {
     while(goOn) {
       val line1 = inLines.next()
       if(line1=="<tr class=\"text-right\">") {
-        val date = scalpContents(inLines.next())
-        val open = scalpContents(inLines.next())
-        val high = scalpContents(inLines.next())
-        val low = scalpContents(inLines.next())
-        val close = scalpContents(inLines.next())
+        val date = scrapContents(inLines.next())
+        val open = scrapContents(inLines.next())
+        val high = scrapContents(inLines.next())
+        val low = scrapContents(inLines.next())
+        val close = scrapContents(inLines.next())
 
         // skip 4 lines
         for(i <- 0 until 4)
@@ -96,7 +96,7 @@ object CoinMarketCapPrice extends Initializable {
 
   def updatePrices(market: Market, coinMarketCapID: String): Unit = {
     val header = "Date\tOpen\tHigh\tLow\tClose"
-    val lines = scalpPrices(coinMarketCapID)
+    val lines = scrapPrices(coinMarketCapID)
     val ps = new java.io.PrintStream(Paths.coinMarketCap+"/"+market.toLowerCase+".txt")
     ps.println(header)
     for(ln <- lines)
@@ -161,20 +161,12 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
   def downloadPrices(): Unit = {
     val header = "Date\tOpen\tHigh\tLow\tClose"
     Logger.trace("Downloading prices for "+market+" from coinmarketcap.com.")
-    val lines = CoinMarketCapPrice.scalpPrices(coinMarketCapID)
+    val lines = CoinMarketCapPrice.scrapPrices(coinMarketCapID)
     val ps = new java.io.PrintStream(fileFullPath)
     ps.println(header)
     for(ln <- lines)
       ps.println(ln)
     ps.close()
   }
-
-}
-
-object Test extends App {
-
-
- CoinMarketCapPrice.downloadPrices()
-
 
 }
