@@ -1,5 +1,6 @@
 package taxes.Exchanger
 
+import taxes.Util.Parse._
 import taxes._
 
 object Poloniex extends Exchanger {
@@ -7,110 +8,107 @@ object Poloniex extends Exchanger {
 
   override val folder: String = "poloniex"
 
-  def readFile(fileName : String) : List[Operation] = {
-    val f = new java.io.File(fileName)
-    val sc = new java.util.Scanner(f)
-    var operations = List[Operation]()
-    val header = sc.nextLine()
-    while(sc.hasNextLine) {
-      val ln = ParseUtils.trimSpaces(sc.nextLine())
-      if(ln.nonEmpty) {
-        val scLn = new java.util.Scanner(ln).useDelimiter("[,%]")
-        val date = Date.fromString(scLn.next()+" +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
+  private val operationsReader = new CSVReader[Operation] {
+    override val hasHeader: Boolean = true
 
-        val (market1, aux) = scLn.next().span(_ != '/')
-        val market2 = aux.tail
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[,%]")
 
-        val category = scLn.next()
-        val orderType = scLn.next()
-        val price = scLn.nextDouble()
-        val amount = scLn.nextDouble()
-        val total = scLn.nextDouble()
-        val feePercent = scLn.nextDouble()
-        scLn.next() // skip %
-        val orderNumber = scLn.next()
-        val baseTotalLessFee = scLn.nextDouble()
-        val quoteTotalLessFee = scLn.nextDouble()
-        scLn.close()
+    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+      val date = Date.fromString(scLn.next()+" +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
 
-        val desc = id + " " + orderNumber
+      val (market1, aux) = scLn.next().span(_ != '/')
+      val market2 = aux.tail
 
-        if (category == "Exchange") {
-          val exchange =
-            if (orderType == "Sell")
-              Exchange(
-                date = date
-                , id = orderNumber
-                , fromAmount = amount, fromMarket = Market.normalize(market1)
-                , toAmount = amount*price*(100-feePercent)/100, toMarket = Market.normalize(market2)
-                , fee = total*feePercent/100, feeMarket = Market.normalize(market2)
-                , exchanger = Poloniex
-                , description = desc
-              )
-            else
-              Exchange(
-                date = date
-                , id = orderNumber
-                , fromAmount = total, fromMarket = Market.normalize(market2)
-                , toAmount = amount*(100-feePercent)/100, toMarket = Market.normalize(market1)
-                // , fee = amount*feePercent/100, feeMarket = CoinConversions.normalize(market1)
-                // Usually, market2 is BTC so we set fee in BTC
-                , fee = amount*feePercent/100*price, feeMarket = Market.normalize(market2)
-                , exchanger = Poloniex
-                , description = desc
-              )
-          operations ::= exchange
-        } else if(category == "Settlement" && orderType == "Buy") {
-          // Just like a Exchange buy
-          val settlement = SettlementBuy(
-            date = date
-            , id = orderNumber
-            , fromAmount = total, fromMarket = Market.normalize(market2)
-            , toAmount = amount*(100-feePercent)/100, toMarket = Market.normalize(market1)
-            // , fee = amount*feePercent/100, feeMarket = CoinConversions.normalize(market1)
-            // Usually, market2 is BTC so we set fee in BTC
-            , fee = amount*feePercent/100*price, feeMarket = Market.normalize(market2)
-            , exchanger = Poloniex
-            , description = desc + " Settlement"
-          )
-          operations ::= settlement
-        } else if(category == "Margin trade") {
-          val exchange =
-            if (orderType == "Sell")
-              Margin(
-                date = date
-                , id = orderNumber
-                , fromAmount = amount, fromMarket = Market.normalize(market1)
-                , toAmount = amount*price*(100-feePercent)/100, toMarket = Market.normalize(market2)
-                , fee = total*feePercent/100, feeMarket = Market.normalize(market2)
-                , orderType = Operation.OrderType.Sell
-                , pair = (Market.normalize(market1), Market.normalize(market2))
-                , exchanger = Poloniex
-                , description = desc
-              )
-            else
-              Margin(
-                date = date
-                , id = orderNumber
-                , fromAmount = total, fromMarket = Market.normalize(market2)
-                , toAmount = amount*(100-feePercent)/100, toMarket = Market.normalize(market1)
-                // , fee = amount*feePercent/100, feeMarket = CoinConversions.normalize(market1)
-                // Usually, market2 is BTC so we set fee in BTC
-                , fee = amount*feePercent/100*price, feeMarket = Market.normalize(market2)
-                , orderType = Operation.OrderType.Buy
-                , pair = (Market.normalize(market1), Market.normalize(market2))
-                , exchanger = Poloniex
-                , description = desc
-              )
-            operations ::= exchange
-        } else
-          Logger.warning("%s.readExchanges. Reading this transaction is not currently supported: %s.".format(id,ln))
-      }
+      val category = scLn.next()
+      val orderType = scLn.next()
+      val price = scLn.nextDouble()
+      val amount = scLn.nextDouble()
+      val total = scLn.nextDouble()
+      val feePercent = scLn.nextDouble()
+      scLn.next() // skip %
+      val orderNumber = scLn.next()
+      val baseTotalLessFee = scLn.nextDouble()
+      val quoteTotalLessFee = scLn.nextDouble()
+      scLn.close()
+
+      val desc = id + " " + orderNumber
+
+      if (category == "Exchange") {
+        val exchange =
+          if (orderType == "Sell")
+            Exchange(
+              date = date
+              , id = orderNumber
+              , fromAmount = amount, fromMarket = Market.normalize(market1)
+              , toAmount = amount*price*(100-feePercent)/100, toMarket = Market.normalize(market2)
+              , fee = total*feePercent/100, feeMarket = Market.normalize(market2)
+              , exchanger = Poloniex
+              , description = desc
+            )
+          else
+            Exchange(
+              date = date
+              , id = orderNumber
+              , fromAmount = total, fromMarket = Market.normalize(market2)
+              , toAmount = amount*(100-feePercent)/100, toMarket = Market.normalize(market1)
+              // , fee = amount*feePercent/100, feeMarket = CoinConversions.normalize(market1)
+              // Usually, market2 is BTC so we set fee in BTC
+              , fee = amount*feePercent/100*price, feeMarket = Market.normalize(market2)
+              , exchanger = Poloniex
+              , description = desc
+            )
+        return Right(exchange)
+      } else if(category == "Settlement" && orderType == "Buy") {
+        // Just like a Exchange buy
+        val settlement = SettlementBuy(
+          date = date
+          , id = orderNumber
+          , fromAmount = total, fromMarket = Market.normalize(market2)
+          , toAmount = amount*(100-feePercent)/100, toMarket = Market.normalize(market1)
+          // , fee = amount*feePercent/100, feeMarket = CoinConversions.normalize(market1)
+          // Usually, market2 is BTC so we set fee in BTC
+          , fee = amount*feePercent/100*price, feeMarket = Market.normalize(market2)
+          , exchanger = Poloniex
+          , description = desc + " Settlement"
+        )
+        return Right(settlement)
+      } else if(category == "Margin trade") {
+        val margin =
+          if (orderType == "Sell")
+            Margin(
+              date = date
+              , id = orderNumber
+              , fromAmount = amount, fromMarket = Market.normalize(market1)
+              , toAmount = amount*price*(100-feePercent)/100, toMarket = Market.normalize(market2)
+              , fee = total*feePercent/100, feeMarket = Market.normalize(market2)
+              , orderType = Operation.OrderType.Sell
+              , pair = (Market.normalize(market1), Market.normalize(market2))
+              , exchanger = Poloniex
+              , description = desc
+            )
+          else
+            Margin(
+              date = date
+              , id = orderNumber
+              , fromAmount = total, fromMarket = Market.normalize(market2)
+              , toAmount = amount*(100-feePercent)/100, toMarket = Market.normalize(market1)
+              // , fee = amount*feePercent/100, feeMarket = CoinConversions.normalize(market1)
+              // Usually, market2 is BTC so we set fee in BTC
+              , fee = amount*feePercent/100*price, feeMarket = Market.normalize(market2)
+              , orderType = Operation.OrderType.Buy
+              , pair = (Market.normalize(market1), Market.normalize(market2))
+              , exchanger = Poloniex
+              , description = desc
+            )
+        return Right(margin)
+      } else
+        return Left("%s.readExchanges. Reading this transaction is not currently supported: %s.".format(id, line))
     }
-    sc.close()
-    return group(operations.sortBy(_.id)).sortBy(_.date)
   }
 
+  def readFile(fileName : String) : List[Operation] =
+    group(operationsReader.readFile(fileName).sortBy(_.id)).sortBy(_.date)
 
   def group(operations: List[Operation]) : List[Operation] =
     operations match {

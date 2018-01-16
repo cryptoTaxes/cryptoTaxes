@@ -1,6 +1,8 @@
 package taxes.PriceHistory
 
 import taxes.Market.Market
+import taxes.Util.Logger
+import taxes.Util.Parse.Parse
 import taxes._
 
 import scala.io.Source
@@ -29,7 +31,7 @@ object CoinMarketCapPrice extends Initializable {
     case (market1, market2) => (Market.normalize(market1), market2.toLowerCase())
   }
 
-  private val allPairs = ParseUtils.readAssociations (
+  private val allPairs = Parse.readAssociations (
     Paths.configFile("coinmarketcapMarkets.txt")
     , "Reading coinmarketcap markets"
     ).map(parsePair)
@@ -123,7 +125,7 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
     while (sc.hasNextLine) {
       val line = sc.nextLine()
       lineNumber += 1
-      if (!ParseUtils.isComment(line)) {
+      if (!Parse.isComment(line)) {
         val scLn = new java.util.Scanner(line).useDelimiter("[\t ]+")
 
         try {

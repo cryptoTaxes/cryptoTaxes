@@ -1,4 +1,6 @@
-package taxes
+package taxes.Util
+
+import taxes.{Finalizable, Initializable, Paths}
 
 object Logger extends Initializable with Finalizable {
   private lazy val warningStream = new java.io.PrintStream(Paths.userOutputFolder+"/warnings.txt")

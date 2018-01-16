@@ -1,6 +1,8 @@
 package taxes.Exchanger
 
 import taxes.Market.Market
+import taxes.Util.Logger
+import taxes.Util.Parse.{CSVSortedOperationReader, Parse, QuotedScanner, Scanner}
 import taxes._
 
 object Kraken extends Exchanger with Initializable {
@@ -11,7 +13,7 @@ object Kraken extends Exchanger with Initializable {
   private val configFileName = Paths.configFile("krakenMarkets.txt")
 
   private val conversions : Map[Market, Market] =
-    ParseUtils.readAssociations(configFileName, "Reading Kraken markets")
+    Parse.readAssociations(configFileName, "Reading Kraken markets")
 
   def parsePair(pair : String) : (Market, Market) = {
     var found = false
@@ -44,57 +46,54 @@ object Kraken extends Exchanger with Initializable {
              )
   }
 
-  def readFile(fileName: String): List[Exchange] = {
-    val f = new java.io.File(fileName)
-    val sc = new java.util.Scanner(f)
-    var exchanges = List[Exchange]()
-    val header = sc.nextLine()
-    while (sc.hasNextLine) {
-      val ln = ParseUtils.trimSpaces(sc.nextLine())
-      if (ln.nonEmpty) {
-        val scLn = QuotedScanner(ln, '\"', ',')
+  private val operationsReader = new CSVSortedOperationReader {
+    override val hasHeader: Boolean = true
 
-        val txid = scLn.next()
-        val ordertxid = scLn.next()
-        val pair = scLn.next()
-        val time = scLn.next()
-        val sellBuy = scLn.next()
-        val ordertype = scLn.next()
-        val price = scLn.nextDouble()
-        val cost = scLn.nextDouble()
-        val fee = scLn.nextDouble()
-        val vol = scLn.nextDouble()
-        val margin = scLn.nextDouble()
-        val misc = scLn.next()
-        val ledgers = scLn.next()
+    override def lineScanner(line: String): Scanner =
+      QuotedScanner(line, '\"', ',')
 
-        if(sellBuy == "sell" && ordertype == "limit") {
-          val date = Date.fromString(time + " +0000", "yyyy-MM-dd HH:mm:ss.S Z")
-          val (market1, market2) = parsePair(pair)
+    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+      val txid = scLn.next()
+      val ordertxid = scLn.next()
+      val pair = scLn.next()
+      val time = scLn.next()
+      val sellBuy = scLn.next()
+      val ordertype = scLn.next()
+      val price = scLn.nextDouble()
+      val cost = scLn.nextDouble()
+      val fee = scLn.nextDouble()
+      val vol = scLn.nextDouble()
+      val margin = scLn.nextDouble()
+      val misc = scLn.next()
+      val ledgers = scLn.next()
 
-          val amount1 = vol
-          val amount2 = cost
+      if(sellBuy == "sell" && ordertype == "limit") {
+        val date = Date.fromString(time + " +0000", "yyyy-MM-dd HH:mm:ss.S Z")
+        val (market1, market2) = parsePair(pair)
 
-          val desc = id + " " + txid + "/" + ordertxid
+        val amount1 = vol
+        val amount2 = cost
 
-          val exchange =
-            Exchange(
-              date = date
-              , id = txid + "/" + ordertxid
-              , fromAmount = amount1, fromMarket = Market.normalize(market1)
-              , toAmount = amount2 - fee, toMarket = Market.normalize(market2)
-              , fee = fee
-              , feeMarket = Market.normalize(market2)
-              , exchanger = Kraken
-              , description = desc
-            )
-          exchanges ::= exchange
-        } else
-          Logger.warning("%s.readExchanges. Reading this transaction is not currently supported: %s.".format(id,ln))
-      }
+        val desc = id + " " + txid + "/" + ordertxid
+
+        val exchange =
+          Exchange(
+            date = date
+            , id = txid + "/" + ordertxid
+            , fromAmount = amount1, fromMarket = Market.normalize(market1)
+            , toAmount = amount2 - fee, toMarket = Market.normalize(market2)
+            , fee = fee
+            , feeMarket = Market.normalize(market2)
+            , exchanger = Kraken
+            , description = desc
+          )
+        return Right(exchange)
+      } else
+        return Left("%s.readExchanges. Reading this transaction is not currently supported: %s.".format(id, line))
     }
-    sc.close()
-    return exchanges.sortBy(_.date)
   }
+
+  def readFile(fileName: String): List[Operation] =
+    operationsReader.readFile(fileName)
 }
 

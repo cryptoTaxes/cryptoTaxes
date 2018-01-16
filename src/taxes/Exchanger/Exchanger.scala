@@ -1,5 +1,6 @@
 package taxes.Exchanger
 
+import taxes.Util.Logger
 import taxes._
 
 trait Exchanger extends Initializable {

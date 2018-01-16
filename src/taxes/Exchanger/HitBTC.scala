@@ -1,5 +1,6 @@
 package taxes.Exchanger
 
+import taxes.Util.Parse.{CSVSortedOperationReader, Parse, QuotedScanner, Scanner}
 import taxes._
 
 object HitBTC extends Exchanger {
@@ -7,51 +8,48 @@ object HitBTC extends Exchanger {
 
   override val folder: String = "hitbtc"
 
-  def readFile(fileName : String) : List[Exchange] = {
-    val f = new java.io.File(fileName)
-    val sc = new java.util.Scanner(f)
-    var exchanges = List[Exchange]()
-    val header = sc.nextLine()
-    while(sc.hasNextLine) {
-      val ln = ParseUtils.trimSpaces(sc.nextLine())
-      if(ln.nonEmpty) {
-        val scLn = QuotedScanner(ln, '\"', ',')
+  private val operationsReader = new CSVSortedOperationReader {
+    override val hasHeader: Boolean = true
 
-        val date = Date.fromString(scLn.next(), "yyyy-MM-dd hh:mm:ss")
-        val instrument = scLn.next()
-        val tradeID = scLn.next()
-        val orderID = scLn.next()
-        val side = scLn.next()
-        val quantity = scLn.nextDouble()
-        val price = scLn.nextDouble()
-        val volume = scLn.nextDouble()
-        val fee = scLn.nextDouble()
-        val rebate = scLn.nextDouble()
-        val total = scLn.nextDouble()
+    override def lineScanner(line: String): Scanner =
+      QuotedScanner(line, '\"', ',')
 
-        val desc = id + " " + tradeID + "/" + orderID
+    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+      val date = Date.fromString(scLn.next(), "yyyy-MM-dd hh:mm:ss")
+      val instrument = scLn.next()
+      val tradeID = scLn.next()
+      val orderID = scLn.next()
+      val side = scLn.next()
+      val quantity = scLn.nextDouble()
+      val price = scLn.nextDouble()
+      val volume = scLn.nextDouble()
+      val fee = scLn.nextDouble()
+      val rebate = scLn.nextDouble()
+      val total = scLn.nextDouble()
 
-        val (market1,market2) = ParseUtils.split(instrument,"/")
-        val isSell = side == "sell"
+      val desc = id + " " + tradeID + "/" + orderID
 
-        // market1 is usually BTC
-        if(isSell) {
-          val exchange = Exchange(
-            date = date
-            , id = tradeID + "/" + orderID
-            , fromAmount = quantity, fromMarket = Market.normalize(market1)
-            , toAmount = total, toMarket = Market.normalize(market2)
-            , fee = fee, feeMarket = Market.normalize(market2)
-            , exchanger = HitBTC
-            , description = desc
-          )
+      val (market1,market2) = Parse.split(instrument,"/")
+      val isSell = side == "sell"
 
-          exchanges ::= exchange
-        } else
-          Logger.warning("%s.readExchanges. Reading this transaction is not currently supported: %s.".format(id,ln))
-      }
+      // market1 is usually BTC
+      if(isSell) {
+        val exchange = Exchange(
+          date = date
+          , id = tradeID + "/" + orderID
+          , fromAmount = quantity, fromMarket = Market.normalize(market1)
+          , toAmount = total, toMarket = Market.normalize(market2)
+          , fee = fee, feeMarket = Market.normalize(market2)
+          , exchanger = HitBTC
+          , description = desc
+        )
+
+        return Right(exchange)
+      } else
+        return Left("%s.readExchanges. Reading this transaction is not currently supported: %s.".format(id, line))
     }
-    sc.close()
-    return exchanges.sortBy(_.date)
   }
+
+  def readFile(fileName : String) : List[Operation] =
+    operationsReader.readFile(fileName)
 }

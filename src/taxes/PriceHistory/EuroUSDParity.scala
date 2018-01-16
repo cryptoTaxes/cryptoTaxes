@@ -1,7 +1,10 @@
 package taxes.PriceHistory
 
 import java.util.InputMismatchException
+
+import taxes.Util.Logger
 import taxes._
+
 import scala.io.Source
 
 object EuroUSDParity extends Initializable {

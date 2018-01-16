@@ -1,6 +1,7 @@
 package taxes.Exchanger
 
-import taxes.{Date, Exchange, Market, ParseUtils}
+import taxes.Util.Parse.Parse
+import taxes.{Date, Exchange, Market}
 
 object Shapeshift extends Exchanger {
   override val id: String = "Shapeshift"
@@ -12,29 +13,29 @@ object Shapeshift extends Exchanger {
     val sc = new java.util.Scanner(f)
     var exchanges = List[Exchange]()
     while (sc.hasNextLine) {
-      val ln0 = ParseUtils.trimSpaces(sc.nextLine())
+      val ln0 = Parse.trimSpaces(sc.nextLine())
       val orderId = ln0.dropWhile(_ != ':').takeWhile(_ != ';')
       val desc = id + " " + orderId
 
-      val ln1 = ParseUtils.trimSpaces(sc.nextLine())
+      val ln1 = Parse.trimSpaces(sc.nextLine())
       val market1 = ln1.tail.takeWhile(_ != ';')
 
-      val ln2 = ParseUtils.trimSpaces(sc.nextLine())
+      val ln2 = Parse.trimSpaces(sc.nextLine())
       val market2 = ln2.tail.takeWhile(_ != ';')
 
-      val ln3 = ParseUtils.trimSpaces(sc.nextLine())
+      val ln3 = Parse.trimSpaces(sc.nextLine())
       val scLn3 = new java.util.Scanner(ln3).useDelimiter("[;]")
       scLn3.next()
       val amount2 = scLn3.next().replace(',','.').toDouble
       scLn3.close()
 
-      val ln4 = ParseUtils.trimSpaces(sc.nextLine())
+      val ln4 = Parse.trimSpaces(sc.nextLine())
       val scLn4 = new java.util.Scanner(ln4).useDelimiter("[;]")
       scLn4.next()
       val amount1 = scLn4.next().replace(',','.').toDouble
       scLn4.close()
 
-      val ln5 = ParseUtils.trimSpaces(sc.nextLine())
+      val ln5 = Parse.trimSpaces(sc.nextLine())
       val scLn5 = new java.util.Scanner(ln5).useDelimiter("[;]")
       val date = Date.fromString(scLn5.next(), "yyyy-MM-dd hh:mm:ss")
       sc.nextLine()

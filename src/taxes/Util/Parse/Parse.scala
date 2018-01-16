@@ -1,6 +1,8 @@
-package taxes
+package taxes.Util.Parse
 
-object ParseUtils {
+import taxes.Util.Logger
+
+package object Parse {
   def isComment(line : String) : Boolean =
     line.isEmpty || line.startsWith("//")
 
@@ -45,11 +47,11 @@ object ParseUtils {
     while (sc.hasNextLine) {
       val line = sc.nextLine()
       lineNumber += 1
-      if(!ParseUtils.isComment(line)) {
+      if(!Parse.isComment(line)) {
         try {
-          val (list, normalized0) = ParseUtils.split(line, "->")
+          val (list, normalized0) = Parse.split(line, "->")
           val normalized = normalized0.toUpperCase()
-          val alternatives = ParseUtils.sepBy(list, ",")
+          val alternatives = Parse.sepBy(list, ",")
           for (alt <- alternatives)
             associations += (alt.toUpperCase() -> normalized)
         } catch {
@@ -63,42 +65,3 @@ object ParseUtils {
 }
 
 
-case class QuotedScanner(str : String, delimiter : Char, sep : Char) {
-  var string = str
-
-  def next() : String = {
-    var token = ""
-
-    while(string.nonEmpty && string.head  == sep)
-      string = string.tail
-
-    val isDelimited = string.nonEmpty && string.head == delimiter
-
-    if(isDelimited) {
-      while (string.nonEmpty && string.head == delimiter)
-        string = string.tail
-
-      while (string.nonEmpty && string.head != delimiter) {
-        token += string.head
-        string = string.tail
-      }
-
-      while (string.nonEmpty && string.head == delimiter)
-        string = string.tail
-    } else {
-      while (string.nonEmpty && string.head != sep) {
-        token += string.head
-        string = string.tail
-      }
-    }
-
-    return token
-  }
-
-  def nextDouble() : Double = {
-    val sc = new java.util.Scanner(next())
-    val double = sc.nextDouble()
-    sc.close()
-    return double
-  }
-}

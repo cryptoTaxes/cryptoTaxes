@@ -1,6 +1,7 @@
 package taxes.Exchanger
 
 import taxes.Market.Market
+import taxes.Util.Parse.{CSVSortedOperationReader, QuotedScanner, Scanner}
 import taxes._
 
 object Changelly extends Exchanger {
@@ -18,53 +19,50 @@ object Changelly extends Exchanger {
     return (amount, market)
   }
 
-  def readFile(fileName : String) : List[Exchange] = {
-    val f = new java.io.File(fileName)
-    val sc = new java.util.Scanner(f)
-    var exchanges = List[Exchange]()
-    val header = sc.nextLine()
-    while(sc.hasNextLine) {
-      val ln = ParseUtils.trimSpaces(sc.nextLine())
-      if(ln.nonEmpty) {
-        val scLn = QuotedScanner(ln, '\"', ',')
+  private val operationsReader = new CSVSortedOperationReader {
+    override val hasHeader: Boolean = true
 
-        val status = scLn.next()
-        if(status=="finished") {
-          val date = Date.fromString(scLn.next()+" +0000", "dd MMM yyyy, HH:mm:ss Z")
+    override def lineScanner(line: String): Scanner =
+      QuotedScanner(line, '\"', ',')
 
-          val (amount, soldMarket) = split(scLn.next())
-          val (totalFee, feeMarket) = split(scLn.next())
+    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+      val status = scLn.next()
+      if(status=="finished") {
+        val date = Date.fromString(scLn.next()+" +0000", "dd MMM yyyy, HH:mm:ss Z")
 
-          val token1 = scLn.next()
-          val (token2, token3) = token1.span(_ != '=')
-          val (exchangeRate, _) = split(token3.drop(2))
-          val receiverWallet = scLn.next()
+        val (amount, soldMarket) = split(scLn.next())
+        val (totalFee, feeMarket) = split(scLn.next())
 
-          val (amountReceived, receivedMarket) = split(scLn.next())
+        val token1 = scLn.next()
+        val (token2, token3) = token1.span(_ != '=')
+        val (exchangeRate, _) = split(token3.drop(2))
+        val receiverWallet = scLn.next()
 
-          val realFee = amount * exchangeRate - amountReceived
-          val feePercent = realFee * 100 / (amount * exchangeRate)
+        val (amountReceived, receivedMarket) = split(scLn.next())
 
-          val desc = id + " " + receiverWallet
+        val realFee = amount * exchangeRate - amountReceived
+        val feePercent = realFee * 100 / (amount * exchangeRate)
 
-          val exchange =
-            Exchange(
-              date = date
-              , id = receivedMarket
-              , fromAmount = amount, fromMarket = Market.normalize(soldMarket)
-              , toAmount = amountReceived, toMarket = Market.normalize(receivedMarket)
-              , fee = realFee, feeMarket = Market.normalize(feeMarket)
-              , exchanger = Changelly
-              , description = desc
-            )
-          exchanges ::= exchange
-        } else
-          Logger.warning("%s.readExchanges. Reading this transaction is not currently supported: %s.".format(id,ln))
-      }
+        val desc = id + " " + receiverWallet
+
+        val exchange =
+          Exchange(
+            date = date
+            , id = receivedMarket
+            , fromAmount = amount, fromMarket = Market.normalize(soldMarket)
+            , toAmount = amountReceived, toMarket = Market.normalize(receivedMarket)
+            , fee = realFee, feeMarket = Market.normalize(feeMarket)
+            , exchanger = Changelly
+            , description = desc
+          )
+        return Right(exchange)
+      } else
+        return Left("%s.readFile: cannot parse this line: %s.".format(id, line))
     }
-    sc.close()
-    return exchanges.sortBy(_.date)
   }
+
+  override def readFile(fileName: String): List[Operation] =
+    operationsReader.readFile(fileName)
 }
 
 

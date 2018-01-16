@@ -2,8 +2,10 @@ package taxes
 
 import java.io.PrintStream
 import java.text.SimpleDateFormat
+
 import taxes.Exchanger._
 import taxes.Market.Market
+import taxes.Util.Logger
 
 
 object Format {

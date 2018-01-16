@@ -2,10 +2,13 @@ package taxes
 
 import taxes.Exchanger.{Exchanger, Exchangers}
 import taxes.PriceHistory.{CoinMarketCapPrice, EuroUSDParity}
+import taxes.Util.Logger
+import taxes.Util.Parse.Parse
 
 object Main extends App {
   // Use English formats for floating point numbers
   java.util.Locale.setDefault(java.util.Locale.ENGLISH)
+  Logger.trace("cryptoTaxes (https://github.com/cryptoTaxes/cryptoTaxes)\n")
 
   val cmdLine = args.mkString(" ")
   //val cmdLine = "-user=user1 -verbosity=10 -currency=euro -download-prices=no"
@@ -44,7 +47,7 @@ object ParseCommandLine {
 
     var config : Config = DefaultConfig
 
-    var toParse = ParseUtils.trimSpaces(cmdLine)
+    var toParse = Parse.trimSpaces(cmdLine)
 
     def failParse = Logger.fatal("Cannot parse command line: "+cmdLine+"\nFrom here: "+toParse)
     while (toParse.nonEmpty) {
