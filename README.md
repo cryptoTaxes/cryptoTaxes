@@ -20,7 +20,7 @@ The following command line parameters can be written after the command:
 
 * `-download-prices=yes` in order to update prices from [Coinmarketcap](coinmarketcap.com) and [BDE](www.bde.es).
 
-After runnng the program, output report will be produced in folder `data/usr/yourUser/output`.
+After running the program, output report will be produced in folder `data/usr/yourUser/output`.
 
 ## Configuration
 

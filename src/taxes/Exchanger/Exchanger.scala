@@ -23,6 +23,7 @@ object Exchangers {
       , Kraken
       , LocalBTC
       , Poloniex
+      , PoloniexBorrowing
       , Shapeshift
       , RippleTrade
       , Yobit
