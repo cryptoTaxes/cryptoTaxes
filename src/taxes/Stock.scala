@@ -33,6 +33,9 @@ case class StockQueue(market : Market, baseMarket : Market) extends DEQueue[Stoc
     }
     return if(done) (basis, 0) else (basis, toRemove)
   }
+
+  def totalAmount : Double =
+    this.iterator.map(_.amount).sum
 }
 
 

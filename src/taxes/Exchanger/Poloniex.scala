@@ -215,6 +215,5 @@ object Poloniex extends Exchanger {
         Left("%s. Read withdrawal. This withdrawal was not completed: %s.".format(id, line))
     }
   }
-
 }
 

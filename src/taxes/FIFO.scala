@@ -2,7 +2,6 @@ package taxes
 
 import java.io.PrintStream
 import java.text.SimpleDateFormat
-
 import taxes.Exchanger._
 import taxes.Market.Market
 import taxes.Util.Logger
@@ -731,36 +730,75 @@ object FIFO {
         else
           margin.fee * baseCoin.priceInBaseCoin(margin.feeMarket, margin.date)
 
-      if(margin.orderType == Operation.OrderType.Sell) {
-        if(marginBuys(marketKey).isEmpty) {
-          // Opening a short
-          marginSells.add(marketKey, soldAmount, boughtSoldExchangeRate, margin.exchanger, margin.date)
+      def nonZero(x : Double) : Boolean = x.abs >= 1E-7
 
-          out.println(
-            "%d. ".format(operationNumber)+
+      def openShort(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market, feeInTradingBaseCoin : Double) = {
+        // Opening a short
+        marginSells.add(marketKey, soldAmount, boughtSoldExchangeRate, margin.exchanger, margin.date)
+
+        out.println(
+          "%d. ".format(operationNumber) +
+            Format.df.format(margin.date) +
+            ". Open short " +
+            Format.asMarket(soldAmount, soldMarket) + " -> " +
+            Format.asMarket(boughtAmount, boughtMarket) +
+            ". Fee = " + Format.asMarket(feeAmount, feeMarket) +
+            ". " + margin.description
+        )
+        if (Config.verbosity(Verbosity.showRates))
+          out.println("EXCHANGE RATE:  " + Format.asMarket(boughtSoldExchangeRate, boughtMarket) + "/" + soldMarket)
+        if (Config.verbosity(Verbosity.showStocks))
+          printQueue(marketKey, marginSells(marketKey))
+        out.println()
+
+        if(feeInTradingBaseCoin>0) {
+          val fee = Fee(margin.date, margin.id, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description + " fee")
+          processFee(fee)
+        }
+      }
+
+      def openLong(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market, feeInTradingBaseCoin : Double) = {
+        // Opening a long
+        marginBuys.add(marketKey, boughtAmount, soldBoughtExchangeRate, margin.exchanger, margin.date)
+
+        out.println(
+          "%d. ".format(operationNumber)+
             Format.df.format(margin.date)+
-            ". Open short "+
+            ". Open long "+
             Format.asMarket(soldAmount, soldMarket)+" -> "+
             Format.asMarket(boughtAmount, boughtMarket)+
-            ". Fee = "+Format.asMarket(margin.fee, margin.feeMarket)+
+            ". Fee = "+Format.asMarket(feeAmount, feeMarket)+
             ". "+margin.description
-          )
-          if(Config.verbosity(Verbosity.showRates))
-            out.println("EXCHANGE RATE:  "+Format.asMarket(boughtSoldExchangeRate,boughtMarket)+"/"+soldMarket)
-          if(Config.verbosity(Verbosity.showStocks))
-            printQueue(marketKey, marginSells(marketKey))
-          out.println()
+        )
+        if(Config.verbosity(Verbosity.showRates))
+          out.println("EXCHANGE RATE:  "+Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/"+boughtMarket)
+        if(Config.verbosity(Verbosity.showStocks))
+          printQueue(marketKey, marginBuys(marketKey))
+        out.println()
 
-          val fee = Fee(margin.date, margin.id, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description+" fee" )
+        if(feeInTradingBaseCoin>0) {
+          val fee = Fee(margin.date, margin.id, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description + " fee")
           processFee(fee)
-        }  else {
+        }
+      }
+
+      if(margin.orderType == Operation.OrderType.Sell) {
+        val inLongsAmount = marginBuys(marketKey).totalAmount
+
+        if(inLongsAmount<=0) {
+          // Opening a short
+          openShort(soldAmount, boughtAmount, margin.fee, margin.feeMarket, feeInTradingBaseCoin)
+        } else {
           // Closing a long
+          val closedSoldAmount = soldAmount min inLongsAmount
+          val closedBoughtAmount = closedSoldAmount * boughtAmount / soldAmount
+
           out.println(
             "%d. ".format(operationNumber)+
             Format.df.format(margin.date)+
             ". Close long "+
-            Format.asMarket(soldAmount, soldMarket)+" -> "+
-            Format.asMarket(boughtAmount, boughtMarket)+
+            Format.asMarket(closedSoldAmount, soldMarket)+" -> "+
+            Format.asMarket(closedBoughtAmount, boughtMarket)+
             ". Fee = "+Format.asMarket(margin.fee, margin.feeMarket)+
             ". "+margin.description
           )
@@ -773,47 +811,38 @@ object FIFO {
             printQueue(marketKey, marginBuys(marketKey))
           out.println()
 
-          val gain = boughtAmount - basis
+          val gain = closedBoughtAmount - basis
 
           if(gain>0)
             processGain(Gain(margin.date, margin.id, gain, tradingBaseMarket, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description + " closed long"))
           else
             processLoss(Loss(margin.date, margin.id, gain.abs, tradingBaseMarket, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description + " closed long"))
 
-          // toDo if noBasis > 0 we are also opening a short
-          if(noBasis>1E-7)
-            Logger.warning("No basis > 0: "+noBasis+" "+margin)
+          if(nonZero(noBasis)) {
+            // we are also opening a short
+            val longedSoldAMount = soldAmount - closedSoldAmount // same as noBasis
+            val longedBoughtAmount = boughtAmount - closedBoughtAmount
+            openShort(noBasis, longedBoughtAmount, 0, margin.feeMarket, 0)
+            // Logger.warning("Shorting No basis > 0: " + (noBasis, longedSoldAMount) + " " + margin)
+          }
         }
       } else if(margin.orderType == Operation.OrderType.Buy) {
-        if(marginSells(marketKey).isEmpty) {
+        val inShortsAmount = marginSells(marketKey).totalAmount
+
+        if(inShortsAmount<=0) {
           // Opening a long
-          marginBuys.add(marketKey, boughtAmount, soldBoughtExchangeRate, margin.exchanger, margin.date)
-
-          out.println(
-            "%d. ".format(operationNumber)+
-            Format.df.format(margin.date)+
-            ". Open long "+
-            Format.asMarket(soldAmount, soldMarket)+" -> "+
-            Format.asMarket(boughtAmount, boughtMarket)+
-            ". Fee = "+Format.asMarket(margin.fee, margin.feeMarket)+
-            ". "+margin.description
-          )
-          if(Config.verbosity(Verbosity.showRates))
-            out.println("EXCHANGE RATE:  "+Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/"+boughtMarket)
-          if(Config.verbosity(Verbosity.showStocks))
-            printQueue(marketKey, marginBuys(marketKey))
-          out.println()
-
-          val fee = Fee(margin.date, margin.id, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description+" fee" )
-          processFee(fee)
+          openLong(soldAmount, boughtAmount, margin.fee, margin.feeMarket, feeInTradingBaseCoin)
         } else {
           // Closing a short
+          val closedBoughtAmount = boughtAmount min inShortsAmount
+          val closedSoldAmount = closedBoughtAmount * soldAmount / boughtAmount
+
           out.println(
             "%d. ".format(operationNumber)+
             Format.df.format(margin.date)+
             ". Close short "+
-            Format.asMarket(soldAmount, soldMarket)+" -> "+
-            Format.asMarket(boughtAmount, boughtMarket)+
+            Format.asMarket(closedSoldAmount, soldMarket)+" -> "+
+            Format.asMarket(closedBoughtAmount, boughtMarket)+
             ". Fee = "+Format.asMarket(margin.fee, margin.feeMarket)+
             ". "+margin.description
           )
@@ -826,15 +855,19 @@ object FIFO {
             printQueue(marketKey, marginSells(marketKey))
           out.println()
 
-          val gain = basis - (soldAmount-feeInTradingBaseCoin) - feeInTradingBaseCoin
+          val gain = basis - (closedSoldAmount-feeInTradingBaseCoin) - feeInTradingBaseCoin
           if(gain>0)
             processGain(Gain(margin.date, margin.id, gain, tradingBaseMarket, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description + " closed short"))
           else
             processLoss(Loss(margin.date, margin.id, gain.abs, tradingBaseMarket, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description + " closed short"))
 
-          // toDo if noBasis > 0 we are also opening a long
-          if(noBasis>1E-7)
-            Logger.warning("No basis > 0: "+noBasis+" "+margin)
+          if(nonZero(noBasis)) {
+            // we are also opening a long
+            val longedSoldAmount = soldAmount - closedSoldAmount
+            val longedBoughtAmount = boughtAmount - closedBoughtAmount // same as noBasis
+            openLong(longedSoldAmount, longedBoughtAmount, 0, margin.feeMarket, 0)
+            // Logger.warning("Longing No basis > 0: " + (noBasis, longedBoughtAmount) + " " + margin)
+          }
         }
       }
     }
