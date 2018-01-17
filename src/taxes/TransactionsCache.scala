@@ -43,8 +43,9 @@ object TransactionsCache extends Initializable with Finalizable {
         return Right((TxKey(market, txid, address), TxInfo(amount, fee)))
       }
     }
-    for((key, info) <- cacheReader(fileName).read())
-      map += (key -> info)
+    if(new File(fileName).exists())
+      for((key, info) <- cacheReader(fileName).read())
+        map += (key -> info)
   }
 
   def lookup(market: Market, txid : String, address : String) : TxInfo = {

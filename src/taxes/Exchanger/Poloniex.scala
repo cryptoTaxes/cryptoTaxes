@@ -159,7 +159,7 @@ object Poloniex extends Exchanger {
       val open = Date.fromString(scLn.next() + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
       val close = Date.fromString(scLn.next() + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
 
-      val desc = id + " Borrowing fees"
+      val desc = id + " Borrowing fee"
 
       val fee = Fee(
         date = close
@@ -193,7 +193,7 @@ object Poloniex extends Exchanger {
         val txid = status.drop(tk.length)
 
         if(currency == Market.bitcoin) {
-          val desc = id + " Withdrawal fee " + txid
+          val desc = id + " Withdrawal fee " + currency + " " + txid
 
           val txInfo = TransactionsCache.lookup(currency, txid, address)
 

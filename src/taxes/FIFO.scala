@@ -820,10 +820,10 @@ object FIFO {
 
           if(nonZero(noBasis)) {
             // we are also opening a short
-            val longedSoldAMount = soldAmount - closedSoldAmount // same as noBasis
+            val longedSoldAmount = soldAmount - closedSoldAmount // same as noBasis
             val longedBoughtAmount = boughtAmount - closedBoughtAmount
-            openShort(longedSoldAMount, longedBoughtAmount, 0, margin.feeMarket, 0)
-            // Logger.warning("Shorting No basis > 0: " + (noBasis, longedSoldAMount) + " " + margin)
+            openShort(longedSoldAmount, longedBoughtAmount, 0, margin.feeMarket, 0)
+            // Logger.warning("Shorting No basis > 0: " + (noBasis, longedSoldAmount) + " " + margin)
           }
         }
       } else if(margin.orderType == Operation.OrderType.Buy) {
