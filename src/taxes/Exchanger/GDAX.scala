@@ -6,9 +6,13 @@ import taxes._
 object GDAX extends Exchanger {
   override val id: String = "GDAX"
 
-  override val folder: String = "gdax"
+  override val sources = Seq(
+    new UserFolderSource[Operation]("gdax") {
+      def fileSource(fileName : String) = operationsReader(fileName)
+    }
+  )
 
-  private val operationsReader = new CSVSortedOperationReader {
+  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val hasHeader: Boolean = true
 
     override def lineScanner(line: String): Scanner =
@@ -46,10 +50,7 @@ object GDAX extends Exchanger {
           )
         return Right(exchange)
       } else
-        return Left("%s.readExchanges. Reading this transaction is not currently supported: %s.".format(id, line))
+        return Left("%s. Read file: Reading this transaction is not currently supported: %s.".format(id, line))
     }
   }
-
-  def readFile(fileName : String) : List[Operation] =
-    operationsReader.readFile(fileName)
 }

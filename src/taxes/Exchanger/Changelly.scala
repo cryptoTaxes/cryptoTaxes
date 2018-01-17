@@ -8,8 +8,6 @@ object Changelly extends Exchanger {
 
   override val id: String = "Changelly"
 
-  override val folder: String = "changelly"
-
   private def split(str : String) : (Double, Market) = {
     val token = str.filter(_ != ',')
     val sc = new java.util.Scanner(token).useDelimiter("[ ]")
@@ -19,7 +17,13 @@ object Changelly extends Exchanger {
     return (amount, market)
   }
 
-  private val operationsReader = new CSVSortedOperationReader {
+  override val sources = Seq(
+    new UserFolderSource[Operation]("changelly") {
+      def fileSource(fileName : String) = operationsReader(fileName)
+    }
+  )
+
+  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val hasHeader: Boolean = true
 
     override def lineScanner(line: String): Scanner =
@@ -57,12 +61,9 @@ object Changelly extends Exchanger {
           )
         return Right(exchange)
       } else
-        return Left("%s.readFile: cannot parse this line: %s.".format(id, line))
+        return Left("%s. Read file: cannot parse this line: %s.".format(id, line))
     }
   }
-
-  override def readFile(fileName: String): List[Operation] =
-    operationsReader.readFile(fileName)
 }
 
 

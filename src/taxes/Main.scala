@@ -11,7 +11,7 @@ object Main extends App {
   Logger.trace("cryptoTaxes (https://github.com/cryptoTaxes/cryptoTaxes)\n")
 
   val cmdLine = args.mkString(" ")
-  //val cmdLine = "-user=user1 -verbosity=10 -currency=euro -download-prices=no"
+  // val cmdLine = "-user=user1 -verbosity=10 -currency=euro -download-prices=no"
   Config.config = ParseCommandLine(cmdLine)
 
   if(Config.config.downloadPrices) {

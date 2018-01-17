@@ -1,12 +1,19 @@
 package taxes.Exchanger
 
 import taxes.Util.Parse.Parse
-import taxes.{Date, Exchange, Market}
+import taxes._
 
 object Shapeshift extends Exchanger {
   override val id: String = "Shapeshift"
 
-  override val folder: String = "shapeshift"
+  override val sources = Seq(
+    new UserFolderSource[Operation]("shapeshift") {
+      def fileSource(fileName : String) = new FileSource[Operation](fileName) {
+        override def read(): Seq[Operation] =
+          readFile(fileName)
+      }
+    }
+  )
 
   def readFile(fileName : String) : List[Exchange] = {
     val f = new java.io.File(fileName)

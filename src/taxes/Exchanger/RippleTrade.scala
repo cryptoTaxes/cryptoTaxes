@@ -6,9 +6,13 @@ import taxes._
 object RippleTrade extends Exchanger {
   override val id: String = "XRP Trade"
 
-  override val folder: String = "xrptrade"
+  override val sources = Seq(
+    new UserFolderSource[Operation]("xrptrade") {
+      def fileSource(fileName : String) = operationsReader(fileName)
+    }
+  )
 
-  private val operationsReader = new CSVSortedOperationReader {
+  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val hasHeader: Boolean = false
 
     override def lineScanner(line: String): Scanner =
@@ -61,10 +65,7 @@ object RippleTrade extends Exchanger {
           )
         return Right(exchange)
       } else
-        return Left("%s.readExchanges. Reading this transaction is not currently supported: %s.".format(id, line))
+        return Left("%s. Read file: Reading this transaction is not currently supported: %s.".format(id, line))
     }
   }
-
-  def readFile(fileName : String) : List[Operation] =
-    operationsReader.readFile(fileName)
 }

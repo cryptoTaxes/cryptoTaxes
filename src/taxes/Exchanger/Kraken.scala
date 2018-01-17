@@ -8,8 +8,6 @@ import taxes._
 object Kraken extends Exchanger with Initializable {
   override val id: String = "Kraken"
 
-  override val folder: String = "kraken"
-
   private val configFileName = Paths.configFile("krakenMarkets.txt")
 
   private val conversions : Map[Market, Market] =
@@ -46,7 +44,13 @@ object Kraken extends Exchanger with Initializable {
              )
   }
 
-  private val operationsReader = new CSVSortedOperationReader {
+  override val sources = Seq(
+    new UserFolderSource[Operation]("kraken") {
+      def fileSource(fileName : String) = operationsReader(fileName)
+    }
+  )
+
+  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val hasHeader: Boolean = true
 
     override def lineScanner(line: String): Scanner =
@@ -89,11 +93,8 @@ object Kraken extends Exchanger with Initializable {
           )
         return Right(exchange)
       } else
-        return Left("%s.readExchanges. Reading this transaction is not currently supported: %s.".format(id, line))
+        return Left("%s. Read file: Reading this transaction is not currently supported: %s.".format(id, line))
     }
   }
-
-  def readFile(fileName: String): List[Operation] =
-    operationsReader.readFile(fileName)
 }
 

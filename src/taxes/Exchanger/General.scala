@@ -1,14 +1,18 @@
 package taxes.Exchanger
 
 import taxes.Util.Parse.{CSVSortedOperationReader, Scanner, SeparatedScanner}
-import taxes.{Date, Exchange, Market, Operation}
+import taxes._
 
 object General extends Exchanger {
   override val id: String = "General"
 
-  override val folder: String = "general"
+  override val sources = Seq(
+    new UserFolderSource[Operation]("general") {
+      def fileSource(fileName : String) = operationsReader(fileName)
+    }
+  )
 
-  private val operationsReader = new CSVSortedOperationReader {
+  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val hasHeader: Boolean = true
 
     override def lineScanner(line: String) =
@@ -39,9 +43,6 @@ object General extends Exchanger {
       return Right(exchange)
     }
   }
-
-  def readFile(fileName: String) : List[Operation] =
-    operationsReader.readFile(fileName)
 }
 
 

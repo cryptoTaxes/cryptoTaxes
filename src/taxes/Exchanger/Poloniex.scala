@@ -6,9 +6,16 @@ import taxes._
 object Poloniex extends Exchanger {
   override val id: String = "Poloniex"
 
-  override val folder: String = "poloniex"
+  override val sources = Seq(
+      new UserFolderSource[Operation]("poloniex") {
+        def fileSource(fileName : String) = operationsReader(fileName)
+      }
+    , new UserFolderSource[Operation]("poloniex/borrowing") {
+        def fileSource(fileName : String) = borrowingFeesReader(fileName)
+      }
+    )
 
-  private val operationsReader = new CSVReader[Operation] {
+  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val hasHeader: Boolean = true
 
     override def lineScanner(line: String) =
@@ -103,12 +110,12 @@ object Poloniex extends Exchanger {
             )
         return Right(margin)
       } else
-        return Left("%s.readExchanges. Reading this transaction is not currently supported: %s.".format(id, line))
+        return Left("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
     }
-  }
 
-  def readFile(fileName : String) : List[Operation] =
-    group(operationsReader.readFile(fileName).sortBy(_.id)).sortBy(_.date)
+    override def read(): List[Operation] =
+      group(super.read().sortBy(_.id)).sortBy(_.date)
+  }
 
   def group(operations: List[Operation]) : List[Operation] =
     operations match {
@@ -133,5 +140,35 @@ object Poloniex extends Exchanger {
       case ops =>
         ops
     }
+
+  private def borrowingFeesReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+    override val hasHeader: Boolean = true
+
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[,%]")
+
+    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+      val currency = scLn.next()
+      val rate = scLn.nextDouble()
+      val amount = scLn.nextDouble()
+      val duration = scLn.nextDouble()
+      val totalFee = scLn.nextDouble()
+      val open = Date.fromString(scLn.next() + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
+      val close = Date.fromString(scLn.next() + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
+      scLn.close()
+
+      val desc = id + " Borrowing fees"
+
+      val fee = Fee(
+        date = close
+        , id = desc
+        , amount = totalFee
+        , market = Market.normalize(currency)
+        , exchanger = Poloniex
+        , description = desc
+      )
+      return Right(fee)
+    }
+  }
 }
 

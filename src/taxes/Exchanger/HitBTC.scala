@@ -6,9 +6,13 @@ import taxes._
 object HitBTC extends Exchanger {
   override val id: String = "HitBTC"
 
-  override val folder: String = "hitbtc"
+  override val sources = Seq(
+    new UserFolderSource[Operation]("hitbtc") {
+      def fileSource(fileName : String) = operationsReader(fileName)
+    }
+  )
 
-  private val operationsReader = new CSVSortedOperationReader {
+  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val hasHeader: Boolean = true
 
     override def lineScanner(line: String): Scanner =
@@ -46,10 +50,7 @@ object HitBTC extends Exchanger {
 
         return Right(exchange)
       } else
-        return Left("%s.readExchanges. Reading this transaction is not currently supported: %s.".format(id, line))
+        return Left("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
     }
   }
-
-  def readFile(fileName : String) : List[Operation] =
-    operationsReader.readFile(fileName)
 }

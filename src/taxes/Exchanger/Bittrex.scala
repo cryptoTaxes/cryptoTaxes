@@ -6,9 +6,13 @@ import taxes._
 object Bittrex extends Exchanger {
   override val id: String = "Bittrex"
 
-  override val folder: String = "bittrex"
+  override val sources = Seq(
+    new UserFolderSource[Operation]("bittrex") {
+      def fileSource(fileName : String) = operationsReader(fileName)
+    }
+  )
 
-  private val operationsReader = new CSVSortedOperationReader {
+  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val hasHeader: Boolean = true
 
     override def lineScanner(line: String) =
@@ -57,7 +61,4 @@ object Bittrex extends Exchanger {
       return Right(exchange)
     }
   }
-
-  override def readFile(fileName: String): List[Operation] =
-    operationsReader.readFile(fileName)
 }
