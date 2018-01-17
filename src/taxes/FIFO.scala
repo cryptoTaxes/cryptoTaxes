@@ -822,7 +822,7 @@ object FIFO {
             // we are also opening a short
             val longedSoldAMount = soldAmount - closedSoldAmount // same as noBasis
             val longedBoughtAmount = boughtAmount - closedBoughtAmount
-            openShort(noBasis, longedBoughtAmount, 0, margin.feeMarket, 0)
+            openShort(longedSoldAMount, longedBoughtAmount, 0, margin.feeMarket, 0)
             // Logger.warning("Shorting No basis > 0: " + (noBasis, longedSoldAMount) + " " + margin)
           }
         }
