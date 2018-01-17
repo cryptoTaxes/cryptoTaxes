@@ -10,8 +10,8 @@ object Main extends App {
   java.util.Locale.setDefault(java.util.Locale.ENGLISH)
   Logger.trace("cryptoTaxes (https://github.com/cryptoTaxes/cryptoTaxes)\n")
 
-  val cmdLine = args.mkString(" ")
-  // val cmdLine = "-user=user1 -verbosity=10 -currency=euro -download-prices=no"
+  //val cmdLine = args.mkString(" ")
+  val cmdLine = "-user=user1 -verbosity=10 -currency=euro -download-prices=no"
   Config.config = ParseCommandLine(cmdLine)
 
   if(Config.config.downloadPrices) {
@@ -25,7 +25,7 @@ object Main extends App {
 
   // Modules that should be initalized
   private val initializables : List[Initializable] =
-    List(Paths, Market, CoinMarketCapPrice, EuroUSDParity, Logger) ++ exchangers
+    List(Paths, Market, CoinMarketCapPrice, EuroUSDParity, Logger, TransactionsCache) ++ exchangers
 
   // Do initialization of modules firstly
   for(initializable <- initializables)
@@ -34,7 +34,7 @@ object Main extends App {
   private val nets = FIFO.process()
 
   // Modules that should be finalize
-  private val finalizables = List(Logger)
+  private val finalizables = List(Logger, TransactionsCache)
 
   // Do finalization of modules
   for(finalizable <- finalizables)

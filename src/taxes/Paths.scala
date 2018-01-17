@@ -29,9 +29,13 @@ object Paths extends Initializable {
     return matchingFiles
   }
 
+  lazy val cacheFolder = usr+"/"+Config.config.user+"/cache"
+
   override def init(): Unit = {
-    val outputFolder = new java.io.File(userOutputFolder)
-    if(!outputFolder.exists())
-      outputFolder.mkdir()
+    for(folderName <- List(userInputFolder, cacheFolder)) {
+      val folder = new java.io.File(folderName)
+      if (!folder.exists())
+        folder.mkdir()
+    }
   }
 }

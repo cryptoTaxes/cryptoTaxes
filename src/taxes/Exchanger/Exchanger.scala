@@ -1,5 +1,6 @@
 package taxes.Exchanger
 
+import taxes.Util.Logger
 import taxes._
 
 trait Exchanger extends Initializable {
@@ -28,11 +29,13 @@ object Exchangers {
       , Yobit
       )
 
-  def readAllOperations(user: String): List[Operation] = {
+  def readAllOperations(): List[Operation] = {
     var operations = List[Operation]()
-    for (exchanger <- allExchangers)
+    for (exchanger <- allExchangers) {
+      Logger.trace("Reading data for %s.".format(exchanger))
       for (src <- exchanger.sources)
         operations ++= src.read()
+    }
     return operations
   }
 }

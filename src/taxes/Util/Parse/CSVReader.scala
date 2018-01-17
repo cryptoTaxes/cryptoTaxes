@@ -3,7 +3,7 @@ package taxes.Util.Parse
 import taxes.Util.Logger
 import taxes.{FileSource, Operation}
 
-abstract class CSVReader[+A](fileName : String) extends FileSource[A](fileName) {
+abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
   val hasHeader : Boolean
 
   def lineScanner(line : String ) : Scanner
@@ -23,15 +23,17 @@ abstract class CSVReader[+A](fileName : String) extends FileSource[A](fileName) 
       val ln = Parse.trimSpaces(sc.nextLine())
       if(ln.nonEmpty) {
         val scLn = lineScanner(ln)
-        val opt = readLine(ln, scLn)
-        scLn.close()
-
-        opt match {
-          case Right(x) =>
-            xs ::= x
-          case Left(err) =>
-            Logger.warning(err)
-        }
+        try {
+          readLine(ln, scLn) match {
+            case Right(x) =>
+              xs ::= x
+            case Left(err) =>
+              Logger.warning(err)
+          }
+        } catch {
+          case e => Logger.fatal("Something went wrong reading csv file %s. %s".format(fileName, e))
+        } finally
+          scLn.close()
       }
     }
     sc.close()

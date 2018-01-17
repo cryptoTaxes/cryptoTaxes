@@ -13,6 +13,9 @@ object Poloniex extends Exchanger {
     , new UserFolderSource[Operation]("poloniex/borrowing") {
         def fileSource(fileName : String) = borrowingFeesReader(fileName)
       }
+    , new UserFolderSource[Operation]("poloniex/withdrawals") {
+        def fileSource(fileName : String) = withdrawalReader(fileName)
+      }
     )
 
   private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
@@ -155,7 +158,6 @@ object Poloniex extends Exchanger {
       val totalFee = scLn.nextDouble()
       val open = Date.fromString(scLn.next() + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
       val close = Date.fromString(scLn.next() + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
-      scLn.close()
 
       val desc = id + " Borrowing fees"
 
@@ -170,5 +172,49 @@ object Poloniex extends Exchanger {
       return Right(fee)
     }
   }
+
+  private def withdrawalReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+    override val hasHeader: Boolean = true
+
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[,%]")
+
+    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+      val date = Date.fromString(scLn.next() + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
+      val currency = Market.normalize(scLn.next())
+      val amount = scLn.nextDouble()
+      val address = scLn.next()
+      val status = scLn.next()
+
+      val tk = "COMPLETE: "
+      val isFinalized = status.startsWith(tk)
+
+      if(isFinalized) {
+        val txid = status.drop(tk.length)
+
+        if(currency == Market.bitcoin) {
+          val desc = id + " Withdrawal fee " + txid
+
+          val txInfo = TransactionsCache.lookup(currency, txid, address)
+
+          val totalFee = amount - txInfo.amount
+
+          val fee = Fee(
+            date = date
+            , id = desc
+            , amount = totalFee
+            , market = Market.normalize(currency)
+            , exchanger = Poloniex
+            , description = desc
+          )
+          return Right(fee)
+        } else
+          Left("%s. Read withdrawal. This withdrawal was ignored: %s.".format(id, line))
+
+      } else
+        Left("%s. Read withdrawal. This withdrawal was not completed: %s.".format(id, line))
+    }
+  }
+
 }
 

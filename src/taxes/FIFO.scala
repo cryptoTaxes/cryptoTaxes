@@ -69,7 +69,7 @@ object FIFO {
   def process(): Unit = {
     val config = Config.config
 
-    val operations = Exchangers.readAllOperations(config.user).sortBy(_.date)
+    val operations = Exchangers.readAllOperations().sortBy(_.date)
 
     if(operations.isEmpty)
       Logger.fatal("No operation was found in any exchange for user: "+config.user+".")
