@@ -1,11 +1,9 @@
 package taxes
 
 import java.io.{File, PrintStream}
-
 import taxes.Market.Market
 import taxes.Util.Logger
 import taxes.Util.Parse.{CSVReader, Scanner, SeparatedScanner}
-
 import scala.io.Source
 
 object TransactionsCache extends Initializable with Finalizable {
@@ -34,13 +32,13 @@ object TransactionsCache extends Initializable with Finalizable {
       override def lineScanner(line: String) =
         SeparatedScanner(line, "[,]")
 
-      override def readLine(line: String, scLn: Scanner) : Either[String,(TxKey, TxInfo)] = {
+      override def readLine(line: String, scLn: Scanner) : CSVReader.Result[(TxKey, TxInfo)] = {
         val market = scLn.next()
         val txid = scLn.next()
         val address = scLn.next()
         val amount = scLn.nextDouble()
         val fee = scLn.nextDouble()
-        return Right((TxKey(market, txid, address), TxInfo(amount, fee)))
+        return CSVReader.Ok((TxKey(market, txid, address), TxInfo(amount, fee)))
       }
     }
     if(new File(fileName).exists())

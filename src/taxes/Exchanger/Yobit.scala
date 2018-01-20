@@ -1,6 +1,6 @@
 package taxes.Exchanger
 
-import taxes.Util.Parse.{CSVSortedOperationReader, Parse, Scanner, SeparatedScanner}
+import taxes.Util.Parse._
 import taxes._
 
 object Yobit extends Exchanger {
@@ -18,7 +18,7 @@ object Yobit extends Exchanger {
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[ \t]")
 
-    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date1 = scLn.next()
       val date2 = scLn.next()
 
@@ -31,7 +31,7 @@ object Yobit extends Exchanger {
       val total = scLn.nextDouble()
       scLn.close()
 
-      val desc = id
+      val desc = Yobit.toString
 
       val (market1,market2) = Parse.split(pair,"/")
       val isSell = orderType == "SELL"
@@ -58,7 +58,7 @@ object Yobit extends Exchanger {
             , exchanger = Yobit
             , description = desc
           )
-      return Right(exchange)
+      return CSVReader.Ok(exchange)
     }
   }
 }

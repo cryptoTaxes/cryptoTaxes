@@ -1,6 +1,6 @@
 package taxes.Exchanger
 
-import taxes.Util.Parse.{CSVSortedOperationReader, Scanner, SeparatedScanner}
+import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 import taxes._
 
 object GDAX extends Exchanger {
@@ -18,7 +18,7 @@ object GDAX extends Exchanger {
     override def lineScanner(line: String): Scanner =
       SeparatedScanner(line, "[,]")
 
-    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val tradeID = scLn.next()
       val product = scLn.next()
       val side = scLn.next()
@@ -32,7 +32,7 @@ object GDAX extends Exchanger {
       scLn.close()
 
       if (side == "SELL") {
-        val desc = id + " " + tradeID
+        val desc = GDAX + " " + tradeID
         val date = Date.fromString(createdAt, "yyyy-MM-dd'T'HH:mm:ss.SSSX")
 
         val (market1, aux) = product.span(_ != '-')
@@ -48,9 +48,9 @@ object GDAX extends Exchanger {
             , exchanger = GDAX
             , description = desc
           )
-        return Right(exchange)
+        return CSVReader.Ok(exchange)
       } else
-        return Left("%s. Read file: Reading this transaction is not currently supported: %s.".format(id, line))
+        return CSVReader.Warning("%s. Read file: Reading this transaction is not currently supported: %s.".format(id, line))
     }
   }
 }

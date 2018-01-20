@@ -24,7 +24,7 @@ object Poloniex extends Exchanger {
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,%]")
 
-    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = Date.fromString(scLn.next()+" +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
 
       val (market1, aux) = scLn.next().span(_ != '/')
@@ -42,7 +42,7 @@ object Poloniex extends Exchanger {
       val quoteTotalLessFee = scLn.nextDouble()
       scLn.close()
 
-      val desc = id + " " + orderNumber
+      val desc = Poloniex + " " + orderNumber
 
       if (category == "Exchange") {
         val exchange =
@@ -68,7 +68,7 @@ object Poloniex extends Exchanger {
               , exchanger = Poloniex
               , description = desc
             )
-        return Right(exchange)
+        return CSVReader.Ok(exchange)
       } else if(category == "Settlement" && orderType == "Buy") {
         // Just like a Exchange buy
         val settlement = SettlementBuy(
@@ -82,7 +82,7 @@ object Poloniex extends Exchanger {
           , exchanger = Poloniex
           , description = desc + " Settlement"
         )
-        return Right(settlement)
+        return CSVReader.Ok(settlement)
       } else if(category == "Margin trade") {
         val margin =
           if (orderType == "Sell")
@@ -111,9 +111,9 @@ object Poloniex extends Exchanger {
               , exchanger = Poloniex
               , description = desc
             )
-        return Right(margin)
+        return CSVReader.Ok(margin)
       } else
-        return Left("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
+        return CSVReader.Warning("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
     }
 
     override def read(): List[Operation] =
@@ -150,7 +150,7 @@ object Poloniex extends Exchanger {
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,%]")
 
-    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val currency = scLn.next()
       val rate = scLn.nextDouble()
       val amount = scLn.nextDouble()
@@ -169,7 +169,7 @@ object Poloniex extends Exchanger {
         , exchanger = Poloniex
         , description = desc
       )
-      return Right(fee)
+      return CSVReader.Ok(fee)
     }
   }
 
@@ -179,7 +179,7 @@ object Poloniex extends Exchanger {
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,%]")
 
-    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = Date.fromString(scLn.next() + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
       val currency = Market.normalize(scLn.next())
       val amount = scLn.nextDouble()
@@ -207,12 +207,12 @@ object Poloniex extends Exchanger {
             , exchanger = Poloniex
             , description = desc
           )
-          return Right(fee)
+          return CSVReader.Ok(fee)
         } else
-          Left("%s. Read withdrawal. This withdrawal was ignored: %s.".format(id, line))
+          CSVReader.Warning("%s. Read withdrawal. This withdrawal was ignored: %s.".format(id, line))
 
       } else
-        Left("%s. Read withdrawal. This withdrawal was not completed: %s.".format(id, line))
+        CSVReader.Warning("%s. Read withdrawal. This withdrawal was not completed: %s.".format(id, line))
     }
   }
 }

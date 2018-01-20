@@ -18,8 +18,8 @@ object RippleTrade extends Exchanger {
     override def lineScanner(line: String): Scanner =
       SeparatedScanner(line, "[,]")
 
-    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
-      val desc = id
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val desc = RippleTrade.toString
 
       val date = Date.fromString(scLn.next(), "yyyy-MM-dd hh:mm:ss")
       val what = scLn.next()
@@ -43,7 +43,7 @@ object RippleTrade extends Exchanger {
             , exchanger = RippleTrade
             , description = desc
           )
-        return Right(exchange)
+        return CSVReader.Ok(exchange)
       } else if (what == "Buy") {
         val amount1 = scLn.nextDouble()
         val market1 = scLn.next()
@@ -63,9 +63,9 @@ object RippleTrade extends Exchanger {
             , exchanger = RippleTrade
             , description = desc
           )
-        return Right(exchange)
+        return CSVReader.Ok(exchange)
       } else
-        return Left("%s. Read file: Reading this transaction is not currently supported: %s.".format(id, line))
+        return CSVReader.Warning("%s. Read file: Reading this transaction is not currently supported: %s.".format(id, line))
     }
   }
 }

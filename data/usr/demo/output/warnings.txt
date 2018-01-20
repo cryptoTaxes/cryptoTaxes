@@ -1,0 +1,2 @@
+Warning: Kraken. Read file. Reading this transaction is not currently supported: XXXXXX-XXXXX-XXXX10,YYYYYY-YYYYY-YYYY10,2017-12-01 10:25:22,deposit,currency,ZEUR,1000.0000,0.0000,1000.0000.
+Warning: Kraken. Read file. Reading this transaction is not currently supported: XXXXXX-XXXXX-XXXX40,YYYYYY-YYYYY-YYYY30,2017-12-04 15:44:11,deposit,currency,ZEUR,1000.0000,0.0000,1000.0000.

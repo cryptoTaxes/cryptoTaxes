@@ -1,6 +1,6 @@
 package taxes.Exchanger
 
-import taxes.Util.Parse.{CSVSortedOperationReader, Scanner, SeparatedScanner}
+import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 import taxes._
 
 object LocalBTC extends Exchanger {
@@ -18,7 +18,7 @@ object LocalBTC extends Exchanger {
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,]")
 
-    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val orderId = scLn.next()
       val date = Date.fromOffsetString(scLn.next().replace(' ','T'))
       val buyer = scLn.next()
@@ -39,7 +39,7 @@ object LocalBTC extends Exchanger {
       val reference = scLn.next()
       scLn.close()
 
-      val desc = id + " " + orderId + "/" + reference
+      val desc = LocalBTC + " " + orderId + "/" + reference
       if(tradeType=="ONLINE_SELL") {
         val exchange = Exchange(
           date = date
@@ -51,9 +51,9 @@ object LocalBTC extends Exchanger {
           , description = desc
         )
 
-        return Right(exchange)
+        return CSVReader.Ok(exchange)
       } else
-        return Left("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
+        return CSVReader.Warning("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
       /*
           Exchange(
             date = date

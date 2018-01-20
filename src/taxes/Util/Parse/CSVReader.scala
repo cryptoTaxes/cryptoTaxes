@@ -3,12 +3,22 @@ package taxes.Util.Parse
 import taxes.Util.Logger
 import taxes.{FileSource, Operation}
 
+object CSVReader {
+  class Result[+A]
+
+  case class Ok[+A](result : A) extends Result[A]
+  case class Warning(msg : String) extends Result[Nothing]
+  case object Ignore extends Result[Nothing]
+}
+
 abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
+  import CSVReader._
+
   val hasHeader : Boolean
 
   def lineScanner(line : String ) : Scanner
 
-  def readLine(line : String, lineScanner : Scanner) : Either[String,A]
+  def readLine(line : String, lineScanner : Scanner) : Result[A]
 
   def read() : List[A] = {
     val f = new java.io.File(fileName)
@@ -25,10 +35,12 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
         val scLn = lineScanner(ln)
         try {
           readLine(ln, scLn) match {
-            case Right(x) =>
+            case Ok(x) =>
               xs ::= x
-            case Left(err) =>
+            case Warning(err) =>
               Logger.warning(err)
+            case Ignore =>
+              ;
           }
         } catch {
           case e => Logger.fatal("Something went wrong reading csv file %s. %s".format(fileName, e))

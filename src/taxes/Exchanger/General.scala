@@ -1,6 +1,7 @@
 package taxes.Exchanger
 
-import taxes.Util.Parse.{CSVSortedOperationReader, Scanner, SeparatedScanner}
+import sun.java2d.loops.FillRect
+import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 import taxes._
 
 object General extends Exchanger {
@@ -18,7 +19,7 @@ object General extends Exchanger {
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,]+")
 
-    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = Date.fromString(scLn.next(), "yyyy-MM-dd")
       val amount1 = scLn.nextDouble()
       val market1 = scLn.next()
@@ -38,9 +39,9 @@ object General extends Exchanger {
           , fee = fee
           , feeMarket = Market.normalize(feeMarket)
           , exchanger = General
-          , description = id+ " "+desc
+          , description = General + " " + desc
         )
-      return Right(exchange)
+      return CSVReader.Ok(exchange)
     }
   }
 }

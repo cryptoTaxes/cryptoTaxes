@@ -1,6 +1,6 @@
 package taxes.Exchanger
 
-import taxes.Util.Parse.{CSVSortedOperationReader, Scanner, SeparatedScanner}
+import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 import taxes._
 
 object Bittrex extends Exchanger {
@@ -18,7 +18,7 @@ object Bittrex extends Exchanger {
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,]")
 
-    override def readLine(line: String, scLn: Scanner) : Either[String,Operation] = {
+    override def readLine(line: String, scLn: Scanner) : CSVReader.Result[Operation] = {
       val orderId = scLn.next()
       val (market1, aux) = scLn.next().span(_ != '-')
       val market2 = aux.tail
@@ -32,18 +32,17 @@ object Bittrex extends Exchanger {
 
       val dateOpen = Date.fromString(scLn.next()+" +0000", "MM/dd/yyyy hh:mm:ss a Z") // Bittrex time is 1 hour behind here
       val dateClose = Date.fromString(scLn.next()+" +0000", "MM/dd/yyyy hh:mm:ss a Z")
-      scLn.close()
 
       val desc = id + " " + orderId
 
-      // market1 is usually BTC
+      // fees are denominated in market1. market1 is normally BTC, USDT or ETH
       val exchange =
-        if(isSell)
+        if (isSell)
           Exchange(
             date = dateClose
             , id = orderId
             , fromAmount = quantity, fromMarket = Market.normalize(market2)
-            , toAmount = price-comissionPaid, toMarket = Market.normalize(market1)
+            , toAmount = price - comissionPaid, toMarket = Market.normalize(market1)
             , fee = comissionPaid, feeMarket = Market.normalize(market1)
             , exchanger = Bittrex
             , description = desc
@@ -58,7 +57,7 @@ object Bittrex extends Exchanger {
             , exchanger = Bittrex
             , description = desc
           )
-      return Right(exchange)
+      return CSVReader.Ok(exchange)
     }
   }
 }

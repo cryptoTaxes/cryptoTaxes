@@ -1,6 +1,6 @@
 package taxes.Exchanger
 
-import taxes.Util.Parse.{CSVSortedOperationReader, Scanner, SeparatedScanner}
+import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 import taxes._
 
 object CCEX extends Exchanger {
@@ -19,7 +19,7 @@ object CCEX extends Exchanger {
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[ \t]+")
 
-    override def readLine(line: String, scLn: Scanner) : Either[String,Operation] = {
+    override def readLine(line: String, scLn: Scanner) : CSVReader.Result[Operation] = {
       val token1 = scLn.next()
       val token2 = scLn.next()
       val orderType = scLn.next()
@@ -51,9 +51,9 @@ object CCEX extends Exchanger {
             , description = id
           )
 
-        return Right(exchange)
+        return CSVReader.Ok(exchange)
       } else
-        return Left("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
+        return CSVReader.Warning("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
     }
   }
 }

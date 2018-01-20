@@ -14,13 +14,13 @@ case class QuotedScanner(str : String, delimiter : Char, sep : Char) extends Sca
   def next() : String = {
     var token = ""
 
-    while(string.nonEmpty && string.head  == sep)
+    if(string.nonEmpty && string.head == sep)
       string = string.tail
 
     val isDelimited = string.nonEmpty && string.head == delimiter
 
     if(isDelimited) {
-      while (string.nonEmpty && string.head == delimiter)
+      if (string.nonEmpty && string.head == delimiter)
         string = string.tail
 
       while (string.nonEmpty && string.head != delimiter) {
@@ -28,7 +28,7 @@ case class QuotedScanner(str : String, delimiter : Char, sep : Char) extends Sca
         string = string.tail
       }
 
-      while (string.nonEmpty && string.head == delimiter)
+      if (string.nonEmpty && string.head == delimiter)
         string = string.tail
     } else {
       while (string.nonEmpty && string.head != sep) {

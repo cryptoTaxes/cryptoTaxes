@@ -36,6 +36,31 @@ case class StockQueue(market : Market, baseMarket : Market) extends DEQueue[Stoc
 
   def totalAmount : Double =
     this.iterator.map(_.amount).sum
+
+  override def toString: String = {
+    val amount = iterator.map(_.amount).sum
+    val totalCost = iterator.map(p => p.amount * p.costBasis).sum
+
+    val sb = StringBuilder.newBuilder
+    sb.append(
+        market.padTo(5, ' ')+
+        Format.leftPad("%.6f".format(amount), 20, ' ')+
+        Format.leftPad(Format.asMarket(totalCost, baseMarket), 20, ' ')+
+        "  "
+    )
+
+    var xs = List[String]()
+    for(s <- this)
+      sb.append(
+        "(%.6f, ".format(s.amount)+
+          Format.asMarket(s.costBasis, baseMarket)+
+          ", %s, ".format(s.exchanger)+
+          new SimpleDateFormat("yyyy-MM-dd").format(s.date)+
+          ")"
+      )
+    sb.append(xs.mkString(", "))
+    return sb.toString
+  }
 }
 
 
@@ -48,8 +73,8 @@ case class StockQueuePool(baseMarket : Market) {
   def iterator: Iterator[StockQueue] =
     queues.iterator.map(_._2)
 
-  def foreach(f: ((Market, StockQueue)) ⇒ Unit): Unit = {
-    queues.foreach(f)
+  def foreach(f: (StockQueue ⇒ Unit)): Unit = {
+    queues.map(_._2).foreach(f)
   }
 
   def add(boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : Date): Unit = {

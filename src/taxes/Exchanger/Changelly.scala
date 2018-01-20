@@ -1,7 +1,7 @@
 package taxes.Exchanger
 
 import taxes.Market.Market
-import taxes.Util.Parse.{CSVSortedOperationReader, QuotedScanner, Scanner}
+import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, QuotedScanner, Scanner}
 import taxes._
 
 object Changelly extends Exchanger {
@@ -29,7 +29,7 @@ object Changelly extends Exchanger {
     override def lineScanner(line: String): Scanner =
       QuotedScanner(line, '\"', ',')
 
-    override def readLine(line: String, scLn: Scanner): Either[String, Operation] = {
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val status = scLn.next()
       if(status=="finished") {
         val date = Date.fromString(scLn.next()+" +0000", "dd MMM yyyy, HH:mm:ss Z")
@@ -47,7 +47,7 @@ object Changelly extends Exchanger {
         val realFee = amount * exchangeRate - amountReceived
         val feePercent = realFee * 100 / (amount * exchangeRate)
 
-        val desc = id + " " + receiverWallet
+        val desc = Changelly + " " + receiverWallet
 
         val exchange =
           Exchange(
@@ -59,9 +59,9 @@ object Changelly extends Exchanger {
             , exchanger = Changelly
             , description = desc
           )
-        return Right(exchange)
+        return CSVReader.Ok(exchange)
       } else
-        return Left("%s. Read file: cannot parse this line: %s.".format(id, line))
+        return CSVReader.Warning("%s. Read file: cannot parse this line: %s.".format(id, line))
     }
   }
 }

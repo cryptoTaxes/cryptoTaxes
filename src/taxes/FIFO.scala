@@ -25,6 +25,14 @@ object Format {
 
   def leftPad(str : String, len : Int, c : Char) : String =
     "".padTo(len-str.length, c)+str
+
+  private val tabs = Array(17,75)
+
+  class ExtendedString(value: String) {
+    def tab(n:Int) = value.padTo(tabs(n), ' ')
+  }
+
+  implicit def extendString(str: String) = new ExtendedString(str)
 }
 
 
@@ -65,6 +73,8 @@ case class ValueTracker(baseMarket : Market)  {
 
 
 object FIFO {
+  import Format.extendString
+
   def process(): Unit = {
     val config = Config.config
 
@@ -130,29 +140,6 @@ object FIFO {
     }
 
 
-    def printQueue(label : String, queue : StockQueue): Unit = {
-      val amount = queue.iterator.map(_.amount).sum
-      val totalCost = queue.iterator.map(p => p.amount * p.costBasis).sum
-
-      out.print(
-        Format.leftPad(label, 5, ' ')+
-        Format.leftPad("%.6f".format(amount), 20, ' ')+
-        Format.leftPad(Format.asMarket(totalCost, queue.baseMarket), 20, ' ')+
-        "  "
-      )
-
-      var xs = List[String]()
-      for(s <- queue)
-        xs ::=
-          "(%.6f, ".format(s.amount)+
-          Format.asMarket(s.costBasis, queue.baseMarket)+
-          ", %s, ".format(s.exchanger)+
-          new SimpleDateFormat("yyyy-MM-dd").format(s.date)+
-          ")"
-       out.println(xs.mkString(", "))
-    }
-
-
     def reportPortfolio(): Unit = {
       out.println("End of year portfolio")
       out.println(Format.header)
@@ -174,7 +161,7 @@ object FIFO {
             " at "+Format.leftPad(Format.asMarket(cost/amount,baseMarket)+"/%s  ".format(queue.market), 24, ' ')+
             "    "
           )
-          printQueue(queue.market, queue)
+          out.println(queue)
         }
       }
       out.println(Format.header)
@@ -269,11 +256,13 @@ object FIFO {
       if(Config.verbosity(Verbosity.showMoreDetails)) {
         out.println("Opened margin longs:")
         for (q <- marginBuys)
-          out.println(q._1, q._2)
+          if(q.totalAmount>0)
+            out.println(q)
 
         out.println("Opened margin shorts:")
         for (q <- marginSells)
-          out.println(q._1, q._2)
+          if(q.totalAmount>0)
+            out.println(q)
         out.println()
       }
     }
@@ -331,7 +320,11 @@ object FIFO {
       }
 
       // Get cost basis for sold coins from current stocks
-      val (soldBasisInBaseCoin, noBasis) = stocks.remove(soldMarket, soldAmount)
+      val (soldBasisInBaseCoin, noBasis) =
+        if (soldMarket != baseMarket)
+          stocks.remove(soldMarket, soldAmount)
+        else
+          (soldAmount, 0.0)
 
       // Total value of sold coins, expressed in base coin
       val sellValueInBaseCoin = totalInBaseCoin
@@ -355,7 +348,7 @@ object FIFO {
 
       // Update realized cost bases and sell values
       if(soldMarket == baseMarket) {
-        Realized.costBases.record(soldMarket, feeInBaseCoin)
+        Realized.costBases.record(boughtMarket, feeInBaseCoin)
 
       } else {
         Realized.costBases.record(soldMarket, soldBasisInBaseCoin)
@@ -385,52 +378,51 @@ object FIFO {
         )
         if(Config.verbosity(Verbosity.showRates))
           out.println(
-            "EXCHANGE RATES: "+Format.asMarket(boughtSoldExchangeRate,boughtMarket)+
+            "EXCHANGE RATES:".tab(0)+Format.asMarket(boughtSoldExchangeRate,boughtMarket)+
             "/%s   ".format (soldMarket)+
             Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/%s".format(boughtMarket)
           )
         if(Config.verbosity(Verbosity.showDetails))
-          out.print(
-            "SOLD:           "+Format.asMarket(soldAmount, soldMarket)+
+          out.print((
+            "SOLD:".tab(0)+Format.asMarket(soldAmount, soldMarket)+
             " at "+Format.asMarket(soldPriceInBaseCoin, baseMarket)+
             "/%s".format(soldMarket)+
-            " = "+Format.asMarket(sellValueInBaseCoin, baseMarket)
+            " = "+Format.asMarket(sellValueInBaseCoin, baseMarket)).tab(1)
           )
-        if(Config.verbosity(Verbosity.showStocks)) {
-          out.print("     ")
-          printQueue(soldMarket, qSold)
-        } else if(Config.verbosity(Verbosity.showDetails))
+        if(Config.verbosity(Verbosity.showStocks))
+          out.println(qSold)
+        else if(Config.verbosity(Verbosity.showDetails))
           out.println()
         if(Config.verbosity(Verbosity.showMoreDetails))
           out.println(
-            "COST BASIS:     "+Format.asMarket(soldBasisInBaseCoin,baseMarket)
+            "COST BASIS:".tab(0)+Format.asMarket(soldBasisInBaseCoin,baseMarket)
           )
         if(Config.verbosity(Verbosity.showDetails))
           if(!boughtBasisPriceInBaseCoin.isNaN()) {
-            out.print(
-              "BOUGHT:         " + Format.asMarket(boughtAmount, boughtMarket) +
-              " at " + Format.asMarket(boughtBasisPriceInBaseCoin, baseMarket) +
-              "/%s".format(boughtMarket)
+            out.print((
+              "BOUGHT:".tab(0) + Format.asMarket(boughtAmount, boughtMarket)+
+              " at " + Format.asMarket(boughtBasisPriceInBaseCoin, baseMarket)+
+              "/%s".format(boughtMarket)).tab(1)
             )
-            if(Config.verbosity(Verbosity.showStocks)) {
-              out.print("     ")
-              printQueue(boughtMarket, qBought)
-            } else
+            if(Config.verbosity(Verbosity.showStocks))
+              out.println(qBought)
+            else
               out.println()
           }
         if(Config.verbosity(Verbosity.showMoreDetails))
           out.println(
-            "FEE:            "+Format.asMarket(exchange.fee, exchange.feeMarket)+
+            "FEE:".tab(0)+Format.asMarket(exchange.fee, exchange.feeMarket)+
             " = "+Format.asMarket(feeInBaseCoin,baseMarket)
           )
-        out.print(if(gainInBaseCoin>0) "GAIN:           " else "LOSS:           ")
+        out.print((if(gainInBaseCoin>0) "GAIN:" else "LOSS:").tab(0))
         if(Config.verbosity(Verbosity.showDetails))
-          out.print(
-            Format.asMarket(sellValueInBaseCoin,baseMarket)+
-              " - " + Format.asMarket(soldBasisInBaseCoin,baseMarket)+
-              " - " + Format.asMarket(feeInBaseCoin,baseMarket)+
-              " = "
-          )
+          if (soldMarket != baseMarket) // If base coin is Euros, buying with euros makes no profit
+            out.print(
+              Format.asMarket(sellValueInBaseCoin,baseMarket)+
+                " - " + Format.asMarket(soldBasisInBaseCoin,baseMarket)+
+                " - " + Format.asMarket(feeInBaseCoin,baseMarket)+
+                " = "
+            )
         out.println(Format.asMarket(gainInBaseCoin,baseMarket))
         out.println()
       }
@@ -458,24 +450,22 @@ object FIFO {
       )
       if(Config.verbosity(Verbosity.showMoreDetails)) {
         out.print(
-          "PAID FEE:       " + Format.asMarket(fee.amount, fee.market)
+          ("PAID FEE:".tab(0) + Format.asMarket(fee.amount, fee.market)).tab(1)
         )
-        if(Config.verbosity(Verbosity.showStocks)) {
-          out.print("     ")
-          printQueue(fee.market, stocks(fee.market))
-        } else
+        if(Config.verbosity(Verbosity.showStocks))
+          out.println(stocks(fee.market))
+        else
           out.println()
         out.println(
-          "FEE COST BASIS: " + Format.asMarket(feeCostInBaseCoin, baseMarket)
+          "FEE COST BASIS:".tab(0) + Format.asMarket(feeCostInBaseCoin, baseMarket)
         )
       }
       out.print(
-        "FEE:           "+Format.asMarket(-feeCostInBaseCoin, baseMarket)
+        ("FEE:".tab(0)+Format.asMarket(-feeCostInBaseCoin, baseMarket)).tab(1)
       )
-      if(Config.verbosity(Verbosity.showStocks)) {
-        out.print("     ")
-        printQueue(fee.market, stocks(fee.market))
-      } else
+      if(Config.verbosity(Verbosity.showStocks))
+        out.println(stocks(fee.market))
+      else
         out.println()
       out.println()
     }
@@ -505,43 +495,40 @@ object FIFO {
           ". "+loss.description
       )
       if(Config.verbosity(Verbosity.showMoreDetails)) {
-        out.print(
-          "PAID:           " + Format.asMarket(loss.amount, loss.market)
+        out.print((
+          "PAID:".tab(0) + Format.asMarket(loss.amount, loss.market)).tab(1)
         )
-        if(Config.verbosity(Verbosity.showStocks)) {
-          out.print("     ")
-          printQueue(loss.market, stocks(loss.market))
-        } else
+        if(Config.verbosity(Verbosity.showStocks))
+          out.println(stocks(loss.market))
+        else
           out.println()
         out.println(
-          "COST BASIS:     " + Format.asMarket(basisInBaseCoin, baseMarket)
+          "COST BASIS:".tab(0) + Format.asMarket(basisInBaseCoin, baseMarket)
         )
       }
       if(Config.verbosity(Verbosity.showMoreDetails)) {
-        out.print(
-          "PAID FEE:       " + Format.asMarket(loss.fee, loss.feeMarket)
+        out.print((
+          "PAID FEE:".tab(0) + Format.asMarket(loss.fee, loss.feeMarket)).tab(1)
         )
-        if(Config.verbosity(Verbosity.showStocks)) {
-          out.print("     ")
-          printQueue(loss.feeMarket, stocks(loss.feeMarket))
-        } else if(Config.verbosity(Verbosity.showMoreDetails))
+        if(Config.verbosity(Verbosity.showStocks))
+          out.println(stocks(loss.feeMarket))
+        else if(Config.verbosity(Verbosity.showMoreDetails))
           out.println()
         out.println(
-          "FEE COST BASIS: " + Format.asMarket(feeBasisInBaseCoin, baseMarket)
+          "FEE COST BASIS:".tab(0) + Format.asMarket(feeBasisInBaseCoin, baseMarket)
         )
       }
 
       if(feeBasisInBaseCoin>0)
         out.println(
-          "FEE:            " + Format.asMarket(-feeBasisInBaseCoin, baseMarket)
+          "FEE:".tab(0) + Format.asMarket(-feeBasisInBaseCoin, baseMarket)
         )
-      out.print(
-        "LOSS:           " + Format.asMarket(-basisInBaseCoin, baseMarket)
+      out.print((
+        "LOSS:".tab(0) + Format.asMarket(-basisInBaseCoin, baseMarket)).tab(1)
       )
-      if(Config.verbosity(Verbosity.showStocks)) {
-        out.print("     ")
-        printQueue(loss.market, stocks(loss.market))
-      } else
+      if(Config.verbosity(Verbosity.showStocks))
+        out.println(stocks(loss.market))
+      else
         out.println()
       out.println()
     }
@@ -576,35 +563,33 @@ object FIFO {
       )
 
       if(Config.verbosity(Verbosity.showMoreDetails)) {
-        out.print(
-          "RECEIVED:       " + Format.asMarket(gain.amount, gain.market) +
+        out.print((
+          "RECEIVED:".tab(0) + Format.asMarket(gain.amount, gain.market) +
           " at " + Format.asMarket(basePrice, baseMarket) +
           "/%s".format(gain.market) +
-          " = " + Format.asMarket(gainInBaseCoin, baseMarket)
+          " = " + Format.asMarket(gainInBaseCoin, baseMarket)).tab(1)
         )
-        if(Config.verbosity(Verbosity.showStocks)) {
-          out.print("     ")
-          printQueue(gain.market, stocks(gain.market))
-        } else
+        if(Config.verbosity(Verbosity.showStocks))
+          out.println(stocks(gain.market))
+        else
           out.println()
-        out.print(
-          "PAID FEE:       " + Format.asMarket(gain.fee, gain.feeMarket)
+        out.print((
+          "PAID FEE:".tab(0) + Format.asMarket(gain.fee, gain.feeMarket)).tab(1)
         )
-        if(Config.verbosity(Verbosity.showStocks)) {
-          out.print("     ")
-          printQueue(gain.feeMarket, stocks(gain.feeMarket))
-        } else
+        if(Config.verbosity(Verbosity.showStocks))
+          out.println(stocks(gain.feeMarket))
+        else
           out.println()
         out.println(
-          "FEE COST BASIS: " + Format.asMarket(feeBasisInBaseCoin, baseMarket)
+          "FEE COST BASIS:".tab(0) + Format.asMarket(feeBasisInBaseCoin, baseMarket)
         )
       }
       if(feeBasisInBaseCoin>0)
         out.println(
-          "FEE:            " + Format.asMarket(-feeBasisInBaseCoin, baseMarket)
+          "FEE:".tab(0) + Format.asMarket(-feeBasisInBaseCoin, baseMarket)
         )
       out.print(
-        "GAIN:           "
+        "GAIN:".tab(0)
       )
       out.println(
         Format.asMarket(gainInBaseCoin, baseMarket)
@@ -668,21 +653,23 @@ object FIFO {
         ". "+settlement.description
       )
       if(Config.verbosity(Verbosity.showRates))
-        out.println(
+        out.println((
           "EXCHANGE RATES: "+Format.asMarket(boughtSoldExchangeRate,boughtMarket)+
           "/%s   ".format (soldMarket)+
-          Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/%s".format(boughtMarket)
+          Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/%s".format(boughtMarket)).tab(1)
         )
 
       // This is like a loss but we have to remove bought coins from stock of opened shorts
       if(marginSells(marketKey).nonEmpty) {
         if(Config.verbosity(Verbosity.showStocks))
-          printQueue(marketKey, marginSells(marketKey))
+          out.println(marginSells(marketKey))
 
         marginSells(marketKey).removeAndGetBasis(boughtAmount)
 
-        if(Config.verbosity(Verbosity.showStocks))
-          printQueue(marketKey, marginSells(marketKey))
+        if(Config.verbosity(Verbosity.showStocks)) {
+          out.print("".tab(1))
+          out.println(marginSells(marketKey))
+        }
       }
       out.println()
 
@@ -746,9 +733,9 @@ object FIFO {
             ". " + margin.description
         )
         if (Config.verbosity(Verbosity.showRates))
-          out.println("EXCHANGE RATE:  " + Format.asMarket(boughtSoldExchangeRate, boughtMarket) + "/" + soldMarket)
+          out.print(("EXCHANGE RATE:".tab(0) + Format.asMarket(boughtSoldExchangeRate, boughtMarket) + "/" + soldMarket).tab(1))
         if (Config.verbosity(Verbosity.showStocks))
-          printQueue(marketKey, marginSells(marketKey))
+          out.println(marginSells(marketKey))
         out.println()
 
         if(feeInTradingBaseCoin>0) {
@@ -771,9 +758,9 @@ object FIFO {
             ". "+margin.description
         )
         if(Config.verbosity(Verbosity.showRates))
-          out.println("EXCHANGE RATE:  "+Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/"+boughtMarket)
+          out.println(("EXCHANGE RATE:".tab(0)+Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/"+boughtMarket).tab(1))
         if(Config.verbosity(Verbosity.showStocks))
-          printQueue(marketKey, marginBuys(marketKey))
+          out.println(marginBuys(marketKey))
         out.println()
 
         if(feeInTradingBaseCoin>0) {
@@ -803,12 +790,16 @@ object FIFO {
             ". "+margin.description
           )
           if(Config.verbosity(Verbosity.showRates))
-            out.println("EXCHANGE RATE:  "+Format.asMarket(boughtSoldExchangeRate,boughtMarket)+"/"+soldMarket)
+            out.print(("EXCHANGE RATE:".tab(0)+Format.asMarket(boughtSoldExchangeRate,boughtMarket)+"/"+soldMarket).tab(1))
           if(Config.verbosity(Verbosity.showStocks))
-            printQueue(marketKey, marginBuys(marketKey))
+            out.println(marginBuys(marketKey))
+          else
+            out.println()
           val (basis, noBasis) = marginBuys.remove(marketKey, soldAmount)
-          if(Config.verbosity(Verbosity.showStocks))
-            printQueue(marketKey, marginBuys(marketKey))
+          if(Config.verbosity(Verbosity.showStocks)) {
+            out.print("".tab(1))
+            out.println(marginBuys(marketKey))
+          }
           out.println()
 
           val gain = closedBoughtAmount - basis
@@ -847,12 +838,16 @@ object FIFO {
             ". "+margin.description
           )
           if(Config.verbosity(Verbosity.showRates))
-            out.println("EXCHANGE RATE:  "+Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/"+boughtMarket)
+            out.print(("EXCHANGE RATE:".tab(0)+Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/"+boughtMarket).tab(1))
           if(Config.verbosity(Verbosity.showStocks))
-            printQueue(marketKey, marginSells(marketKey))
+            out.println(marginSells(marketKey))
+          else
+            out.println()
           val (basis, noBasis) = marginSells.remove(marketKey, boughtAmount)
-          if(Config.verbosity(Verbosity.showStocks))
-            printQueue(marketKey, marginSells(marketKey))
+          if(Config.verbosity(Verbosity.showStocks)) {
+            out.print("".tab(1))
+            out.println(marginSells(marketKey))
+          }
           out.println()
 
           val gain = basis - (closedSoldAmount-feeInTradingBaseCoin) - feeInTradingBaseCoin
