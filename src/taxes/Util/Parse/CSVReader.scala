@@ -16,7 +16,7 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
 
   val hasHeader : Boolean
 
-  def lineScanner(line : String ) : Scanner
+  def lineScanner(line : String) : Scanner
 
   def readLine(line : String, lineScanner : Scanner) : Result[A]
 
