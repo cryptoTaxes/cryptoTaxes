@@ -91,12 +91,17 @@ object FIFO {
     val baseMarket = baseCoin.market
 
     // current stock of assets with their cost bases (expressed in base coin)
-    val stocks = StockQueuePool(baseMarket)
+    val stocks = QueueStockPool(baseMarket)
 
     // current in longs/shorts assets for margin trading operations
-    val marginBuys = StockQueuePool(Market.bitcoin)
-    val marginSells = StockQueuePool(Market.bitcoin)
-
+    val marginBuysMap = scala.collection.immutable.Map[Exchanger, StockPool](
+        Poloniex -> QueueStockPool(Market.bitcoin)
+      , Bitfinex -> StackStockPool(Market.usd)
+      )
+    val marginSellsMap = scala.collection.immutable.Map[Exchanger, StockPool](
+        Poloniex -> QueueStockPool(Market.bitcoin)
+      , Bitfinex -> StackStockPool(Market.usd)
+    )
 
     var frees = List[String]()
     var price0 = List[Exchange]()
@@ -255,14 +260,16 @@ object FIFO {
 
       if(Config.verbosity(Verbosity.showMoreDetails)) {
         out.println("Opened margin longs:")
-        for (q <- marginBuys)
-          if(q.totalAmount>0)
-            out.println(q)
+        for(marginBuy <- marginBuysMap.values)
+          for (cont <- marginBuy)
+            if(cont.totalAmount>0)
+              out.println(cont)
 
         out.println("Opened margin shorts:")
-        for (q <- marginSells)
-          if(q.totalAmount>0)
-            out.println(q)
+        for(marginSell <- marginSellsMap.values)
+          for (cont <- marginSell)
+            if(cont.totalAmount>0)
+              out.println(cont)
         out.println()
       }
     }
@@ -323,8 +330,10 @@ object FIFO {
       val (soldBasisInBaseCoin, noBasis) =
         if (soldMarket != baseMarket)
           stocks.remove(soldMarket, soldAmount)
-        else
+        else {
+          stocks.remove(soldMarket, soldAmount)
           (soldAmount, 0.0)
+        }
 
       // Total value of sold coins, expressed in base coin
       val sellValueInBaseCoin = totalInBaseCoin
@@ -660,15 +669,19 @@ object FIFO {
         )
 
       // This is like a loss but we have to remove bought coins from stock of opened shorts
-      if(marginSells(marketKey).nonEmpty) {
-        if(Config.verbosity(Verbosity.showStocks))
-          out.println(marginSells(marketKey))
+      // (we bought them to pay for a short that went against us)
+      if(settlement.exchanger == Poloniex) {
+        val stockContainer = marginSellsMap(Poloniex)(marketKey)
+        if (stockContainer.nonEmpty) {
+          if (Config.verbosity(Verbosity.showStocks))
+            out.println(stockContainer)
 
-        marginSells(marketKey).removeAndGetBasis(boughtAmount)
+          stockContainer.removeAndGetBasis(boughtAmount)
 
-        if(Config.verbosity(Verbosity.showStocks)) {
-          out.print("".tab(1))
-          out.println(marginSells(marketKey))
+          if (Config.verbosity(Verbosity.showStocks)) {
+            out.print("".tab(1))
+            out.println(stockContainer)
+          }
         }
       }
       out.println()
@@ -687,6 +700,9 @@ object FIFO {
       val (tradedMarket, tradingBaseMarket) = margin.pair
 
       val marketKey = marginPairKey(tradedMarket, tradingBaseMarket)
+
+      val marginBuys = marginBuysMap(margin.exchanger)
+      val marginSells = marginSellsMap(margin.exchanger)
 
       // Check that markets involved in margin operation are those in traded pair
       if(margin.orderType == Operation.OrderType.Sell) {

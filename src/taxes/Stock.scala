@@ -5,6 +5,7 @@ import taxes.Exchanger.Exchanger
 import taxes.Market.Market
 
 
+
 // basis is expressed in base unit. exchanger is where it was bought
 case class Stock(var amount : Double, costBasis : Price, exchanger : Exchanger, date : Date) {
   override def toString : String =
@@ -14,7 +15,11 @@ case class Stock(var amount : Double, costBasis : Price, exchanger : Exchanger, 
 }
 
 
-case class StockQueue(market : Market, baseMarket : Market) extends DEQueue[Stock] {
+trait StockContainer extends Container[Stock] {
+  val market : Market
+
+  val baseMarket : Market
+
   def removeAndGetBasis(amount : Double) : (Price, Double) = {
     var toRemove = amount
     var basis = 0.0
@@ -37,59 +42,79 @@ case class StockQueue(market : Market, baseMarket : Market) extends DEQueue[Stoc
   def totalAmount : Double =
     this.iterator.map(_.amount).sum
 
-  override def toString: String = {
-    val amount = iterator.map(_.amount).sum
-    val totalCost = iterator.map(p => p.amount * p.costBasis).sum
+  override def toString : String = {
+    val amount = totalAmount
+    val totalCost = this.iterator.map(p => p.amount * p.costBasis).sum
 
     val sb = StringBuilder.newBuilder
     sb.append(
-        market.padTo(5, ' ')+
+      market.padTo(5, ' ')+
         Format.leftPad("%.6f".format(amount), 20, ' ')+
         Format.leftPad(Format.asMarket(totalCost, baseMarket), 20, ' ')+
         "  "
     )
 
-    var xs = List[String]()
-    for(s <- this)
+    for(stock <- this)
       sb.append(
-        "(%.6f, ".format(s.amount)+
-          Format.asMarket(s.costBasis, baseMarket)+
-          ", %s, ".format(s.exchanger)+
-          new SimpleDateFormat("yyyy-MM-dd").format(s.date)+
-          ")"
+        "(%.6f, ".format(stock.amount)+
+          Format.asMarket(stock.costBasis, baseMarket)+
+          ", %s, ".format(stock.exchanger)+
+          new SimpleDateFormat("yyyy-MM-dd").format(stock.date)+
+          ") "
       )
-    sb.append(xs.mkString(", "))
     return sb.toString
   }
 }
 
 
-case class StockQueuePool(baseMarket : Market) {
-  private val queues = scala.collection.mutable.Map[Market, StockQueue]()
+case class StockQueue(market : Market, baseMarket : Market) extends Queue[Stock] with StockContainer
 
-  def apply(market : Market): StockQueue =
-    queues.getOrElse(market, StockQueue(market, baseMarket))
 
-  def iterator: Iterator[StockQueue] =
-    queues.iterator.map(_._2)
+case class StockStack(market : Market, baseMarket : Market) extends Stack[Stock] with StockContainer
 
-  def foreach(f: (StockQueue ⇒ Unit)): Unit = {
-    queues.map(_._2).foreach(f)
+
+trait StockPool {
+  val baseMarket : Market
+
+  protected def newContainer(market: Market) : StockContainer
+
+  protected val containers = scala.collection.mutable.Map[Market, StockContainer]()
+
+  def apply(market : Market): StockContainer =
+    containers.getOrElse(market, newContainer(market))
+
+  def iterator: Iterator[StockContainer] =
+    containers.iterator.map(_._2)
+
+  def foreach(f: (StockContainer ⇒ Unit)): Unit = {
+    containers.map(_._2).foreach(f)
   }
 
   def add(boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : Date): Unit = {
-    val qBought = apply(boughtMarket)
+    val container = apply(boughtMarket)
 
-    qBought.addLast(
-        Stock(boughtAmount, costBasis, exchanger, date)
+    container.addLast(
+      Stock(boughtAmount, costBasis, exchanger, date)
       , (x: Stock, y: Stock) => x.costBasis == y.costBasis && x.exchanger == y.exchanger && x.date == y.date
-      , (x: Stock, y: Stock) => Stock(x.amount + y.amount, x.costBasis, x.exchanger, x.date)
-      )
-    queues(boughtMarket) = qBought
+      , (x: Stock, y: Stock) => x.copy(amount = x.amount + y.amount)
+    )
+    containers(boughtMarket) = container
   }
 
   def remove(soldMarket : Market, soldAmount : Double): (Price, Price) = {
-    val qSold = apply(soldMarket)
-    return qSold.removeAndGetBasis(soldAmount)
+    val container = apply(soldMarket)
+    return container.removeAndGetBasis(soldAmount)
   }
+}
+
+
+case class QueueStockPool(baseMarket : Market) extends StockPool {
+  def newContainer(market: Market) =
+    StockQueue(market, baseMarket)
+}
+
+
+case class StackStockPool(baseMarket : Market) extends StockPool {
+  def newContainer(market: Market) =
+    StockStack(market, baseMarket)
 }

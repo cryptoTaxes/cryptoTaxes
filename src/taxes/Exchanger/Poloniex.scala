@@ -10,9 +10,9 @@ object Poloniex extends Exchanger {
       new UserFolderSource[Operation]("poloniex") {
         def fileSource(fileName : String) = operationsReader(fileName)
       }
-    , new UserFolderSource[Operation]("poloniex/borrowing") {
+    /* , new UserFolderSource[Operation]("poloniex/borrowing") {
         def fileSource(fileName : String) = borrowingFeesReader(fileName)
-      }
+      } */
     , new UserFolderSource[Operation]("poloniex/withdrawals") {
         def fileSource(fileName : String) = withdrawalReader(fileName)
       }
@@ -27,8 +27,9 @@ object Poloniex extends Exchanger {
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = Date.fromString(scLn.next()+" +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
 
-      val (market1, aux) = scLn.next().span(_ != '/')
-      val market2 = aux.tail
+      val (aux1, aux2) = scLn.next().span(_ != '/')
+      val market1 = Market.normalize(aux1)
+      val market2 = Market.normalize(aux2.tail)
 
       val category = scLn.next()
       val orderType = scLn.next()
@@ -50,9 +51,9 @@ object Poloniex extends Exchanger {
             Exchange(
               date = date
               , id = orderNumber
-              , fromAmount = amount, fromMarket = Market.normalize(market1)
-              , toAmount = amount*price*(100-feePercent)/100, toMarket = Market.normalize(market2)
-              , fee = total*feePercent/100, feeMarket = Market.normalize(market2)
+              , fromAmount = amount, fromMarket = market1
+              , toAmount = amount*price*(100-feePercent)/100, toMarket = market2
+              , fee = total*feePercent/100, feeMarket = market2
               , exchanger = Poloniex
               , description = desc
             )
@@ -60,25 +61,25 @@ object Poloniex extends Exchanger {
             Exchange(
               date = date
               , id = orderNumber
-              , fromAmount = total, fromMarket = Market.normalize(market2)
-              , toAmount = amount*(100-feePercent)/100, toMarket = Market.normalize(market1)
+              , fromAmount = total, fromMarket = market2
+              , toAmount = amount*(100-feePercent)/100, toMarket = market1
               // , fee = amount*feePercent/100, feeMarket = CoinConversions.normalize(market1)
               // Usually, market2 is BTC so we set fee in BTC
-              , fee = amount*feePercent/100*price, feeMarket = Market.normalize(market2)
+              , fee = amount*feePercent/100*price, feeMarket = market2
               , exchanger = Poloniex
               , description = desc
             )
         return CSVReader.Ok(exchange)
       } else if(category == "Settlement" && orderType == "Buy") {
-        // Just like a Exchange buy
+        // Just like a Exchange buy and then a loss
         val settlement = SettlementBuy(
           date = date
           , id = orderNumber
-          , fromAmount = total, fromMarket = Market.normalize(market2)
-          , toAmount = amount*(100-feePercent)/100, toMarket = Market.normalize(market1)
+          , fromAmount = total, fromMarket = market2
+          , toAmount = amount*(100-feePercent)/100, toMarket = market1
           // , fee = amount*feePercent/100, feeMarket = CoinConversions.normalize(market1)
           // Usually, market2 is BTC so we set fee in BTC
-          , fee = amount*feePercent/100*price, feeMarket = Market.normalize(market2)
+          , fee = amount*feePercent/100*price, feeMarket = market2
           , exchanger = Poloniex
           , description = desc + " Settlement"
         )
@@ -89,11 +90,11 @@ object Poloniex extends Exchanger {
             Margin(
               date = date
               , id = orderNumber
-              , fromAmount = amount, fromMarket = Market.normalize(market1)
-              , toAmount = amount*price*(100-feePercent)/100, toMarket = Market.normalize(market2)
-              , fee = total*feePercent/100, feeMarket = Market.normalize(market2)
+              , fromAmount = amount, fromMarket = market1
+              , toAmount = amount*price*(100-feePercent)/100, toMarket = market2
+              , fee = total*feePercent/100, feeMarket = market2
               , orderType = Operation.OrderType.Sell
-              , pair = (Market.normalize(market1), Market.normalize(market2))
+              , pair = (market1, market2)
               , exchanger = Poloniex
               , description = desc
             )
@@ -101,13 +102,13 @@ object Poloniex extends Exchanger {
             Margin(
               date = date
               , id = orderNumber
-              , fromAmount = total, fromMarket = Market.normalize(market2)
-              , toAmount = amount*(100-feePercent)/100, toMarket = Market.normalize(market1)
+              , fromAmount = total, fromMarket = market2
+              , toAmount = amount*(100-feePercent)/100, toMarket = market1
               // , fee = amount*feePercent/100, feeMarket = CoinConversions.normalize(market1)
               // Usually, market2 is BTC so we set fee in BTC
-              , fee = amount*feePercent/100*price, feeMarket = Market.normalize(market2)
+              , fee = amount*feePercent/100*price, feeMarket = market2
               , orderType = Operation.OrderType.Buy
-              , pair = (Market.normalize(market1), Market.normalize(market2))
+              , pair = (market1, market2)
               , exchanger = Poloniex
               , description = desc
             )
@@ -151,7 +152,7 @@ object Poloniex extends Exchanger {
       SeparatedScanner(line, "[,%]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val currency = scLn.next()
+      val currency = Market.normalize(scLn.next())
       val rate = scLn.nextDouble()
       val amount = scLn.nextDouble()
       val duration = scLn.nextDouble()
@@ -165,7 +166,7 @@ object Poloniex extends Exchanger {
         date = close
         , id = desc
         , amount = totalFee
-        , market = Market.normalize(currency)
+        , market = currency
         , exchanger = Poloniex
         , description = desc
       )
@@ -203,7 +204,7 @@ object Poloniex extends Exchanger {
             date = date
             , id = desc
             , amount = totalFee
-            , market = Market.normalize(currency)
+            , market = currency
             , exchanger = Poloniex
             , description = desc
           )
