@@ -93,7 +93,7 @@ trait StockPool {
   def add(boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : Date): Unit = {
     val container = apply(boughtMarket)
 
-    container.addLast(
+    container.insert(
       Stock(boughtAmount, costBasis, exchanger, date)
       , (x: Stock, y: Stock) => x.costBasis == y.costBasis && x.exchanger == y.exchanger && x.date == y.date
       , (x: Stock, y: Stock) => x.copy(amount = x.amount + y.amount)

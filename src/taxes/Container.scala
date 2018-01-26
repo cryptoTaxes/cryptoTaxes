@@ -13,9 +13,9 @@ trait Container[T] {
 
   def removeFirst()
 
-  def addLast(x : T)
+  def insert(x : T)
 
-  def addLast(x : T, eq : (T,T) => Boolean, combine : (T,T) => T)
+  def insert(x : T, eq : (T,T) => Boolean, combine : (T,T) => T)
 
   def iterator: Iterator[T] =
     xs.iterator
@@ -33,10 +33,10 @@ class Queue[T]() extends Container[T] {
   def removeFirst(): Unit =
     xs = xs.tail
 
-  def addLast(x : T): Unit =
+  def insert(x : T): Unit =
     xs = xs :+ x
 
-  def addLast(x : T, eq : (T,T) => Boolean, combine : (T,T) => T): Unit =
+  def insert(x : T, eq : (T,T) => Boolean, combine : (T,T) => T): Unit =
     if(xs.nonEmpty && eq(xs.last,x))
       xs = xs.init :+ combine(xs.last, x)
     else
@@ -54,10 +54,10 @@ class Stack[T]() extends Container[T] {
   def removeFirst(): Unit =
     xs = xs.tail
 
-  def addLast(x : T): Unit =
+  def insert(x : T): Unit =
     xs = x :: xs
 
-  def addLast(x : T, eq : (T,T) => Boolean, combine : (T,T) => T): Unit =
+  def insert(x : T, eq : (T,T) => Boolean, combine : (T,T) => T): Unit =
     if(xs.nonEmpty && eq(xs.head,x))
       xs = combine(xs.head, x) :: xs.tail
     else

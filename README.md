@@ -1,6 +1,23 @@
 # cryptoTaxes
 Compute your crypto taxes.
 
+## Disclaimer
+
+The software is provided "as is", without warranty of any kind, express or
+implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose and noninfringement.
+
+Additionally, we make no warranty that:
+* This software will meet your requirements.
+* This software will be uninterrupted, timely, secure or error-free.
+* The results from the use of this software will be effective, accurate or reliable.
+* The quality of this software will meet your expectations.
+
+In no event shall the authors or copyright holders be liable for any claim, damages or other
+liability, whether in an action of contract, tort or otherwise, arising from,
+out of or in connection with the software or the use or other dealings in the
+software.
+
 ## Usage
 [java Runtime Environment](https://www.java.com/download/) must be previously installed in your computer in order to run this program. 
 

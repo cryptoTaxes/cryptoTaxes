@@ -1,0 +1,1 @@
+Copy data for your trades from HISTORY Tab (on left) -> ARCHIVE (on top).

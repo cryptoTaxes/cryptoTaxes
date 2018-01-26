@@ -101,7 +101,7 @@ object FIFO {
     val marginSellsMap = scala.collection.immutable.Map[Exchanger, StockPool](
         Poloniex -> QueueStockPool(Market.bitcoin)
       , Bitfinex -> StackStockPool(Market.usd)
-    )
+      )
 
     var frees = List[String]()
     var price0 = List[Exchange]()
@@ -305,15 +305,17 @@ object FIFO {
       Realized.perMarketPaidFees.record(exchange.feeMarket, feeInBaseCoin)
 
       // Total value involved in this operation, expressed in base coin
-      val totalInBaseCoin =
+      val (totalInBaseCoin, baseCoinProxy) =
         if (soldMarket == baseMarket)
-          soldAmount
+          (soldAmount, baseMarket)
         else if (boughtMarket == baseMarket)
-          boughtAmount + feeInBaseCoin
+          (boughtAmount + feeInBaseCoin, baseMarket)
         else if (Market.priority(soldMarket) > Market.priority(boughtMarket))
-          soldAmount * baseCoin.priceInBaseCoin(soldMarket, exchange.date)
+          (soldAmount * baseCoin.priceInBaseCoin(soldMarket, exchange.date), soldMarket)
         else
-          boughtAmount * baseCoin.priceInBaseCoin(boughtMarket, exchange.date) + feeInBaseCoin // bought amount does not include fee
+          ( boughtAmount * baseCoin.priceInBaseCoin(boughtMarket, exchange.date) + feeInBaseCoin // bought amount does not include fee
+          , boughtMarket
+          )
 
       // Price we sold released coins at, expressed in base coin
       val soldPriceInBaseCoin = totalInBaseCoin / soldAmount
@@ -357,6 +359,8 @@ object FIFO {
 
       // Update realized cost bases and sell values
       if(soldMarket == baseMarket) {
+        // toDo this is the case for Euro -> BTC if your base is Euro.
+        // toDO Should the fee be charged to Euro instead?
         Realized.costBases.record(boughtMarket, feeInBaseCoin)
 
       } else {
@@ -385,12 +389,18 @@ object FIFO {
             ". Fee = "+Format.asMarket(exchange.fee, exchange.feeMarket)+
             ". "+exchange.description
         )
-        if(Config.verbosity(Verbosity.showRates))
+        if(Config.verbosity(Verbosity.showRates)) {
           out.println(
-            "EXCHANGE RATES:".tab(0)+Format.asMarket(boughtSoldExchangeRate,boughtMarket)+
-            "/%s   ".format (soldMarket)+
-            Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/%s".format(boughtMarket)
+            "EXCHANGE RATES:".tab(0) + Format.asMarket(boughtSoldExchangeRate, boughtMarket) +
+            "/%s   ".format(soldMarket) +
+            Format.asMarket(soldBoughtExchangeRate, soldMarket) + "/%s".format(boughtMarket)
           )
+          out.println(
+            "%s RATE:".format(baseMarket).tab(0) +
+            Format.asMarket(baseCoin.priceInBaseCoin(baseCoinProxy, exchange.date), baseMarket) +
+            "/" + baseCoinProxy
+          )
+        }
         if(Config.verbosity(Verbosity.showDetails))
           out.print((
             "SOLD:".tab(0)+Format.asMarket(soldAmount, soldMarket)+

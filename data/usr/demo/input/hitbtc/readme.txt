@@ -1,0 +1,1 @@
+Use your trades.csv file (can be downloaded from Reports -> My trades -> Export as .csv).
