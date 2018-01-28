@@ -31,19 +31,31 @@ object GDAX extends Exchanger {
       val priceFeeTotalUnit = scLn.next()
       scLn.close()
 
+      val desc = GDAX + " " + tradeID
+      val date = Date.fromString(createdAt, "yyyy-MM-dd'T'HH:mm:ss.SSSX")
+
+      val (market1, aux) = product.span(_ != '-')
+      val market2 = aux.tail
+
       if (side == "SELL") {
-        val desc = GDAX + " " + tradeID
-        val date = Date.fromString(createdAt, "yyyy-MM-dd'T'HH:mm:ss.SSSX")
-
-        val (market1, aux) = product.span(_ != '-')
-        val market2 = aux.tail
-
         val exchange =
           Exchange(
             date = date
             , id = tradeID
             , fromAmount = size, fromMarket = Market.normalize(sizeUnit)
             , toAmount = total, toMarket = Market.normalize(priceFeeTotalUnit)
+            , fee = fee, feeMarket = Market.normalize(priceFeeTotalUnit)
+            , exchanger = GDAX
+            , description = desc
+          )
+        return CSVReader.Ok(exchange)
+      } else if (side == "BUY") {
+        val exchange =
+          Exchange(
+            date = date
+            , id = tradeID
+            , fromAmount = total.abs, fromMarket = Market.normalize(priceFeeTotalUnit)
+            , toAmount = size, toMarket = Market.normalize(sizeUnit)
             , fee = fee, feeMarket = Market.normalize(priceFeeTotalUnit)
             , exchanger = GDAX
             , description = desc
