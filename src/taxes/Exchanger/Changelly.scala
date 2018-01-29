@@ -30,19 +30,19 @@ object Changelly extends Exchanger {
       QuotedScanner(line, '\"', ',')
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val status = scLn.next()
+      val status = scLn.next("Status")
       if(status=="finished") {
-        val date = Date.fromString(scLn.next()+" +0000", "dd MMM yyyy, HH:mm:ss Z")
+        val date = Date.fromString(scLn.next("Date")+" +0000", "dd MMM yyyy, HH:mm:ss Z")
 
-        val (amount, soldMarket) = split(scLn.next())
-        val (totalFee, feeMarket) = split(scLn.next())
+        val (amount, soldMarket) = split(scLn.next("Sold"))
+        val (totalFee, feeMarket) = split(scLn.next("Fee"))
 
-        val token1 = scLn.next()
+        val token1 = scLn.next("Exchange Rate")
         val (token2, token3) = token1.span(_ != '=')
         val (exchangeRate, _) = split(token3.drop(2))
-        val receiverWallet = scLn.next()
+        val receiverWallet = scLn.next("Receiver Wallet")
 
-        val (amountReceived, receivedMarket) = split(scLn.next())
+        val (amountReceived, receivedMarket) = split(scLn.next("Received"))
 
         val realFee = amount * exchangeRate - amountReceived
         val feePercent = realFee * 100 / (amount * exchangeRate)

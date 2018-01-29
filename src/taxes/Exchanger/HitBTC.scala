@@ -19,17 +19,17 @@ object HitBTC extends Exchanger {
       QuotedScanner(line, '\"', ',')
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = Date.fromString(scLn.next(), "yyyy-MM-dd hh:mm:ss")
-      val instrument = scLn.next()
-      val tradeID = scLn.next()
-      val orderID = scLn.next()
-      val side = scLn.next()
-      val quantity = scLn.nextDouble()
-      val price = scLn.nextDouble()
-      val volume = scLn.nextDouble()
-      val fee = scLn.nextDouble()
-      val rebate = scLn.nextDouble()
-      val total = scLn.nextDouble()
+      val date = Date.fromString(scLn.next("Date"), "yyyy-MM-dd hh:mm:ss")
+      val instrument = scLn.next("Instrument")
+      val tradeID = scLn.next("Trade ID")
+      val orderID = scLn.next("Order ID")
+      val side = scLn.next("Side")
+      val quantity = scLn.nextDouble("Quantity")
+      val price = scLn.nextDouble("Price")
+      val volume = scLn.nextDouble("Volume")
+      val fee = scLn.nextDouble("Fee")
+      val rebate = scLn.nextDouble("Rebate")
+      val total = scLn.nextDouble("Total")
 
       val desc = HitBTC + " " + tradeID + "/" + orderID
 

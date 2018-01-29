@@ -20,23 +20,25 @@ object Bittrex extends Exchanger {
   private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val hasHeader: Boolean = true
 
+    override val charSet: String = "UTF-16LE"
+
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val orderId = scLn.next()
-      val (market1, aux) = scLn.next().span(_ != '-')
+      val orderId = scLn.next("Order ID")
+      val (market1, aux) = scLn.next("Pair").span(_ != '-')
       val market2 = aux.tail
 
-      val isSell = scLn.next() == "LIMIT_SELL"
-      val quantity = scLn.nextDouble()
-      val limit = scLn.nextDouble()
-      val comissionPaid = scLn.nextDouble()
+      val isSell = scLn.next("Order Type") == "LIMIT_SELL"
+      val quantity = scLn.nextDouble("Quantity")
+      val limit = scLn.nextDouble("Limit")
+      val comissionPaid = scLn.nextDouble("Comission Paid")
 
-      val price = scLn.nextDouble()
+      val price = scLn.nextDouble("Price")
 
-      val dateOpen = Date.fromString(scLn.next() + " +0000", "MM/dd/yyyy hh:mm:ss a Z") // Bittrex time is 1 hour behind here
-      val dateClose = Date.fromString(scLn.next() + " +0000", "MM/dd/yyyy hh:mm:ss a Z")
+      val dateOpen = Date.fromString(scLn.next("Open Date") + " +0000", "MM/dd/yyyy hh:mm:ss a Z") // Bittrex time is 1 hour behind here
+      val dateClose = Date.fromString(scLn.next("Close Date") + " +0000", "MM/dd/yyyy hh:mm:ss a Z")
 
       val desc = id + " " + orderId
 

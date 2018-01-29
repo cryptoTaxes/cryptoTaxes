@@ -20,16 +20,16 @@ object CCEX extends Exchanger {
       SeparatedScanner(line, "[ \t]+")
 
     override def readLine(line: String, scLn: Scanner) : CSVReader.Result[Operation] = {
-      val token1 = scLn.next()
-      val token2 = scLn.next()
-      val orderType = scLn.next()
+      val token1 = scLn.next("Date1")
+      val token2 = scLn.next("Date2")
+      val orderType = scLn.next("Order Type")
 
       if(orderType=="Transaction") {
         val date = Date.fromString(token1+" "+token2, "yyyy-MM-dd hh:mm:ss")
-        val amount1 = scLn.nextDouble()
-        val market1 = scLn.next()
-        val amount2 = scLn.nextDouble()
-        val market2 = scLn.next()
+        val amount1 = scLn.nextDouble("Amount1")
+        val market1 = scLn.next("Market1")
+        val amount2 = scLn.nextDouble("Amount2")
+        val market2 = scLn.next("Market2")
         scLn.close()
 
         val feePercent = 0.2

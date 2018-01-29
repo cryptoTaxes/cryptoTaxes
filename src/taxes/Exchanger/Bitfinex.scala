@@ -22,25 +22,25 @@ object Bitfinex extends Exchanger {
       SeparatedScanner(line, "[,]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val reference = scLn.next()
+      val reference = scLn.next("Reference")
 
-      val (aux1, aux2) = scLn.next().splitAt(3)
+      val (aux1, aux2) = scLn.next("Pair").splitAt(3)
       val market1 = Market.normalize(aux1)
       val market2 = Market.normalize(aux2)
 
-      val orderType = scLn.next()
-      val hidden = scLn.next()
+      val orderType = scLn.next("Order Type")
+      val hidden = scLn.next("Hidden")
 
-      val amount = scLn.nextDouble()
-      val amountExecuted = scLn.nextDouble()
+      val amount = scLn.nextDouble("Amount")
+      val amountExecuted = scLn.nextDouble("Amount Executed")
 
-      val price = scLn.next()
-      val averageExecutionPrice = scLn.nextDouble()
+      val price = scLn.next("Price")
+      val averageExecutionPrice = scLn.nextDouble("Average Execution Price")
 
-      val created = Date.fromString(scLn.next(), "yyyy-MM-dd HH:mm:ss.S")
-      val updated = Date.fromString(scLn.next(), "yyyy-MM-dd HH:mm:ss.S")
+      val created = Date.fromString(scLn.next("Date Created"), "yyyy-MM-dd HH:mm:ss.S")
+      val updated = Date.fromString(scLn.next("Date Updated"), "yyyy-MM-dd HH:mm:ss.S")
 
-      val status = scLn.next()
+      val status = scLn.next("Status")
 
       val desc = Bitfinex + " " + reference
 
@@ -108,11 +108,11 @@ object Bitfinex extends Exchanger {
       SeparatedScanner(line, "[,]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val currency = Market.normalize(scLn.next())
-      val description = scLn.next()
-      val amount = scLn.nextDouble()
-      val balance = scLn.next()
-      val date = Date.fromString(scLn.next(), "yyyy-MM-dd HH:mm:ss")
+      val currency = Market.normalize(scLn.next("Currency"))
+      val description = scLn.next("Description")
+      val amount = scLn.nextDouble("Amount")
+      val balance = scLn.next("Balance")
+      val date = Date.fromString(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss")
 
       val desc = Bitfinex + " " + description
 

@@ -21,17 +21,17 @@ object RippleTrade extends Exchanger {
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val desc = RippleTrade.toString
 
-      val date = Date.fromString(scLn.next(), "yyyy-MM-dd hh:mm:ss")
-      val what = scLn.next()
+      val date = Date.fromString(scLn.next("Date"), "yyyy-MM-dd hh:mm:ss")
+      val what = scLn.next("What")
 
       if (what == "Sell") {
-        val amount1 = scLn.nextDouble()
-        val market1 = scLn.next()
-        scLn.next()
-        val amount2 = scLn.nextDouble()
-        val market2 = scLn.next()
-        scLn.next()
-        val price = scLn.nextDouble()
+        val amount1 = scLn.nextDouble("Amount1")
+        val market1 = scLn.next("Market1")
+        scLn.next("Skip")
+        val amount2 = scLn.nextDouble("Amount2")
+        val market2 = scLn.next("Market2")
+        scLn.next("Skip")
+        val price = scLn.nextDouble("Price")
 
         val exchange =
           Exchange(
@@ -45,13 +45,13 @@ object RippleTrade extends Exchanger {
           )
         return CSVReader.Ok(exchange)
       } else if (what == "Buy") {
-        val amount1 = scLn.nextDouble()
-        val market1 = scLn.next()
-        scLn.next()
-        val amount2 = scLn.nextDouble()
-        val market2 = scLn.next()
-        scLn.next()
-        val price = scLn.nextDouble()
+        val amount1 = scLn.nextDouble("Amount1")
+        val market1 = scLn.next("Market1")
+        scLn.next("Skip")
+        val amount2 = scLn.nextDouble("Amount2")
+        val market2 = scLn.next("Market2")
+        scLn.next("Skip")
+        val price = scLn.nextDouble("Price")
 
         val exchange =
           Exchange(

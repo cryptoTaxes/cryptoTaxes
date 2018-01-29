@@ -21,13 +21,13 @@ object General extends Exchanger {
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = Date.fromString(scLn.next(), "yyyy-MM-dd")
-      val amount1 = scLn.nextDouble()
-      val market1 = scLn.next()
-      val amount2 = scLn.nextDouble()
-      val market2 = scLn.next()
-      val fee = scLn.nextDouble()
-      val feeMarket = scLn.next
-      val desc = scLn.next()
+      val amount1 = scLn.nextDouble("Amount1")
+      val market1 = scLn.next("Market1")
+      val amount2 = scLn.nextDouble("Amount2")
+      val market2 = scLn.next("Market2")
+      val fee = scLn.nextDouble("Fee")
+      val feeMarket = scLn.next("Fee Market")
+      val desc = scLn.next("Description")
       scLn.close()
 
       val exchange =

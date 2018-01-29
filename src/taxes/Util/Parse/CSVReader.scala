@@ -16,20 +16,26 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
 
   val hasHeader : Boolean
 
+  val charSet : String = "UTF-8"
+
   def lineScanner(line : String) : Scanner
 
   def readLine(line : String, lineScanner : Scanner) : Result[A]
 
   def read() : List[A] = {
     val f = new java.io.File(fileName)
-    val sc = new java.util.Scanner(f)
+    val sc = new java.util.Scanner(f, charSet)
 
     var xs = List[A]()
+    var lnNumber = 0
 
-    if(hasHeader)
+    if(hasHeader) {
+      lnNumber += 1
       sc.nextLine()
+    }
 
     while(sc.hasNextLine) {
+      lnNumber += 1
       val ln = Parse.trimSpaces(sc.nextLine())
       if(ln.nonEmpty) {
         val scLn = lineScanner(ln)
@@ -43,7 +49,8 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
               ;
           }
         } catch {
-          case e => Logger.fatal("Something went wrong reading csv file %s. %s".format(fileName, e))
+          case e =>
+            Logger.fatal("Something went wrong reading csv file %s.\n%s\nLine %d: \"%s\"".format(fileName, e, lnNumber, ln))
         } finally
           scLn.close()
       }

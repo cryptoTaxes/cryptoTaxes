@@ -19,16 +19,16 @@ object GDAX extends Exchanger {
       SeparatedScanner(line, "[,]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val tradeID = scLn.next()
-      val product = scLn.next()
-      val side = scLn.next()
-      val createdAt = scLn.next()
-      val size = scLn.nextDouble()
-      val sizeUnit = scLn.next()
-      val price = scLn.nextDouble()
-      val fee = scLn.nextDouble()
-      val total = scLn.nextDouble()
-      val priceFeeTotalUnit = scLn.next()
+      val tradeID = scLn.next("Trade ID")
+      val product = scLn.next("Product")
+      val side = scLn.next("Side")
+      val createdAt = scLn.next("Created At")
+      val size = scLn.nextDouble("Size")
+      val sizeUnit = scLn.next("Size Unit")
+      val price = scLn.nextDouble("Price")
+      val fee = scLn.nextDouble("Fee")
+      val total = scLn.nextDouble("Total")
+      val priceFeeTotalUnit = scLn.next("Price/Total Unit")
       scLn.close()
 
       val desc = GDAX + " " + tradeID

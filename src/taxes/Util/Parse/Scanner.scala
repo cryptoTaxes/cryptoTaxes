@@ -1,10 +1,36 @@
 package taxes.Util.Parse
 
+case class ScannerException(msg : String) extends RuntimeException(msg)
+
 trait Scanner {
   def next() : String
   def nextDouble() : Double
   def nextInt() : Int
   def close() : Unit
+
+  def next(what : String) : String = {
+    try {
+      next()
+    } catch {
+      case _ : Exception => throw ScannerException("Error reading " + what)
+    }
+  }
+
+  def nextDouble(what : String) : Double = {
+    try {
+      nextDouble()
+    } catch {
+      case _ : Exception => throw ScannerException("Error reading " + what)
+    }
+  }
+
+  def nextInt(what : String) : Int = {
+    try {
+      nextInt()
+    } catch {
+      case _ : Exception => throw ScannerException("Error reading " + what)
+    }
+  }
 }
 
 

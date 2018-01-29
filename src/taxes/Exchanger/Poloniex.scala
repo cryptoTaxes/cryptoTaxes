@@ -25,22 +25,22 @@ object Poloniex extends Exchanger {
       SeparatedScanner(line, "[,%]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = Date.fromString(scLn.next()+" +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
+      val date = Date.fromString(scLn.next("Date")+" +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
 
-      val (aux1, aux2) = scLn.next().span(_ != '/')
+      val (aux1, aux2) = scLn.next("Pair").span(_ != '/')
       val market1 = Market.normalize(aux1)
       val market2 = Market.normalize(aux2.tail)
 
-      val category = scLn.next()
-      val orderType = scLn.next()
-      val price = scLn.nextDouble()
-      val amount = scLn.nextDouble()
-      val total = scLn.nextDouble()
-      val feePercent = scLn.nextDouble()
-      scLn.next() // skip %
-      val orderNumber = scLn.next()
-      val baseTotalLessFee = scLn.nextDouble()
-      val quoteTotalLessFee = scLn.nextDouble()
+      val category = scLn.next("Category")
+      val orderType = scLn.next("Order Type")
+      val price = scLn.nextDouble("Price")
+      val amount = scLn.nextDouble("Amount")
+      val total = scLn.nextDouble("Total")
+      val feePercent = scLn.nextDouble("Fee Percent")
+      scLn.next("%") // skip %
+      val orderNumber = scLn.next("Order Number")
+      val baseTotalLessFee = scLn.nextDouble("Base Total Less Fee")
+      val quoteTotalLessFee = scLn.nextDouble("Quote Total Less Fee")
       scLn.close()
 
       val desc = Poloniex + " " + orderNumber
@@ -152,13 +152,13 @@ object Poloniex extends Exchanger {
       SeparatedScanner(line, "[,%]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val currency = Market.normalize(scLn.next())
-      val rate = scLn.nextDouble()
-      val amount = scLn.nextDouble()
-      val duration = scLn.nextDouble()
-      val totalFee = scLn.nextDouble()
-      val open = Date.fromString(scLn.next() + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
-      val close = Date.fromString(scLn.next() + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
+      val currency = Market.normalize(scLn.next("Currency"))
+      val rate = scLn.nextDouble("Rate")
+      val amount = scLn.nextDouble("Amount")
+      val duration = scLn.nextDouble("Duration")
+      val totalFee = scLn.nextDouble("Total Fee")
+      val open = Date.fromString(scLn.next("Open Date") + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
+      val close = Date.fromString(scLn.next("Close Date") + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
 
       val desc = id + " Borrowing fee"
 
@@ -181,11 +181,11 @@ object Poloniex extends Exchanger {
       SeparatedScanner(line, "[,%]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = Date.fromString(scLn.next() + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
-      val currency = Market.normalize(scLn.next())
-      val amount = scLn.nextDouble()
-      val address = scLn.next()
-      val status = scLn.next()
+      val date = Date.fromString(scLn.next("Date") + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
+      val currency = Market.normalize(scLn.next("Currency"))
+      val amount = scLn.nextDouble("Amount")
+      val address = scLn.next("Address")
+      val status = scLn.next("Status")
 
       val tk = "COMPLETE: "
       val isFinalized = status.startsWith(tk)

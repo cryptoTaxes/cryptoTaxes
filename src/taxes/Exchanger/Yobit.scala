@@ -19,19 +19,19 @@ object Yobit extends Exchanger {
       SeparatedScanner(line, "[ \t]+")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date1 = scLn.next()
-      val date2 = scLn.next()
-      val date3 = scLn.next()
-      val date4 = scLn.next()
+      val date1 = scLn.next("Date1")
+      val date2 = scLn.next("Date2")
+      val date3 = scLn.next("Date3")
+      val date4 = scLn.next("Date4")
 
       val date = Date.fromString(date3+" "+date4, "yyyy-MM-dd hh:mm:ss")
 
-      val pair = scLn.next()
-      val orderType = scLn.next()
-      val price = scLn.nextDouble()
-      val amount = scLn.nextDouble()
-      val completed = scLn.nextDouble()
-      val total = scLn.nextDouble()
+      val pair = scLn.next("Pair")
+      val orderType = scLn.next("Order Type")
+      val price = scLn.nextDouble("Price")
+      val amount = scLn.nextDouble("Amount")
+      val completed = scLn.nextDouble("Completed")
+      val total = scLn.nextDouble("Total")
       scLn.close()
 
       val desc = Yobit.toString
