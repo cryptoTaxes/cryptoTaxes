@@ -3,6 +3,7 @@
 // Used to download historical prices.
 
 BCH   -> bitcoin-cash
+BNB   -> binance-coin
 BTC   -> bitcoin
 ETH   -> ethereum
 LTC   -> litecoin

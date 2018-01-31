@@ -6,8 +6,6 @@ import taxes.Market.Market
 trait Operation {
   def date : Date
   def id : String
-  def exchanger : Exchanger
-  def description : String
 
   protected val dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", java.util.Locale.ENGLISH)
   protected def dateToString(date : Date) : String = dateFormat.format(date)
@@ -86,3 +84,6 @@ case class Gain(date : Date, id : String, amount: Double, market: Market, fee: D
   override def toString : String =
     "Gain(%s %18.8f %-5s   %18.8f %-5s  %s)" format (dateToString(date), amount, market, fee, feeMarket, description)
 }
+
+
+case class Operations(date : Date, id : String, operations : Seq[Operation]) extends Operation

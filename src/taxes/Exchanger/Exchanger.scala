@@ -15,7 +15,8 @@ trait Exchanger extends Initializable {
 object Exchangers {
   val allExchangers : List[Exchanger] =
     List[Exchanger](
-        Bitfinex
+        Binance
+      , Bitfinex
       , Bittrex
       , CCEX
       , Changelly

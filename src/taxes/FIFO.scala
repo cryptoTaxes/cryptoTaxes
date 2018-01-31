@@ -284,7 +284,9 @@ object FIFO {
 
       // Compute exchange rates
       val (boughtSoldExchangeRate, soldBoughtExchangeRate) =
-        if (exchange.feeMarket == boughtMarket)
+        if (exchange.fee == 0)
+          (boughtAmount / soldAmount, soldAmount / boughtAmount)
+        else if (exchange.feeMarket == boughtMarket)
           ((boughtAmount + exchange.fee) / soldAmount, soldAmount / (boughtAmount + exchange.fee))
         else if (exchange.feeMarket == soldMarket)
           (boughtAmount / (soldAmount - exchange.fee), (soldAmount - exchange.fee) / boughtAmount)
@@ -297,9 +299,33 @@ object FIFO {
           0
         else if (exchange.feeMarket == baseMarket)
           exchange.fee
-        else if (exchange.feeMarket == exchange.toMarket && exchange.fromMarket == baseMarket)
+        else if (exchange.feeMarket == boughtMarket && soldMarket == baseMarket)
           soldBoughtExchangeRate * exchange.fee
-        else
+        else if (exchange.feeMarket == soldMarket && boughtMarket == baseMarket)
+          boughtSoldExchangeRate * exchange.fee
+        else if (exchange.feeMarket == boughtMarket) {
+          if (Market.priority(soldMarket) > Market.priority(boughtMarket)) {
+            val total = soldAmount * baseCoin.priceInBaseCoin(soldMarket, exchange.date)
+            exchange.fee * total / (boughtAmount+exchange.fee)
+          } else {
+            val total = (boughtAmount+exchange.fee) * baseCoin.priceInBaseCoin(boughtMarket, exchange.date)
+            exchange.fee * total / (boughtAmount+exchange.fee)
+          }
+        } else if (exchange.feeMarket == boughtMarket) {
+          if (Market.priority(soldMarket) > Market.priority(boughtMarket)) {
+            val total = soldAmount * baseCoin.priceInBaseCoin(soldMarket, exchange.date)
+            exchange.fee * total / (boughtAmount+exchange.fee)
+          } else {
+            exchange.fee * baseCoin.priceInBaseCoin(boughtMarket, exchange.date)
+          }
+        } else if (exchange.feeMarket == soldMarket) {
+          if (Market.priority(soldMarket) > Market.priority(boughtMarket)) {
+            exchange.fee * baseCoin.priceInBaseCoin(soldMarket, exchange.date)
+          } else {
+            val boughtInBaseCoin = boughtAmount * baseCoin.priceInBaseCoin(boughtMarket, exchange.date)
+            boughtInBaseCoin / (soldAmount / exchange.fee - 1)
+          }
+        } else
           exchange.fee * baseCoin.priceInBaseCoin(exchange.feeMarket, exchange.date)
 
       Realized.perMarketPaidFees.record(exchange.feeMarket, feeInBaseCoin)
@@ -428,7 +454,7 @@ object FIFO {
             else
               out.println()
           }
-        if(Config.verbosity(Verbosity.showMoreDetails))
+        if(Config.verbosity(Verbosity.showMoreDetails) && exchange.fee > 0)
           out.println(
             "FEE:".tab(0)+Format.asMarket(exchange.fee, exchange.feeMarket)+
             " = "+Format.asMarket(feeInBaseCoin,baseMarket)
@@ -439,8 +465,11 @@ object FIFO {
             out.print(
               Format.asMarket(sellValueInBaseCoin,baseMarket)+
                 " - " + Format.asMarket(soldBasisInBaseCoin,baseMarket)+
-                " - " + Format.asMarket(feeInBaseCoin,baseMarket)+
-                " = "
+                (if(exchange.fee >0)
+                  " - " + Format.asMarket(feeInBaseCoin,baseMarket)
+                 else
+                  ""
+                )+" = "
             )
         out.println(Format.asMarket(gainInBaseCoin,baseMarket))
         out.println()
@@ -893,21 +922,9 @@ object FIFO {
       }
     }
 
-    val startDate = Date(2000,1,1)
-    val endDate = Date(2500,12,31)
-    var currentYear : Int = operations.head.date.getYear
-    initializeYear(currentYear)
 
-    for (operation <- operations if operation.date >= startDate && operation.date <= endDate) {
-      val newYear = operation.date.getYear
-      if(newYear > currentYear) {
-        reportYear(currentYear)
-        currentYear = initializeYear(newYear)
-      }
 
-      operationNumber += 1
-      Logger.trace(operationNumber+" "+operation)
-
+    def dispatch(operation: Operation): Unit = {
       operation match {
         case exchange: Exchange =>
           processExchange(exchange)
@@ -926,7 +943,30 @@ object FIFO {
 
         case margin : Margin =>
           processMargin(margin)
+
+        case operations : Operations =>
+          operations.operations.foreach(dispatch)
       }
+    }
+
+
+    val startDate = Date(2000,1,1)
+    val endDate = Date(2500,12,31)
+    var currentYear : Int = operations.head.date.getYear
+    initializeYear(currentYear)
+
+    for (operation <- operations if operation.date >= startDate && operation.date <= endDate) {
+      val newYear = operation.date.getYear
+      if(newYear > currentYear) {
+        reportYear(currentYear)
+        currentYear = initializeYear(newYear)
+      }
+
+      operationNumber += 1
+      Logger.trace(operationNumber+" "+operation)
+
+      dispatch(operation)
+
     }
     reportYear(currentYear)
     out.close()
