@@ -58,7 +58,7 @@ object Bittrex extends Exchanger {
           Exchange(
             date = dateClose
             , id = orderId
-            , fromAmount = price, fromMarket = Market.normalize(market1)
+            , fromAmount = price + comissionPaid, fromMarket = Market.normalize(market1)
             , toAmount = quantity, toMarket = Market.normalize(market2)
             , fee = comissionPaid, feeMarket = Market.normalize(market1)
             , exchanger = Bittrex
