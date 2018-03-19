@@ -86,6 +86,9 @@ object FIFO {
     val outFile = Paths.userOutputFolder+"/output.txt"
     val out = new java.io.PrintStream(outFile)
 
+    var csv : CSV = null
+
+
     // what market is our basis
     val baseCoin = config.baseCoin
     val baseMarket = baseCoin.market
@@ -141,6 +144,19 @@ object FIFO {
       out.println(year)
       out.println(Format.header)
       out.println()
+
+
+      if(csv != null)
+        csv.close()
+
+      val csvFile = Paths.userOutputFolder+"/output%d.csv".format(year)
+      csv = CSV(csvFile)
+
+      for(i <- 1 to 10)
+        csv.println()
+      csv.println(year)
+      csv.printlnHeader
+
       return year
     }
 
@@ -473,6 +489,19 @@ object FIFO {
             )
         out.println(Format.asMarket(gainInBaseCoin,baseMarket))
         out.println()
+
+        val csvEntry = csv.Entry(
+            date = exchange.date
+          , sold = soldMarket
+          , soldAmount = soldAmount
+          , bought = boughtMarket
+          , boughtAmount = boughtAmount
+          , costBasis = soldBasisInBaseCoin
+          , sellValue = sellValueInBaseCoin
+          , fee = feeInBaseCoin
+        )
+
+        csv.println(csvEntry)
       }
     }
 
@@ -516,6 +545,21 @@ object FIFO {
       else
         out.println()
       out.println()
+
+      if(feeCostInBaseCoin>0) {
+        val csvEntry = csv.Entry(
+          date = fee.date
+          , sold = "FEE"
+          , soldAmount = 0
+          , bought = "FEE"
+          , boughtAmount = 0
+          , costBasis = 0
+          , sellValue = 0
+          , fee = feeCostInBaseCoin
+        )
+
+        csv.println(csvEntry)
+      }
     }
 
 
@@ -579,6 +623,19 @@ object FIFO {
       else
         out.println()
       out.println()
+
+      val csvEntry = csv.Entry(
+        date = loss.date
+        , sold = loss.market
+        , soldAmount = loss.amount
+        , bought = "LOSS"
+        , boughtAmount = 0
+        , costBasis = basisInBaseCoin
+        , sellValue = 0
+        , fee = feeBasisInBaseCoin
+      )
+
+      csv.println(csvEntry)
     }
 
 
@@ -643,6 +700,19 @@ object FIFO {
         Format.asMarket(gainInBaseCoin, baseMarket)
       )
       out.println()
+
+      val csvEntry = csv.Entry(
+        date = gain.date
+        , sold = "GAIN"
+        , soldAmount = 0
+        , bought = gain.market
+        , boughtAmount = gain.amount
+        , costBasis = 0
+        , sellValue = gainInBaseCoin
+        , fee = feeBasisInBaseCoin
+      )
+
+      csv.println(csvEntry)
     }
 
 
@@ -970,6 +1040,7 @@ object FIFO {
     }
     reportYear(currentYear)
     out.close()
+    csv.close()
 
     Logger.trace("Output generated in file "+outFile+".")
   }

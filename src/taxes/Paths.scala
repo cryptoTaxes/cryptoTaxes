@@ -13,6 +13,24 @@ object Paths extends Initializable {
   def coinMarketCapFile(market : Market) =
     coinMarketCap+"/"+market+".txt"
 
+  def coinMarketCapHtmlFile(market : Market) =
+    coinMarketCap+"/"+market+".html"
+
+  def backup(fileName : String): Unit = {
+    val file = new java.io.File(fileName)
+    if(file.exists()) {
+      var i = 0
+      var ok = false
+      var backup : java.io.File = null
+      while(!ok) {
+        i += 1
+        backup = new java.io.File(fileName + ".bak"+i)
+        ok = !backup.exists()
+      }
+      file.renameTo(backup)
+    }
+  }
+
   val usr = data+"/usr"
   lazy val userInputFolder = usr+"/"+Config.config.user+"/input"
   lazy val userOutputFolder = usr+"/"+Config.config.user+"/output"

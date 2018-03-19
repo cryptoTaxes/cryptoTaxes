@@ -96,7 +96,9 @@ object EuroUSDParity extends Initializable {
 
     val url = "https://www.bde.es/webbde/es/estadis/infoest/series/tc_1_1.csv"
     val source = Source.fromURL(url)(scala.io.Codec.ISO8859)
-    val ps = new java.io.PrintStream(Paths.euroUSDFile)
+    val fileName = Paths.euroUSDFile
+    Paths.backup(fileName)
+    val ps = new java.io.PrintStream(fileName)
     ps.print(source.mkString)
     ps.close()
   }

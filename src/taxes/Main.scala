@@ -5,13 +5,14 @@ import taxes.PriceHistory.{CoinMarketCapPrice, EuroUSDParity}
 import taxes.Util.Logger
 import taxes.Util.Parse.Parse
 
+
 object Main extends App {
   // Use English formats for floating point numbers
   java.util.Locale.setDefault(java.util.Locale.ENGLISH)
   Logger.trace("cryptoTaxes (https://github.com/cryptoTaxes/cryptoTaxes)\n")
 
-  val cmdLine = args.mkString(" ")
-  // val cmdLine = "-user=demo -verbosity=10 -currency=euro -download-prices=no"
+  //val cmdLine = args.mkString(" ")
+  val cmdLine = "-user=user1 -verbosity=10 -currency=euro -download-prices=no"
   Config.config = ParseCommandLine(cmdLine)
 
   if(Config.config.downloadPrices) {
