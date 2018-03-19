@@ -97,7 +97,7 @@ object Kraken extends Exchanger with Initializable {
             date = date
             , id = id
             , fromAmount = amount1 + fee1, fromMarket = Market.normalize(market1)
-            , toAmount = amount2, toMarket = Market.normalize(market2)
+            , toAmount = amount2 - fee2, toMarket = Market.normalize(market2)
             , fee = fee2
             , feeMarket = Market.normalize(market2)
             , exchanger = Kraken
@@ -112,7 +112,7 @@ object Kraken extends Exchanger with Initializable {
             date = date
             , id = id
             , fromAmount = amount2 + fee2, fromMarket = Market.normalize(market2)
-            , toAmount = amount1, toMarket = Market.normalize(market1)
+            , toAmount = amount1 - fee1, toMarket = Market.normalize(market1)
             , fee = fee1
             , feeMarket = Market.normalize(market1)
             , exchanger = Kraken
