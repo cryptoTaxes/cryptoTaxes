@@ -86,8 +86,7 @@ object FIFO {
     val outFile = Paths.userOutputFolder+"/output.txt"
     val out = new java.io.PrintStream(outFile)
 
-    var csv : CSV = null
-
+    val csv = CSV()
 
     // what market is our basis
     val baseCoin = config.baseCoin
@@ -145,14 +144,10 @@ object FIFO {
       out.println(Format.header)
       out.println()
 
-
-      if(csv != null)
-        csv.close()
-
       val csvFile = Paths.userOutputFolder+"/output%d.csv".format(year)
-      csv = CSV(csvFile)
+      csv.setOutputTo(csvFile)
 
-      for(i <- 1 to 10)
+      for(i <- 1 to 1)
         csv.println()
       csv.println(year)
       csv.printlnHeader
@@ -491,14 +486,14 @@ object FIFO {
         out.println()
 
         val csvEntry = csv.Entry(
-            date = exchange.date
-          , sold = soldMarket
-          , soldAmount = soldAmount
-          , bought = boughtMarket
-          , boughtAmount = boughtAmount
-          , costBasis = soldBasisInBaseCoin
-          , sellValue = sellValueInBaseCoin
-          , fee = feeInBaseCoin
+            date = Some(exchange.date)
+          , sold = Some(soldMarket)
+          , soldAmount = Some(soldAmount)
+          , bought = Some(boughtMarket)
+          , boughtAmount = Some(boughtAmount)
+          , costBasis = Some(soldBasisInBaseCoin)
+          , sellValue = Some(sellValueInBaseCoin)
+          , fee = Some(feeInBaseCoin)
         )
 
         csv.println(csvEntry)
@@ -548,14 +543,9 @@ object FIFO {
 
       if(feeCostInBaseCoin>0) {
         val csvEntry = csv.Entry(
-          date = fee.date
-          , sold = "FEE"
-          , soldAmount = 0
-          , bought = "FEE"
-          , boughtAmount = 0
-          , costBasis = 0
-          , sellValue = 0
-          , fee = feeCostInBaseCoin
+            date = Some(fee.date)
+          , sold = Some("Fee")
+          , fee = Some(feeCostInBaseCoin)
         )
 
         csv.println(csvEntry)
@@ -625,14 +615,12 @@ object FIFO {
       out.println()
 
       val csvEntry = csv.Entry(
-        date = loss.date
-        , sold = loss.market
-        , soldAmount = loss.amount
-        , bought = "LOSS"
-        , boughtAmount = 0
-        , costBasis = basisInBaseCoin
-        , sellValue = 0
-        , fee = feeBasisInBaseCoin
+          date = Some(loss.date)
+        , sold = Some(loss.market)
+        , soldAmount = Some(loss.amount)
+        , bought = Some("Loss")
+        , costBasis = Some(basisInBaseCoin)
+        , fee = Some(feeBasisInBaseCoin)
       )
 
       csv.println(csvEntry)
@@ -702,14 +690,12 @@ object FIFO {
       out.println()
 
       val csvEntry = csv.Entry(
-        date = gain.date
-        , sold = "GAIN"
-        , soldAmount = 0
-        , bought = gain.market
-        , boughtAmount = gain.amount
-        , costBasis = 0
-        , sellValue = gainInBaseCoin
-        , fee = feeBasisInBaseCoin
+          date = Some(gain.date)
+        , sold = Some("Gain")
+        , bought = Some(gain.market)
+        , boughtAmount = Some(gain.amount)
+        , sellValue = Some(gainInBaseCoin)
+        , fee = Some(feeBasisInBaseCoin)
       )
 
       csv.println(csvEntry)
