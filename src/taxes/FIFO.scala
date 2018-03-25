@@ -10,7 +10,7 @@ import taxes.Util.Logger
 object Format {
   val header : String = "".padTo(80,'=')
   
-  val df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
+  val df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
   def asMarket(number : Double, marketUnit : Market) : String = {
     val fmt =

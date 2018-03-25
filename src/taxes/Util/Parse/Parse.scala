@@ -3,6 +3,21 @@ package taxes.Util.Parse
 import taxes.Util.Logger
 
 package object Parse {
+
+  def asDouble(str : String) : Double = {
+    val sc = new java.util.Scanner(str)
+    val double = sc.nextDouble()
+    sc.close()
+    return double
+  }
+
+  def asInt(str : String) : Int = {
+    val sc = new java.util.Scanner(str)
+    val int = sc.nextInt()
+    sc.close()
+    return int
+  }
+
   def isComment(line : String) : Boolean =
     line.isEmpty || line.startsWith("//")
 

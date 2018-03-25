@@ -66,26 +66,18 @@ case class QuotedScanner(str : String, delimiter : Char, sep : Char) extends Sca
     return token
   }
 
-  def nextDouble() : Double = {
-    val sc = new java.util.Scanner(next())
-    val double = sc.nextDouble()
-    sc.close()
-    return double
-  }
+  def nextDouble() : Double =
+    Parse.asDouble(next())
 
-  def nextInt() : Int = {
-    val sc = new java.util.Scanner(next())
-    val int = sc.nextInt()
-    sc.close()
-    return int
-  }
+  def nextInt() : Int =
+    Parse.asInt(next())
 
   def close(): Unit = {}
 }
 
 
-case class SeparatedScanner(str : String, delimiterRegex : String) extends Scanner {
-  private val sc = new java.util.Scanner(str).useDelimiter(delimiterRegex)
+case class SeparatedScanner(str : String, separatorRegex : String) extends Scanner {
+  private val sc = new java.util.Scanner(str).useDelimiter(separatorRegex)
 
   def next() : String = sc.next()
 

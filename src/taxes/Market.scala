@@ -36,6 +36,13 @@ object Market extends Initializable {
 
   val litecoin : Market = normalize("LTC")
 
+  val dogecoin : Market = normalize("DOGE")
+
+  val vertcoin : Market = normalize("VTC")
+
+  val etc : Market = normalize("ETC")
+
+
   private val priorities : Map[Market, Int] = {
     def parsePair(t : (Market, String)) = t match {
       case (market, str) => (normalize(market), str.toInt)

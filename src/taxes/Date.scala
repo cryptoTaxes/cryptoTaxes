@@ -29,8 +29,11 @@ class Date(milliseconds : Long) extends java.util.Date(milliseconds) with Ordere
 
 
 object Date {
-  def apply(unixTime : Long) =
-    new Date(unixTime)
+  def apply(milliseconds : Long) =
+    new Date(milliseconds)
+
+  def fromUnix(seconds : Long) =
+    new Date(seconds * 1000L)
 
   // month is in 1-12
   def apply(year : Int, month : Int, date : Int) =

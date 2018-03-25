@@ -4,24 +4,26 @@ import java.io.{File, PrintStream}
 import taxes.Market.Market
 import taxes.Util.Logger
 import taxes.Util.Parse.{CSVReader, Scanner, SeparatedScanner}
-import scala.io.Source
 
 object TransactionsCache extends Initializable with Finalizable {
 
   case class TxKey(market: Market, txid : String, address : String)
-  case class TxInfo(amount : Double, fee : Double)
+  case class TxInfo(amount : Double, fee : Double, date : Date)
 
   private val map = scala.collection.mutable.Map[TxKey, TxInfo]()
 
   private val fileName = Paths.cacheFolder+"/"+"transactions.csv"
 
+  private val df = "yyyy-MM-dd hh:mm:ss"
+  private val sdf = new java.text.SimpleDateFormat(df)
+
   def saveToDisk(): Unit = {
     val f = new File(fileName)
     val ps = new PrintStream(f)
-    val header = "market,txid,address,amount,fee"
+    val header = "market,txid,address,amount,fee,date"
     ps.println(header)
     for((key,info) <- map)
-      ps.println(List(key.market, key.txid, key.address, info.amount, info.fee).mkString(","))
+      ps.println(List(key.market, key.txid, key.address, info.amount, info.fee, sdf.format(info.date)).mkString(","))
     ps.close()
   }
 
@@ -38,7 +40,8 @@ object TransactionsCache extends Initializable with Finalizable {
         val address = scLn.next()
         val amount = scLn.nextDouble()
         val fee = scLn.nextDouble()
-        return CSVReader.Ok((TxKey(market, txid, address), TxInfo(amount, fee)))
+        val date = Date.fromString(scLn.next(), df)
+        return CSVReader.Ok((TxKey(market, txid, address), TxInfo(amount, fee, date)))
       }
     }
     if(new File(fileName).exists())
@@ -50,13 +53,10 @@ object TransactionsCache extends Initializable with Finalizable {
     map.get(TxKey(market, txid, address)) match {
       case Some(txInfo) => txInfo
       case None => {
-        if(market == Market.bitcoin) {
-          //toDo fix HTTP response code: 429
-          val satoshi = 1E8
-          val amount = Source.fromURL("https://blockchain.info/q/txresult/%s/%s".format(txid, address)).mkString.toInt / satoshi
-          val fee = Source.fromURL("https://blockchain.info/q/txfee/%s".format(txid)).mkString.toInt / satoshi
+        if (List(Market.bitcoin, Market.litecoin, Market.dogecoin, Market.etc, Market.vertcoin).contains(market)) {
+          val sc = BlockExplorerSearcher(market, txid, address)
           val key = TxKey(market, txid, address)
-          val info = TxInfo(amount, fee)
+          val info = TxInfo(sc.amount, sc.fee, sc.date)
           map += (key -> info)
           saveToDisk()
           return info

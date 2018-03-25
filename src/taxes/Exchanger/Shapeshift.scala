@@ -1,6 +1,7 @@
 package taxes.Exchanger
 
-import taxes.Util.Parse.Parse
+import taxes.Util.Logger
+import taxes.Util.Parse.{AdvancedJSONParser, Parse}
 import taxes._
 
 object Shapeshift extends Exchanger {
@@ -16,52 +17,78 @@ object Shapeshift extends Exchanger {
   )
 
   def readFile(fileName : String) : List[Exchange] = {
+    val prefix0 = "https://shapeshift.io/#/status/"
+    val prefix1 = "https://shapeshift.io/txStat/"
+
+    var lnNumber = 0
     val f = new java.io.File(fileName)
     val sc = new java.util.Scanner(f)
+
+    def nextLine(): String = {
+      lnNumber += 1
+      Parse.trimSpaces(sc.nextLine())
+    }
+
     var exchanges = List[Exchange]()
     while (sc.hasNextLine) {
-      val ln0 = Parse.trimSpaces(sc.nextLine())
-      val orderId = ln0.dropWhile(_ != ':').takeWhile(_ != ';')
-      val desc = id + " " + orderId
+      val ln0 = nextLine()
+      if(ln0.nonEmpty) {
+        if(!ln0.startsWith(prefix0))
+          Logger.warning("%s. Line %d: \"%s\" should start with %s.".format(id, lnNumber, ln0, prefix0))
+        else {
+          val orderId = ln0.drop(prefix0.length)
+          val desc = id + " " + orderId
 
-      val ln1 = Parse.trimSpaces(sc.nextLine())
-      val market1 = ln1.tail.takeWhile(_ != ';')
+          val ln1 = nextLine()
+          if (!ln1.startsWith(prefix1))
+            Logger.warning("%s. Line %d: \"%s\" should start with %s.".format(id, lnNumber, ln1, prefix1))
+          else {
+            val inAddress = ln1.drop(prefix1.length)
 
-      val ln2 = Parse.trimSpaces(sc.nextLine())
-      val market2 = ln2.tail.takeWhile(_ != ';')
+            val ln2 = nextLine()
+            val json = AdvancedJSONParser(ln2)
 
-      val ln3 = Parse.trimSpaces(sc.nextLine())
-      val scLn3 = new java.util.Scanner(ln3).useDelimiter("[;]")
-      scLn3.next()
-      val amount2 = scLn3.next().replace(',','.').toDouble
-      scLn3.close()
+            val addr = json[String]("address")
+            if (addr != inAddress)
+              Logger.warning("%s. Line %d: Input address %s should be %s.".format(id, lnNumber, addr, inAddress))
+            else if(json[String]("status") != "complete")
+              Logger.warning("%s. Line %d: Status should be complete.".format(id, lnNumber))
+            else {
+              val amount1 = json.getDouble("incomingCoin")
+              val market1 = Market.normalize(json[String]("incomingType"))
+              val address1 = json[String]("address")
 
-      val ln4 = Parse.trimSpaces(sc.nextLine())
-      val scLn4 = new java.util.Scanner(ln4).useDelimiter("[;]")
-      scLn4.next()
-      val amount1 = scLn4.next().replace(',','.').toDouble
-      scLn4.close()
+              val amount2 = json.getDouble("outgoingCoin")
+              val market2 = Market.normalize(json[String]("outgoingType"))
 
-      val ln5 = Parse.trimSpaces(sc.nextLine())
-      val scLn5 = new java.util.Scanner(ln5).useDelimiter("[;]")
-      val date = Date.fromString(scLn5.next(), "yyyy-MM-dd hh:mm:ss")
-      sc.nextLine()
+              val ln3 = nextLine()
+              val txid = ln3
 
-      val exchange =
-        Exchange(
-          date = date
-          , id = orderId
-          , fromAmount = amount1, fromMarket = Market.normalize(market1)
-          , toAmount = amount2, toMarket = Market.normalize(market2)
-          , fee = 0 // toDo fix me
-          , feeMarket = Market.normalize(market1)
-          , exchanger = Shapeshift
-          , description = desc
-        )
+              val txInfo = TransactionsCache.lookup(market1, txid, address1)
 
-      exchanges ::= exchange
+              val date = txInfo.date
+
+              val exchange =
+                Exchange(
+                  date = date
+                  , id = orderId
+                  , fromAmount = amount1 + txInfo.fee, fromMarket = market1
+                  , toAmount = amount2, toMarket = market2
+                  , fee = txInfo.fee
+                  , feeMarket = market1
+                  , exchanger = Shapeshift
+                  , description = desc
+                )
+
+              exchanges ::= exchange
+            }
+          }
+        }
+      }
     }
     sc.close()
     return exchanges.sortBy(_.date)
   }
 }
+
+
