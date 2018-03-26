@@ -45,6 +45,9 @@ object Poloniex extends Exchanger {
 
       val desc = Poloniex + " " + orderNumber
 
+      if(amount==0 && total==0) // Must be a Poloniex error but I got an entry with no amount not total
+        return CSVReader.Warning("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
+
       if (category == "Exchange") {
         val exchange =
           if (orderType == "Sell")
@@ -63,7 +66,7 @@ object Poloniex extends Exchanger {
               , id = orderNumber
               , fromAmount = total, fromMarket = market2
               , toAmount = amount*(100-feePercent)/100, toMarket = market1
-              // , fee = amount*feePercent/100, feeMarket = CoinConversions.normalize(market1)
+              //, fee = amount*feePercent/100, feeMarket = market1
               // Usually, market2 is BTC so we set fee in BTC
               , fee = amount*feePercent/100*price, feeMarket = market2
               , exchanger = Poloniex
@@ -77,9 +80,9 @@ object Poloniex extends Exchanger {
           , id = orderNumber
           , fromAmount = total, fromMarket = market2
           , toAmount = amount*(100-feePercent)/100, toMarket = market1
-          // , fee = amount*feePercent/100, feeMarket = CoinConversions.normalize(market1)
+          , fee = amount*feePercent/100, feeMarket = market1
           // Usually, market2 is BTC so we set fee in BTC
-          , fee = amount*feePercent/100*price, feeMarket = market2
+          //, fee = amount*feePercent/100*price, feeMarket = market2
           , exchanger = Poloniex
           , description = desc + " Settlement"
         )
@@ -104,9 +107,9 @@ object Poloniex extends Exchanger {
               , id = orderNumber
               , fromAmount = total, fromMarket = market2
               , toAmount = amount*(100-feePercent)/100, toMarket = market1
-              // , fee = amount*feePercent/100, feeMarket = CoinConversions.normalize(market1)
+              , fee = amount*feePercent/100, feeMarket = market1
               // Usually, market2 is BTC so we set fee in BTC
-              , fee = amount*feePercent/100*price, feeMarket = market2
+              //, fee = amount*feePercent/100*price, feeMarket = market2
               , orderType = Operation.OrderType.Buy
               , pair = (market1, market2)
               , exchanger = Poloniex
@@ -117,8 +120,8 @@ object Poloniex extends Exchanger {
         return CSVReader.Warning("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
     }
 
-    override def read(): List[Operation] =
-      group(super.read().sortBy(_.id)).sortBy(_.date)
+    // override def read(): List[Operation] =
+    //  group(super.read().sortBy(_.id)).sortBy(_.date)
   }
 
   def group(operations: List[Operation]) : List[Operation] =

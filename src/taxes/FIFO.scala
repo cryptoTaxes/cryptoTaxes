@@ -768,8 +768,10 @@ object FIFO {
       if(settlement.exchanger == Poloniex) {
         val stockContainer = marginSellsMap(Poloniex)(marketKey)
         if (stockContainer.nonEmpty) {
-          if (Config.verbosity(Verbosity.showStocks))
+          if (Config.verbosity(Verbosity.showStocks)) {
+            out.print("".tab(1))
             out.println(stockContainer)
+          }
 
           stockContainer.removeAndGetBasis(boughtAmount)
 
@@ -781,7 +783,7 @@ object FIFO {
       }
       out.println()
 
-      processLoss(Loss(settlement.date, settlement.id, totalInTradingBaseCoin, tradingBaseMarket, feeInTradingBaseCoin, tradingBaseMarket, settlement.exchanger, settlement.description))
+      processLoss(Loss(settlement.date, settlement.id, totalInTradingBaseCoin, tradingBaseMarket, 0/*feeInTradingBaseCoin*/, tradingBaseMarket, settlement.exchanger, settlement.description))
     }
 
 
