@@ -42,6 +42,8 @@ object Market extends Initializable {
 
   val etc : Market = normalize("ETC")
 
+  val ripple : Market = normalize("XRP")
+
 
   private val priorities : Map[Market, Int] = {
     def parsePair(t : (Market, String)) = t match {

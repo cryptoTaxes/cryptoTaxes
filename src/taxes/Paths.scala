@@ -38,7 +38,7 @@ object Paths extends Initializable {
   val conf = data+"/config"
   def configFile(fileName : String) = conf+"/"+fileName
 
-  def findFilesAt(path : String, extension : String = ".csv") : Array[java.io.File] = {
+  def findFilesAt(path : String, extension : String) : Array[java.io.File] = {
     val f = new java.io.File(path)
     val matchingFiles = f.listFiles(new java.io.FilenameFilter() {
       def accept(dir: java.io.File, name: String): Boolean =

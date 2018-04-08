@@ -8,7 +8,7 @@ object General extends Exchanger {
   override val id: String = "General"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("general") {
+    new UserFolderSource[Operation]("general", ".csv") {
       def fileSource(fileName : String) = operationsReader(fileName)
     }
   )

@@ -1,5 +1,7 @@
 package taxes.Exchanger
 
+import java.security.cert.Extension
+
 import taxes.Util.Logger
 import taxes._
 
@@ -43,4 +45,4 @@ object Exchangers {
 }
 
 
-abstract case class UserFolderSource[+A](folderPath : String) extends FolderSource[A](Paths.userInputFolder+"/"+folderPath)
+abstract case class UserFolderSource[+A](folderPath : String, extension : String) extends FolderSource[A](Paths.userInputFolder+"/"+folderPath, extension)

@@ -1,71 +1,89 @@
 package taxes.Exchanger
 
+import taxes.Market.Market
+import taxes.Util.Logger
 import taxes.Util.Parse._
 import taxes._
 
+import scala.collection.immutable.Map
+import scala.io.Source
+import scala.util.parsing.json.JSON
+
 object RippleTrade extends Exchanger {
-  override val id: String = "XRP Trade"
+  override val id: String = "XRPTrade"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("xrptrade") {
-      def fileSource(fileName : String) = operationsReader(fileName)
+    new UserFolderSource[Operation]("xrptrade", ".json") {
+      def fileSource(fileName: String) = new FileSource[Operation](fileName) {
+        override def read(): Seq[Operation] =
+          readFile(fileName)
+      }
     }
   )
 
-  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
-    override val hasHeader: Boolean = false
+  private case class Entry(hash : String, amount : Double, currency : Market, date : Date)
 
-    override def lineScanner(line: String): Scanner =
-      SeparatedScanner(line, "[,]")
+  private def readFile(fileName : String) : List[Exchange] = {
+    val src = Source.fromFile(fileName)
+    val contents = src.dropWhile(_ != '{').mkString // skip till proper start of json
+    src.close()
 
-    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val desc = RippleTrade.toString
+    val json = AdvancedJSONParser(contents)
 
-      val date = Date.fromString(scLn.next("Date"), "yyyy-MM-dd hh:mm:ss")
-      val what = scLn.next("What")
+    val changes = json.getList("balance_changes")
 
-      if (what == "Sell") {
-        val amount1 = scLn.nextDouble("Amount1")
-        val market1 = scLn.next("Market1")
-        scLn.next("Skip")
-        val amount2 = scLn.nextDouble("Amount2")
-        val market2 = scLn.next("Market2")
-        scLn.next("Skip")
-        val price = scLn.nextDouble("Price")
+    val entries = for(change <- changes)
+      yield
+        Entry(
+            date = Date.fromString(change[String]("executed_time"), "yyyy-MM-dd'T'HH:mm:ssX")
+          , hash = change[String]("tx_hash")
+          , amount = Parse.asDouble(change[String]("amount_change"))
+          , currency = change[String]("currency")
+        )
 
-        val exchange =
-          Exchange(
-            date = date
-            , id = ""
-            , fromAmount = amount1, fromMarket = Market.normalize(market1)
-            , toAmount = amount2, toMarket = Market.normalize(market2)
-            , fee = 0, feeMarket = Market.normalize(market2)
-            , exchanger = RippleTrade
-            , description = desc
-          )
-        return CSVReader.Ok(exchange)
-      } else if (what == "Buy") {
-        val amount1 = scLn.nextDouble("Amount1")
-        val market1 = scLn.next("Market1")
-        scLn.next("Skip")
-        val amount2 = scLn.nextDouble("Amount2")
-        val market2 = scLn.next("Market2")
-        scLn.next("Skip")
-        val price = scLn.nextDouble("Price")
+    var exchanges = List[Exchange]()
 
-        val exchange =
-          Exchange(
-            date = date
-            , id = ""
-            , fromAmount = amount2, fromMarket = Market.normalize(market2)
-            , toAmount = amount1, toMarket = Market.normalize(market1)
-            , fee = 0, feeMarket = Market.normalize(market1)
-            , exchanger = RippleTrade
-            , description = desc
-          )
-        return CSVReader.Ok(exchange)
-      } else
-        return CSVReader.Warning("%s. Read file: Reading this transaction is not currently supported: %s.".format(id, line))
+    val hashes = entries.map(_.hash).toSet
+
+    for(hash <- hashes) {
+      val optXRP = entries.find(entry => entry.hash == hash && entry.currency == "XRP")
+      optXRP match {
+        case None =>
+          Logger.fatal("RippleTrade.readFile: could not find XRP value for hash %s".format(hash))
+        case Some(entryXRP) => {
+          val optBTC = entries.find(entry => entry.hash == hash && entry.currency == "BTC")
+          optBTC match {
+            case None =>
+              Logger.fatal("RippleTrade.readFile: could not find BTC value for hash %s".format(hash))
+            case Some(entryBTC) => {
+              val desc = RippleTrade + " " + hash
+              val exchange =
+                if (entryXRP.amount < 0)
+                  Exchange(
+                    date = entryXRP.date
+                    , id = hash
+                    , fromAmount = entryXRP.amount.abs, fromMarket = Market.ripple
+                    , toAmount = entryBTC.amount.abs, toMarket = Market.bitcoin
+                    , fee = 0, feeMarket = Market.ripple
+                    , exchanger = RippleTrade
+                    , description = desc
+                  )
+                else
+                  Exchange(
+                    date = entryXRP.date
+                    , id = hash
+                    , fromAmount = entryBTC.amount.abs, fromMarket = Market.bitcoin
+                    , toAmount = entryXRP.amount.abs, toMarket = Market.ripple
+                    , fee = 0, feeMarket = Market.ripple
+                    , exchanger = RippleTrade
+                    , description = desc
+                  )
+              exchanges ::= exchange
+            }
+          }
+        }
+      }
     }
+    return exchanges.sortBy(_.date)
   }
 }

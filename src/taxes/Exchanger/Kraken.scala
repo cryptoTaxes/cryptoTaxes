@@ -45,10 +45,10 @@ object Kraken extends Exchanger with Initializable {
   }
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("kraken/ledgers") {
+    new UserFolderSource[Operation]("kraken/ledgers", ".csv") {
       def fileSource(fileName: String) = ledgerReader(fileName)
     },
-    new UserFolderSource[Operation]("kraken/trades") {
+    new UserFolderSource[Operation]("kraken/trades", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
     }
   )

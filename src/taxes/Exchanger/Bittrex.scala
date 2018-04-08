@@ -9,10 +9,10 @@ object Bittrex extends Exchanger {
   override val id: String = "Bittrex"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("bittrex") {
+    new UserFolderSource[Operation]("bittrex", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
     },
-    new UserFolderSource[Operation]("bittrex/withdrawals") {
+    new UserFolderSource[Operation]("bittrex/withdrawals", ".csv") {
       def fileSource(fileName: String) = withdrawalsReader(fileName)
     }
   )

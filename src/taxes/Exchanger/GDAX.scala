@@ -7,7 +7,7 @@ object GDAX extends Exchanger {
   override val id: String = "GDAX"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("gdax") {
+    new UserFolderSource[Operation]("gdax", ".csv") {
       def fileSource(fileName : String) = operationsReader(fileName)
     }
   )

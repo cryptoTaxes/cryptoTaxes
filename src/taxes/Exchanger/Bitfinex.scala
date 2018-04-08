@@ -7,10 +7,10 @@ object Bitfinex extends Exchanger {
   override val id: String = "Bitfinex"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("bitfinex") {
+    new UserFolderSource[Operation]("bitfinex", ".csv") {
       def fileSource(fileName: String) = reportReader(fileName)
     },
-    new UserFolderSource[Operation]("bitfinex/ledger") {
+    new UserFolderSource[Operation]("bitfinex/ledger", ".csv") {
       def fileSource(fileName: String) = ledgerReader(fileName)
     }
   )

@@ -8,7 +8,7 @@ object Shapeshift extends Exchanger {
   override val id: String = "Shapeshift"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("shapeshift") {
+    new UserFolderSource[Operation]("shapeshift", ".json") {
       def fileSource(fileName : String) = new FileSource[Operation](fileName) {
         override def read(): Seq[Operation] =
           readFile(fileName)

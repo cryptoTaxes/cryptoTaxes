@@ -18,7 +18,7 @@ object Changelly extends Exchanger {
   }
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("changelly") {
+    new UserFolderSource[Operation]("changelly", ".csv") {
       def fileSource(fileName : String) = operationsReader(fileName)
     }
   )

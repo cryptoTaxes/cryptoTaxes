@@ -8,7 +8,7 @@ object CCEX extends Exchanger {
   override val id: String = "C-CEX"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("c-cex") {
+    new UserFolderSource[Operation]("c-cex", ".csv") {
       def fileSource(fileName : String) = operationsReader(fileName)
     }
   )

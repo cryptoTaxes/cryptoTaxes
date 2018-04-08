@@ -8,8 +8,8 @@ trait JSONParser {
   def getDouble(key : String) : Double
 
   def getInt(key : String) : Int
-
 }
+
 
 case class SimpleJSONParser(str0 : String) extends JSONParser {
   private val map = scala.collection.mutable.Map[String, String]()
@@ -102,10 +102,18 @@ case class SimpleJSONParser(str0 : String) extends JSONParser {
 }
 
 
-case class AdvancedJSONParser(str : String) extends JSONParser {
-  private val map = scala.util.parsing.json.JSON.parseFull(str) match {
-    case None      => throw JSONException("AdvancedJSONParser: parse failed for %s".format(str))
-    case Some(map) => map.asInstanceOf[Map[String, Any]]
+object AdvancedJSONParser {
+  def apply(str : String) : AdvancedJSONParser =
+    new AdvancedJSONParser(str)
+}
+
+
+case class AdvancedJSONParser(map : Map[String, Any]) extends JSONParser {
+  def this(str : String) {
+    this(scala.util.parsing.json.JSON.parseFull(str) match {
+      case None      => throw JSONException("AdvancedJSONParser: parse failed for %s".format(str))
+      case Some(map) => map.asInstanceOf[Map[String, Any]]
+    })
   }
 
   def getString(key : String) = map(key).asInstanceOf[String]
@@ -130,4 +138,12 @@ case class AdvancedJSONParser(str : String) extends JSONParser {
   def apply[A](key : String) : A =
     map(key).asInstanceOf[A]
 
+  def getList(key : String) = {
+    map(key) match {
+      case list : List[Map[String,Any]] =>
+        list.map(AdvancedJSONParser(_))
+      case obj             =>
+        throw JSONException("AdvancedJSONParser.getList: not a List %s".format(obj))
+    }
+  }
 }

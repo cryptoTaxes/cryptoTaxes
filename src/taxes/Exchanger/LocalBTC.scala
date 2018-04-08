@@ -7,7 +7,7 @@ object LocalBTC extends Exchanger {
   override val id: String = "LocalBTC"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("localbitcoins") {
+    new UserFolderSource[Operation]("localbitcoins", ".csv") {
       def fileSource(fileName : String) = operationsReader(fileName)
     }
   )

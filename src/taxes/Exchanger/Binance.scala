@@ -8,7 +8,7 @@ object Binance extends Exchanger {
   override val id: String = "Binance"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("binance") {
+    new UserFolderSource[Operation]("binance", ".csv") {
       def fileSource(fileName : String) = operationsReader(fileName)
     }
   )
