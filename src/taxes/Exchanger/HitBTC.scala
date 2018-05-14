@@ -50,7 +50,7 @@ object HitBTC extends Exchanger {
 
         return CSVReader.Ok(exchange)
       } else
-        return CSVReader.Warning("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
     }
   }
 }

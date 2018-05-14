@@ -4,6 +4,16 @@ import taxes.Market.Market
 
 object Paths extends Initializable {
   val data = "data"
+
+  def pathFromData(fullPath : String) : String = {
+    val i = fullPath.indexOf(data)
+    if(i>=0)
+      fullPath.drop(i)
+    else
+      fullPath
+  }
+
+
   val prices = data+"/prices"
 
   val coinMarketCap = prices+"/coinmarketcap"

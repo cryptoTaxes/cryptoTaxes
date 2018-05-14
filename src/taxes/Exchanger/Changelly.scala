@@ -61,7 +61,7 @@ object Changelly extends Exchanger {
           )
         return CSVReader.Ok(exchange)
       } else
-        return CSVReader.Warning("%s. Read file: cannot parse this line: %s.".format(id, line))
+        return CSVReader.Warning("%s. Read file %s: cannot parse this line: %s.".format(id, Paths.pathFromData(fileName), line))
     }
   }
 }

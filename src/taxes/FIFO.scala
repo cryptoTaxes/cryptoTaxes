@@ -366,12 +366,12 @@ object FIFO {
       }
 
       // Get cost basis for sold coins from current stocks
-      val (soldBasisInBaseCoin, noBasis) =
+      val (soldBasisInBaseCoin, noBasis, usedStocks) =
         if (soldMarket != baseMarket)
           stocks.remove(soldMarket, soldAmount)
         else {
-          stocks.remove(soldMarket, soldAmount)
-          (soldAmount, 0.0)
+          val (_,_,usedStocks) = stocks.remove(soldMarket, soldAmount)
+          (soldAmount, 0.0, usedStocks)
         }
 
       // Total value of sold coins, expressed in base coin
@@ -413,7 +413,7 @@ object FIFO {
         frees ::= "SOLD %.8f %.6f %s = %.8f %s  ".format(noBasis, soldAmount, soldMarket, noBasis * sellValueInBaseCoin / soldAmount, baseMarket)
 
 
-      if (true || (exchange.fromMarket=="XLM" || exchange.toMarket=="XLM")) {
+      if (true || (exchange.fromMarket=="XRP" || exchange.toMarket=="XRP") && exchange.exchanger == RippleTrade) {
         val qSold = stocks(soldMarket)
         val qBought = stocks(boughtMarket)
 
@@ -449,10 +449,16 @@ object FIFO {
           out.println(qSold)
         else if(Config.verbosity(Verbosity.showDetails))
           out.println()
-        if(Config.verbosity(Verbosity.showMoreDetails))
-          out.println(
-            "COST BASIS:".tab(0)+Format.asMarket(soldBasisInBaseCoin,baseMarket)
-          )
+        if(Config.verbosity(Verbosity.showMoreDetails)) {
+          if(Config.verbosity(Verbosity.showMoreDetails)) {
+            out.print(
+              ("COST BASIS:".tab(0) + Format.asMarket(soldBasisInBaseCoin, baseMarket)).tab(1)
+            )
+            if(Config.verbosity(Verbosity.showStocks) && soldMarket != baseMarket)
+              out.print(usedStocks)
+            out.println()
+          }
+        }
         if(Config.verbosity(Verbosity.showDetails))
           if(!boughtBasisPriceInBaseCoin.isNaN()) {
             out.print((
@@ -494,6 +500,7 @@ object FIFO {
           , costBasis = Some(soldBasisInBaseCoin)
           , sellValue = Some(sellValueInBaseCoin)
           , fee = Some(feeInBaseCoin)
+          , exchanger = exchange.exchanger
         )
 
         csv.println(csvEntry)
@@ -502,7 +509,7 @@ object FIFO {
 
 
     def processFee(fee : Fee) {
-      val (feeCostInBaseCoin,_) = stocks.remove(fee.market, fee.amount)
+      val (feeCostInBaseCoin, _, usedStocks) = stocks.remove(fee.market, fee.amount)
 
       Realized.perMarketPaidFees.record(fee.market, feeCostInBaseCoin)
 
@@ -546,6 +553,7 @@ object FIFO {
             date = Some(fee.date)
           , sold = Some("Fee")
           , fee = Some(feeCostInBaseCoin)
+          , exchanger = fee.exchanger
         )
 
         csv.println(csvEntry)
@@ -554,10 +562,10 @@ object FIFO {
 
 
     def processLoss(loss : Loss) {
-      val (feeBasisInBaseCoin,_) = stocks.remove(loss.feeMarket, loss.fee)
+      val (feeBasisInBaseCoin, _, usedStocksFee) = stocks.remove(loss.feeMarket, loss.fee)
       Realized.perMarketPaidFees.record(loss.feeMarket, feeBasisInBaseCoin)
 
-      val (basisInBaseCoin,_) = stocks.remove(loss.market, loss.amount)
+      val (basisInBaseCoin, _, usedStocks) = stocks.remove(loss.market, loss.amount)
 
       // take fee into account
       val totalLossInBaseCoin = basisInBaseCoin + feeBasisInBaseCoin
@@ -621,6 +629,7 @@ object FIFO {
         , bought = Some("Loss")
         , costBasis = Some(basisInBaseCoin)
         , fee = Some(feeBasisInBaseCoin)
+        , exchanger = loss.exchanger
       )
 
       csv.println(csvEntry)
@@ -628,7 +637,7 @@ object FIFO {
 
 
     def processGain(gain : Gain) {
-      val (feeBasisInBaseCoin,_) = stocks.remove(gain.feeMarket, gain.fee)
+      val (feeBasisInBaseCoin, _, usedStocks) = stocks.remove(gain.feeMarket, gain.fee)
       Realized.perMarketPaidFees.record(gain.feeMarket, feeBasisInBaseCoin)
 
       // Paying a fee implies loosing paid amount
@@ -696,6 +705,7 @@ object FIFO {
         , boughtAmount = Some(gain.amount)
         , sellValue = Some(gainInBaseCoin)
         , fee = Some(feeBasisInBaseCoin)
+        , exchanger = gain.exchanger
       )
 
       csv.println(csvEntry)
@@ -908,7 +918,7 @@ object FIFO {
             out.println(marginBuys(marketKey))
           else
             out.println()
-          val (basis, noBasis) = marginBuys.remove(marketKey, soldAmount)
+          val (basis, noBasis, usedStocks) = marginBuys.remove(marketKey, soldAmount)
           if(Config.verbosity(Verbosity.showStocks)) {
             out.print("".tab(1))
             out.println(marginBuys(marketKey))
@@ -956,7 +966,7 @@ object FIFO {
             out.println(marginSells(marketKey))
           else
             out.println()
-          val (basis, noBasis) = marginSells.remove(marketKey, boughtAmount)
+          val (basis, noBasis, usedStocks) = marginSells.remove(marketKey, boughtAmount)
           if(Config.verbosity(Verbosity.showStocks)) {
             out.print("".tab(1))
             out.println(marginSells(marketKey))
@@ -1013,6 +1023,10 @@ object FIFO {
     var currentYear : Int = operations.head.date.getYear
     initializeYear(currentYear)
 
+
+    var minBTC = 10000.0
+    var dateMinBTC = Date(0,0,0)
+
     for (operation <- operations if operation.date >= startDate && operation.date <= endDate) {
       val newYear = operation.date.getYear
       if(newYear > currentYear) {
@@ -1025,11 +1039,19 @@ object FIFO {
 
       dispatch(operation)
 
+      val m = stocks.apply(Market.bitcoin).totalAmount
+      if(m < minBTC) {
+        minBTC = m
+        dateMinBTC = operation.date
+      }
+
     }
     reportYear(currentYear)
     out.close()
     csv.close()
 
     Logger.trace("Output generated in file "+outFile+".")
+
+    println(minBTC, dateMinBTC)
   }
 }

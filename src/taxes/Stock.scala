@@ -20,23 +20,26 @@ trait StockContainer extends Container[Stock] {
 
   val baseMarket : Market
 
-  def removeAndGetBasis(amount : Double) : (Price, Double) = {
+  def removeAndGetBasis(amount : Double) : (Price, Double, StockContainer) = {
     var toRemove = amount
     var basis = 0.0
     var done = false
+    val usedStocks = StockQueue(market, baseMarket)
     while(!this.isEmpty && !done) {
       val stock = this.first
       if(stock.amount >= toRemove) {
         basis += toRemove * stock.costBasis
         stock.amount -= toRemove
+        usedStocks.insert(stock.copy(amount = toRemove))
         done = true
       } else {
         basis += stock.amount * stock.costBasis
         toRemove -= stock.amount
         this.removeFirst()
+        usedStocks.insert(stock.copy())
       }
     }
-    return if(done) (basis, 0) else (basis, toRemove)
+    return if(done) (basis, 0, usedStocks) else (basis, toRemove, usedStocks)
   }
 
   def totalAmount : Double =
@@ -101,7 +104,7 @@ trait StockPool {
     containers(boughtMarket) = container
   }
 
-  def remove(soldMarket : Market, soldAmount : Double): (Price, Price) = {
+  def remove(soldMarket : Market, soldAmount : Double): (Price, Price, StockContainer) = {
     val container = apply(soldMarket)
     return container.removeAndGetBasis(soldAmount)
   }

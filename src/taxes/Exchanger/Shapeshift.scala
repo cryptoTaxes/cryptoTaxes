@@ -34,14 +34,14 @@ object Shapeshift extends Exchanger {
       val ln0 = nextLine()
       if(ln0.nonEmpty) {
         if(!ln0.startsWith(prefix0))
-          Logger.warning("%s. Line %d: \"%s\" should start with %s.".format(id, lnNumber, ln0, prefix0))
+          Logger.warning("%s. %s Line %d: \"%s\" should start with %s.".format(id, Paths.pathFromData(fileName), lnNumber, ln0, prefix0))
         else {
           val orderId = ln0.drop(prefix0.length)
           val desc = id + " " + orderId
 
           val ln1 = nextLine()
           if (!ln1.startsWith(prefix1))
-            Logger.warning("%s. Line %d: \"%s\" should start with %s.".format(id, lnNumber, ln1, prefix1))
+            Logger.warning("%s. %s Line %d: \"%s\" should start with %s.".format(id, Paths.pathFromData(fileName), lnNumber, ln1, prefix1))
           else {
             val inAddress = ln1.drop(prefix1.length)
 
@@ -50,9 +50,9 @@ object Shapeshift extends Exchanger {
 
             val addr = json[String]("address")
             if (addr != inAddress)
-              Logger.warning("%s. Line %d: Input address %s should be %s.".format(id, lnNumber, addr, inAddress))
+              Logger.warning("%s. %s Line %d: Input address %s should be %s.".format(id, Paths.pathFromData(fileName), lnNumber, addr, inAddress))
             else if(json[String]("status") != "complete")
-              Logger.warning("%s. Line %d: Status should be complete.".format(id, lnNumber))
+              Logger.warning("%s. %s Line %d: Status should be complete.".format(id, Paths.pathFromData(fileName), lnNumber))
             else {
               val amount1 = json.getDouble("incomingCoin")
               val market1 = Market.normalize(json[String]("incomingType"))

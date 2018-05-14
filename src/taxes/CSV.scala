@@ -3,6 +3,7 @@ package taxes
 import java.io.PrintStream
 import java.text.SimpleDateFormat
 
+import taxes.Exchanger.Exchanger
 import taxes.Market.Market
 import taxes.Util.Logger
 
@@ -13,7 +14,7 @@ case class CSV() {
 
   private var optState : Option[State] = None
 
-  private val header = List("Date","Sold","Amount", "Bought", "Amount", "Cost basis", "Sell Value", "Fee")
+  private val header = List("Date","Sold","Amount", "Bought", "Amount", "Cost basis", "Sell Value", "Fee", "Exchanger")
 
   private val df = new SimpleDateFormat("yyyy-MM-dd")
 
@@ -22,7 +23,7 @@ case class CSV() {
 
   private val sep = ";"
 
-  case class Entry(date : Option[Date] = None, sold : Option[Market] = None, soldAmount : Option[Double] = None, bought : Option[Market] = None, boughtAmount : Option[Double] = None, costBasis : Option[Double] = None, sellValue : Option[Double] = None, fee : Option[Double] = None) {
+  case class Entry(date : Option[Date] = None, sold : Option[Market] = None, soldAmount : Option[Double] = None, bought : Option[Market] = None, boughtAmount : Option[Double] = None, costBasis : Option[Double] = None, sellValue : Option[Double] = None, fee : Option[Double] = None, exchanger: Exchanger) {
 
     private def doFormat[A](opt : Option[A], f : A => String) : String = opt match {
       case None => ""
@@ -39,6 +40,7 @@ case class CSV() {
                    , doFormat[Double](costBasis, ff.format(_))
                    , doFormat[Double](sellValue, ff.format(_))
                    , doFormat[Double](fee, ff.format(_))
+                   , exchanger.toString
                    )
       xs.mkString(sep)
     }

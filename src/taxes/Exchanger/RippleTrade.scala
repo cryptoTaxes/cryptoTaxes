@@ -5,9 +5,7 @@ import taxes.Util.Logger
 import taxes.Util.Parse._
 import taxes._
 
-import scala.collection.immutable.Map
 import scala.io.Source
-import scala.util.parsing.json.JSON
 
 object RippleTrade extends Exchanger {
   override val id: String = "XRPTrade"
@@ -49,12 +47,12 @@ object RippleTrade extends Exchanger {
       val optXRP = entries.find(entry => entry.hash == hash && entry.currency == "XRP")
       optXRP match {
         case None =>
-          Logger.fatal("RippleTrade.readFile: could not find XRP value for hash %s".format(hash))
+          Logger.fatal("RippleTrade.readFile %s: could not find XRP value for hash %s".format(Paths.pathFromData(fileName), hash))
         case Some(entryXRP) => {
           val optBTC = entries.find(entry => entry.hash == hash && entry.currency == "BTC")
           optBTC match {
             case None =>
-              Logger.fatal("RippleTrade.readFile: could not find BTC value for hash %s".format(hash))
+              Logger.fatal("RippleTrade.readFile %s: could not find BTC value for hash %s".format(Paths.pathFromData(fileName), hash))
             case Some(entryBTC) => {
               val desc = RippleTrade + " " + hash
               val exchange =

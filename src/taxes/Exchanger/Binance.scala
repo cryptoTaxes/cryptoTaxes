@@ -27,7 +27,7 @@ object Binance extends Exchanger {
 
       baseMarkets.find(pair.endsWith) match {
         case None =>
-          return CSVReader.Warning("%s. Read file. Reading this transaction is not currently supported: %s. Base pair unknown.".format(id, line))
+          return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s. Base pair unknown.".format(id, Paths.pathFromData(fileName), line))
         case Some(suffix) =>
 
           val market1 = Market.normalize(pair.take(pair.length - suffix.length))
@@ -85,7 +85,7 @@ object Binance extends Exchanger {
 
               return CSVReader.Ok(Operations(date = date, id = "", operations = List(exchange, fee)))
             } else
-              return CSVReader.Warning("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
+              return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
           } else if (orderType == "SELL") {
             val toMarket = market2
 
@@ -123,10 +123,10 @@ object Binance extends Exchanger {
 
               return CSVReader.Ok(Operations(date = date, id = "", operations = List(exchange, fee)))
             } else
-              return CSVReader.Warning("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
+              return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
 
           } else
-            return CSVReader.Warning("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
+            return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
       }
     }
   }

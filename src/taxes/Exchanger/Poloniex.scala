@@ -35,7 +35,13 @@ object Poloniex extends Exchanger {
       val orderType = scLn.next("Order Type")
       val price = scLn.nextDouble("Price")
       val amount = scLn.nextDouble("Amount")
-      val total = scLn.nextDouble("Total")
+      val total = {
+        val t = scLn.nextDouble("Total")
+        if(t>0)
+          t
+        else
+          price*amount // if total is less than 0.00000001, it's represented as 0.00000000 in csv file
+      }
       val feePercent = scLn.nextDouble("Fee Percent")
       scLn.next("%") // skip %
       val orderNumber = scLn.next("Order Number")
@@ -43,10 +49,11 @@ object Poloniex extends Exchanger {
       val quoteTotalLessFee = scLn.nextDouble("Quote Total Less Fee")
       scLn.close()
 
+
       val desc = Poloniex + " " + orderNumber
 
       if(amount==0 && total==0) // Must be a Poloniex error but I got an entry with no amount not total
-        return CSVReader.Warning("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
 
       if (category == "Exchange") {
         val exchange =
@@ -117,7 +124,7 @@ object Poloniex extends Exchanger {
             )
         return CSVReader.Ok(margin)
       } else
-        return CSVReader.Warning("%s. Read file. Reading this transaction is not currently supported: %s.".format(id, line))
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
     }
 
     // override def read(): List[Operation] =
@@ -213,10 +220,10 @@ object Poloniex extends Exchanger {
           )
           return CSVReader.Ok(fee)
         } else
-          CSVReader.Warning("%s. Read withdrawal. This withdrawal was ignored: %s.".format(id, line))
+          CSVReader.Warning("%s. Read withdrawal %s: This withdrawal was ignored: %s.".format(id, Paths.pathFromData(fileName), line))
 
       } else
-        CSVReader.Warning("%s. Read withdrawal. This withdrawal was not completed: %s.".format(id, line))
+        CSVReader.Warning("%s. Read withdrawal %s: This withdrawal was not completed: %s.".format(id, Paths.pathFromData(fileName), line))
     }
   }
 }
