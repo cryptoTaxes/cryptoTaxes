@@ -143,8 +143,15 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
           val high = scLn.nextDouble()
           val low = scLn.nextDouble()
           val close = scLn.nextDouble()
-          val avg = (high + low) / 2
-          prices(date) = open // avg
+
+          prices(date) = Config.config.priceCalculation match {
+            case PriceCalculation.open      => open
+            case PriceCalculation.close     => close
+            case PriceCalculation.openClose => (open + close) / 2
+            case PriceCalculation.high      => high
+            case PriceCalculation.low       => low
+            case PriceCalculation.`lowHigh`   => (high + low) / 2
+          }
         } catch {
           case _ => Logger.warning("CoinMarketCapPrice. Could not read line %d \"%s\" in file %s" format(lineNumber, line, file.getName))
         } finally {

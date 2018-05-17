@@ -11,8 +11,8 @@ object Main extends App {
   java.util.Locale.setDefault(java.util.Locale.ENGLISH)
   Logger.trace("cryptoTaxes (https://github.com/cryptoTaxes/cryptoTaxes)\n")
 
-  //val cmdLine = args.mkString(" ")
-  val cmdLine = "-user=user1 -verbosity=10 -currency=euro -download-prices=no"
+  val cmdLine = args.mkString(" ")
+  //val cmdLine = "-user=user1 -verbosity=10 -currency=euro -download-prices=no"
   Config.config = ParseCommandLine(cmdLine)
 
   if(Config.config.downloadPrices) {
@@ -81,6 +81,17 @@ object ParseCommandLine {
             } else if(flag == "download-prices") {
               val download = List("true", "yes", "on").contains(value.toLowerCase)
               config = config.copy(downloadPrices = download)
+            } else if(flag == "price-calculation") {
+              val method = value match {
+                case "open"      => PriceCalculation.open
+                case "close"     => PriceCalculation.close
+                case "openClose" => PriceCalculation.openClose
+                case "low"       => PriceCalculation.low
+                case "high"      => PriceCalculation.high
+                case "lowHigh"   => PriceCalculation.lowHigh
+                case _           => Logger.fatal("Unknown price calculation method: "+value)
+              }
+              config = config.copy(priceCalculation = method)
             } else
               failParse
           } else
