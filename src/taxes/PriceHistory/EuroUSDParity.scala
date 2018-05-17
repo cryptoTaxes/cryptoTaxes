@@ -37,7 +37,7 @@ object EuroUSDParity extends Initializable {
     val header2 = sc.nextLine()
     val header3 = sc.nextLine()
     val header4 = sc.nextLine()
-    var previousPrice = 0.0
+    var noPriceDates = List[Date]()
     while (sc.hasNextLine) {
       val line = sc.nextLine()
       lineNumber += 1
@@ -47,18 +47,24 @@ object EuroUSDParity extends Initializable {
           val strDate = scLn.next().tail
 
           val day = strDate.take(2)
-          val month = readMonth(strDate.drop(3).take(3))
-          val year = strDate.drop(6).take(4)
+          val month = readMonth(strDate.slice(3, 6))
+          val year = strDate.slice(6, 10)
 
           val date = Date.fromString(month + day + year, "MMddyyyy")
-          val oneEuro = try {
-            scLn.nextDouble()
+          try {
+            val oneEuro = scLn.nextDouble()
+            prices(date) = oneEuro
+            noPriceDates match {
+              case List() => ;
+              case dates =>
+                for(date <- dates.reverse)
+                  prices(date) = oneEuro
+                noPriceDates = List[Date]()
+            }
           } catch {
             case (_: InputMismatchException) =>
-              previousPrice // if no price is published we use that of previous day
+              noPriceDates ::= date // if no price was published we will use that of next day
           }
-          previousPrice = oneEuro
-          prices(date) = oneEuro
         } catch {
           case _ => Logger.warning("EuroUSDParity. Could not read line %d \"%s\" in file %s" format(lineNumber, line, file.getName))
         } finally {
@@ -72,17 +78,20 @@ object EuroUSDParity extends Initializable {
 
   private lazy val prices = readPrices()
 
+  private lazy val lastDay = prices.keys.max
+
   def oneEuro2USD(date : Date) : Price = {
-    // uses price of previous day if not found
-    val attemptDate = date.at00.clone()
-    while(true) {
+    // uses price of next day if not found
+    var attemptDate = date.at00
+    while(attemptDate <= lastDay) {
       prices.get(attemptDate) match {
         case None =>
-          attemptDate.setDate(attemptDate.getDate-1)
-        case Some(price) => return price
+          attemptDate = attemptDate.nextDay
+        case Some(price) =>
+          return price
       }
     }
-    return Logger.fatal("oneEuro2USD. shouldn't get reached %s" format(attemptDate))
+    return Logger.fatal("oneEuro2USD. Price for Euro not found for day %s. Last download price is for %s." format(attemptDate, lastDay))
   }
 
   def USD2Euro(amount : Double, date : Date) : Price =

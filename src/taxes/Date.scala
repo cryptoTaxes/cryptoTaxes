@@ -1,5 +1,7 @@
 package taxes
 
+import java.util.Calendar
+
 // milliseconds since the standard base time known as "the epoch"
 class Date(milliseconds : Long) extends java.util.Date(milliseconds) with Ordered[java.util.Date] {
 
@@ -25,6 +27,17 @@ class Date(milliseconds : Long) extends java.util.Date(milliseconds) with Ordere
     this.getTime.compare(that.getTime)
 
   override def clone(): Date = super.clone().asInstanceOf[Date]
+
+  def sameDayAs(that : Date) : Boolean =
+    getDate == that.getDate && getMonth == that.getMonth && getYear == that.getYear
+
+  def nextDay: Date = {
+    val calendar = Calendar.getInstance()
+    calendar.setTime(this)
+    calendar.add(Calendar.DATE, 1) // move onto next day
+
+    return Date(calendar.getTimeInMillis)
+  }
 }
 
 
