@@ -6,6 +6,7 @@ import taxes.Market.Market
 trait Operation {
   def date : Date
   def id : String
+  def exchanger : Exchanger
 
   protected val dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", java.util.Locale.ENGLISH)
   protected def dateToString(date : Date) : String = dateFormat.format(date)
@@ -66,24 +67,22 @@ case class SettlementBuy( date : Date
 }
 
 
-case class Fee(date : Date, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String) extends Operation {
+case class Fee(date : Date, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String, alt : Option[(Double, Market)] = None) extends Operation {
   override def toString : String =
     "Fee(%s %18.8f %-5s  %s)" format (dateToString(date), amount, market, description)
 }
 
 
-// amount is without taking fee into account (fee should be added to amount when Loss is processed)
-case class Loss(date : Date, id : String, amount: Double, market: Market, fee: Double, feeMarket : Market, exchanger : Exchanger, description : String) extends Operation {
+case class Loss(date : Date, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String) extends Operation {
   override def toString : String =
-    "Lost(%s %18.8f %-5s  %18.8f %-5s  %s)" format (dateToString(date), amount, market, fee, feeMarket, description)
+    "Lost(%s %18.8f %-5s  %s)" format (dateToString(date), amount, market, description)
 }
 
 
 // amount is the real gain (fee has already been deducted)
-case class Gain(date : Date, id : String, amount: Double, market: Market, fee: Double, feeMarket : Market, exchanger : Exchanger, description : String) extends Operation {
+case class Gain(date : Date, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String) extends Operation {
   override def toString : String =
-    "Gain(%s %18.8f %-5s   %18.8f %-5s  %s)" format (dateToString(date), amount, market, fee, feeMarket, description)
+    "Gain(%s %18.8f %-5s   %s)" format (dateToString(date), amount, market, description)
 }
 
 
-case class Operations(date : Date, id : String, operations : Seq[Operation]) extends Operation

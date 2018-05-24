@@ -31,7 +31,7 @@ object GDAX extends Exchanger {
       val priceFeeTotalUnit = scLn.next("Price/Total Unit")
       scLn.close()
 
-      val desc = GDAX + " " + tradeID
+      val desc = "Order: " + tradeID
       val date = Date.fromString(createdAt, "yyyy-MM-dd'T'HH:mm:ss.SSSX")
 
       val (market1, aux) = product.span(_ != '-')

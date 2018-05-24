@@ -50,7 +50,11 @@ object Poloniex extends Exchanger {
       scLn.close()
 
 
-      val desc = Poloniex + " " + orderNumber
+      val desc =
+        if(orderNumber.nonEmpty)
+          "Order: " + orderNumber
+        else
+          ""
 
       if(amount==0 && total==0) // Must be a Poloniex error but I got an entry with no amount not total
         return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
@@ -73,9 +77,9 @@ object Poloniex extends Exchanger {
               , id = orderNumber
               , fromAmount = total, fromMarket = market2
               , toAmount = amount*(100-feePercent)/100, toMarket = market1
-              //, fee = amount*feePercent/100, feeMarket = market1
+              , fee = amount*feePercent/100, feeMarket = market1
               // Usually, market2 is BTC so we set fee in BTC
-              , fee = amount*feePercent/100*price, feeMarket = market2
+              //, fee = amount*feePercent/100*price, feeMarket = market2
               , exchanger = Poloniex
               , description = desc
             )
@@ -91,7 +95,7 @@ object Poloniex extends Exchanger {
           // Usually, market2 is BTC so we set fee in BTC
           //, fee = amount*feePercent/100*price, feeMarket = market2
           , exchanger = Poloniex
-          , description = desc + " Settlement"
+          , description = desc + " settlement"
         )
         return CSVReader.Ok(settlement)
       } else if(category == "Margin trade") {
@@ -170,7 +174,7 @@ object Poloniex extends Exchanger {
       val open = Date.fromString(scLn.next("Open Date") + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
       val close = Date.fromString(scLn.next("Close Date") + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
 
-      val desc = id + " Borrowing fee"
+      val desc = "Borrowing fee"
 
       val fee = Fee(
         date = close

@@ -39,7 +39,7 @@ object LocalBTC extends Exchanger {
       val reference = scLn.next("Reference")
       scLn.close()
 
-      val desc = LocalBTC + " " + orderId + "/" + reference
+      val desc = "Order: " + orderId + "/" + reference
       if(tradeType=="ONLINE_SELL") {
         val exchange = Exchange(
           date = date

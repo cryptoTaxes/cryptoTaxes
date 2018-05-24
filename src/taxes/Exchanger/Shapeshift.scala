@@ -37,7 +37,7 @@ object Shapeshift extends Exchanger {
           Logger.warning("%s. %s Line %d: \"%s\" should start with %s.".format(id, Paths.pathFromData(fileName), lnNumber, ln0, prefix0))
         else {
           val orderId = ln0.drop(prefix0.length)
-          val desc = id + " " + orderId
+          val desc = "Order: " + orderId
 
           val ln1 = nextLine()
           if (!ln1.startsWith(prefix1))

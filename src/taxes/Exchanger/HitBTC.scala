@@ -31,7 +31,7 @@ object HitBTC extends Exchanger {
       val rebate = scLn.nextDouble("Rebate")
       val total = scLn.nextDouble("Total")
 
-      val desc = HitBTC + " " + tradeID + "/" + orderID
+      val desc = "Order: " + tradeID + "/" + orderID
 
       val (market1,market2) = Parse.split(instrument,"/")
       val isSell = side == "sell"

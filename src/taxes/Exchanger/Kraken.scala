@@ -82,7 +82,7 @@ object Kraken extends Exchanger with Initializable {
       val (market1, market2) = parsePair(pair)
 
       val id = txid + "/" + ordertxid
-      val desc = Kraken + " " + id
+      val desc = "Order: " + id
 
       val (txidMarket2, txidMarket1) = Parse.split(ledgers, ",")
 

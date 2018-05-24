@@ -42,7 +42,7 @@ object Bitfinex extends Exchanger {
 
       val status = scLn.next("Status")
 
-      val desc = Bitfinex + " " + reference
+      val desc = "Order: " + reference
 
       if(amountExecuted != 0) { //status.startsWith("EXECUTED") || status.contains("PARTIALLY FILLED")) {
         if(orderType.contains("EXCHANGE")) {
@@ -114,7 +114,7 @@ object Bitfinex extends Exchanger {
       val balance = scLn.next("Balance")
       val date = Date.fromString(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss")
 
-      val desc = Bitfinex + " " + description
+      val desc = description
 
       if (description.startsWith("Settlement") && currency == Market.usd) {
         // USD settlements are really paid as BTC settlements

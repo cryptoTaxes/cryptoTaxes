@@ -34,7 +34,7 @@ object Yobit extends Exchanger {
       val total = scLn.nextDouble("Total")
       scLn.close()
 
-      val desc = Yobit.toString
+      val desc = ""
 
       val (market1,market2) = Parse.split(pair,"/")
       val isSell = orderType == "SELL"

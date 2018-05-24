@@ -1,0 +1,233 @@
+package taxes
+
+import java.io.PrintStream
+
+import taxes.Market.Market
+import taxes.Util.Logger
+
+import scala.xml.Elem
+
+
+trait ToHTML {
+  def toHTML : Elem
+}
+
+
+object HTML {
+  val df = Format.shortDf
+
+  lazy val baseMarket = Config.config.baseCoin.market
+
+  def asMarket(amount: Double, marketUnit: Market, decimals : Int = 2) : Elem =
+    <span class='noLineBreak'>
+      {Format.formatDecimal(amount, decimals)}
+      <span class='market'>{marketUnit}</span>
+    </span>
+
+  
+  def asRate(rate: Double, marketUnit0: Market, marketUnit1: Market, decimals : Int = 2) : Elem =
+    <span class='noLineBreak'>
+      {asMarket(rate, marketUnit0, decimals)}
+      / <span class="market">{marketUnit1}</span>
+    </span>
+
+
+  def box(header : Any, boxBody : Any) : Elem =
+    <div class='boxed'>
+      <div class='boxHeader'>
+          {header}
+      </div>
+      <div class='boxBody'>
+        {boxBody}
+      </div>
+    </div>
+
+
+  def header4(header0 : Any, header1 : Any, header2 : Any, header3 : Any) : Elem =
+    <span>
+      <span class='header0'>
+        {header0}
+      </span>
+      <span class='header1'>
+        {header1}
+      </span>
+      <span class='header2'>
+        {header2}
+      </span>
+      <span class='header3'>
+        {header3}
+      </span>
+    </span>
+
+
+  trait Boxed {
+    def headerToHTML : Elem
+
+    def bodyToHTML : Elem
+
+    def toHTML: Elem =
+      box(headerToHTML, bodyToHTML)
+  }
+
+
+  def reportResults(year : Int, realized : FIFO.Realized) : Elem = {
+    val proceeds = realized.proceeds.sum
+    val costs = realized.costBasis.sum
+    val fees = realized.perMarketPaidFees.sum
+
+    val net = proceeds - costs - fees
+    val netMsg = "Net " + (if(net>0) "gain" else "loss") + ":"
+    <table id='tableStyle1'>
+      <caption>{"%d Resume".format(year)}</caption>
+      <tr>
+        <td><span class='embold'>Total proceeds:</span></td>
+        <td>{asMarket(proceeds, baseMarket)}</td>
+      </tr>
+      <tr>
+        <td><span class='embold'>Total cost bases:</span></td>
+        <td>{asMarket(costs, baseMarket)}</td>
+      </tr>
+      <tr>
+        <td><span class='embold'>Total fees:</span></td>
+        <td>{asMarket(fees, baseMarket)}</td>
+      </tr>
+      <tr>
+        <td><span class='embold'>{netMsg}</span></td>
+        <td>{asMarket(net, baseMarket)}</td>
+      </tr>
+    </table>
+  }
+
+
+  def reportYear(year : Int, realized : FIFO.Realized) : Elem = {
+    <div>
+      <div>{realized.perMarketGains.toHTML("Gains per market")}</div>
+      <div>{realized.perMarketLooses.toHTML("Looses per market")}</div>
+      <div>{realized.perMarketPaidFees.toHTML("Paid fees per market")}</div>
+      <div class='marginTopBottom20'>
+        <span class='embold'>Net result:</span>
+        {asMarket(realized.perMarketGains.sum - realized.perMarketLooses.sum - realized.perMarketPaidFees.sum, baseMarket)}
+      </div>
+
+      <div>{realized.costBasis.toHTML("Cost bases per market")}</div>
+      <div>{realized.proceeds.toHTML("Proceeds per market")}</div>
+      {val realizedGains = {
+         val keys = realized.costBasis.keys.toSet union realized.proceeds.keys.toSet
+         val list = keys.map(k => (k, realized.proceeds(k) - realized.costBasis(k)))
+         val valueTracker = ValueTracker(baseMarket)
+         for((k,v) <- list)
+           valueTracker.record(k,v)
+         valueTracker
+         }
+       <div>{realizedGains.toHTML("Realized Gains per market")}</div>
+      }
+
+      <div class='marginTopBottom20'>
+        <span class='embold'>Net result:</span>
+        {asMarket(realized.proceeds.sum - realized.costBasis.sum - realized.perMarketPaidFees.sum, baseMarket)}
+      </div>
+    </div>
+  }
+}
+
+
+case class HTML(fileName : String, title : String) {
+  private var allHTMLs = List[ToHTML]()
+
+  def +=(html : ToHTML) : Unit =
+    allHTMLs ::= html
+
+  def +=(html : Elem): Unit = {
+    allHTMLs ::= new ToHTML {
+      override def toHTML : Elem = html
+    }
+  }
+
+  private case class State(fileName : String, ps : java.io.PrintStream, title : String)
+
+  private var optState : Option[State] = Some(State(fileName, new PrintStream(fileName), title))
+
+  def setOutputTo(fileName : String): Unit = {
+    val newState = State(fileName, new PrintStream(fileName), title)
+
+    optState match {
+      case None     => ;
+      case Some(st) => printlnPage()
+                       st.ps.close()
+    }
+    optState = Some(newState)
+  }
+
+  def close() : Unit = {
+    optState match {
+      case None     => Logger.fatal("HTML.close: stream is already closed")
+      case Some(st) => printlnPage()
+                       st.ps.close()
+    }
+    optState = None
+  }
+
+  private def println(x : Any) : Unit = {
+    optState match {
+      case None     => Logger.fatal("HTML.println: stream is currently closed")
+      case Some(st) => st.ps.println(x)
+    }
+  }
+
+  private val styles =
+    """
+      | body {font-family: Roboto; -webkit-print-color-adjust: exact; }
+      | .back1, .boxHeader, table#tableStyle1 caption, table#tableStyle1 tr:last-child {  background-color: #e0e0e0; }
+      | .boxPadding, .boxBody, .boxHeader, table#tableStyle1 caption, table#tableStyle1 td, th { padding-top: 2px; padding-bottom: 2px; padding-left: 4px; padding-right: 4px; }
+      |
+      | .header { font-size: 130%; margin-bottom: 20px; }
+      | .boxed { width: 98%; background-color: White;  border: 1px solid black; border-collapse: collapse; margin-bottom: 10px; page-break-inside:avoid; page-break-after:auto; }
+      | .boxHeader {  border-bottom: 1px solid black; border-collapse: collapse; }
+      | .header0 { width: 7%; display: inline-block; }
+      | .header1 { width: 18%; display: inline-block; }
+      | .header2 { width: 55%; display: inline-block; }
+      | .header3 { width: 18%; display: inline-block; text-align: right; }
+      | .market { color: blue; }
+      | .exchanger { color: green; }
+      | .operationNumber { color: navy; }
+      | .boxBody { background-color: White; font-size: 90%; }
+      | .embold, .header { font-weight: bold;}
+      | .small1 { font-size: 85%; }
+      | .small2, .desc, .rates, .stock, .footnote { font-size: 80%; }
+      | .noLineBreak { white-space:nowrap; }
+      | .marginBottom5, .desc, .rates { margin-bottom: 5px; }
+      | .marginTopBottom20, .footnote { margin-top: 20px; margin-bottom: 20px; }
+      | .paddingR10 { padding-right: 10px; }
+      | .alignR { text-align: right; }
+      |
+      | table#tableStyle1 { border: 1px solid black; border-collapse: collapse; margin-bottom: 20px; }
+      | table#tableStyle1 caption { border: 1px solid black; border-bottom: 0px solid black; font-weight: bold; font-size: 100%; text-align: left; }
+      | table#tableStyle1 tr:nth-child(odd) { background-color: #f0f0f0;  }
+      | table#tableStyle1 tr:hover { background-color: #c5c5c5; }
+      | table#tableStyle1 td, th { text-align: right; vertical-align: top; }
+      | table#tableStyle1 td:first-child, th:first-child { text-align: left; }
+      |""".stripMargin
+
+  private def page() =
+    <html>
+    <head>
+      <link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet'></link>
+      <title>{optState.get.title}</title>
+      <style type="text/css">
+        {styles}
+      </style>
+    </head>
+    <body>
+      {allHTMLs.reverse.map({_.toHTML})}
+      <br></br>
+      <div class='footnote'>
+      This document was generated by <a href='https://github.com/cryptoTaxes/cryptoTaxes'>cryptoTaxes</a>.
+      </div>
+    </body>
+    </html>
+
+  private def printlnPage() : Unit = {
+    println(page())
+    allHTMLs = List[ToHTML]()
+  }
+}

@@ -6,7 +6,12 @@ import taxes.{FileSource, Operation}
 object CSVReader {
   class Result[+A]
 
-  case class Ok[+A](result : A) extends Result[A]
+  object Ok {
+    def apply[A](result: A) =
+      new Ok(List(result))
+  }
+
+  case class Ok[+A](results : Seq[A]) extends Result[A]
   case class Warning(msg : String) extends Result[Nothing]
   case object Ignore extends Result[Nothing]
 }
@@ -41,8 +46,9 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
         val scLn = lineScanner(ln)
         try {
           readLine(ln, scLn) match {
-            case Ok(x) =>
-              xs ::= x
+            case Ok(ys) =>
+              for(y <- ys)
+                xs ::= y
             case Warning(err) =>
               Logger.warning(err)
             case Ignore =>

@@ -1,8 +1,14 @@
 package taxes.Exchanger
 
-import sun.java2d.loops.FillRect
 import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 import taxes._
+
+
+case class General(name : String) extends Exchanger {
+  override val id = name
+  override val sources = Seq()
+}
+
 
 object General extends Exchanger {
   override val id: String = "General"
@@ -27,6 +33,7 @@ object General extends Exchanger {
       val market2 = scLn.next("Market2")
       val fee = scLn.nextDouble("Fee")
       val feeMarket = scLn.next("Fee Market")
+      val exchangerName = scLn.next("Exchanger")
       val desc = scLn.next("Description")
       scLn.close()
 
@@ -38,8 +45,8 @@ object General extends Exchanger {
           , toAmount = amount2, toMarket = Market.normalize(market2)
           , fee = fee
           , feeMarket = Market.normalize(feeMarket)
-          , exchanger = General
-          , description = General + " " + desc
+          , exchanger = General(exchangerName)
+          , description = desc
         )
       return CSVReader.Ok(exchange)
     }

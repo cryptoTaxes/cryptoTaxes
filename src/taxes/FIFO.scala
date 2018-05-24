@@ -1,53 +1,85 @@
 package taxes
 
 import java.io.PrintStream
-import java.text.SimpleDateFormat
+import java.math.RoundingMode
+import java.text.{DecimalFormat, NumberFormat, SimpleDateFormat}
+
 import taxes.Exchanger._
 import taxes.Market.Market
 import taxes.Util.Logger
 
+import scala.xml.Elem
+
 
 object Format {
-  val header : String = "".padTo(80,'=')
-  
   val df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
-  def asMarket(number : Double, marketUnit : Market) : String = {
-    val fmt =
-      if(marketUnit == Market.euro)
-        EuroBaseCoin.format
-      else if(marketUnit == Market.usd)
-        USDBaseCoin.format
+  val shortDf = new SimpleDateFormat("yyyy-MM-dd")
+
+  val decimalSep = java.text.NumberFormat.getInstance().asInstanceOf[DecimalFormat].getDecimalFormatSymbols.getDecimalSeparator
+
+  def trimZeros(str0 : String) : String = {
+    var str = str0.reverse
+    if(str0.contains(decimalSep)) {
+      str = str.dropWhile(_ == '0')
+      if (str.nonEmpty && str.head == decimalSep)
+        str = str.tail
+    }
+    return str.reverse
+  }
+
+  def formatDecimal(x : Double, decimals : Int = 2) : String = {
+    val xAbs = x.abs
+    var fmt =
+      if (xAbs < 0.00000009)
+        "0.000000000"
+      else if (xAbs < 0.0000009)
+        "0.00000000"
+      else if (xAbs < 0.000009)
+        "0.0000000"
+      else if (xAbs < 0.00009)
+        "0.000000"
+      else if (xAbs < 0.0009)
+        "0.00000"
+      else if (xAbs < 0.009)
+        "0.0000"
+      else if (xAbs < 0.09)
+        "0.000"
       else
-        BTCBaseCoin.format
-    fmt.format(number)+" %s".format(marketUnit)
+        "0.00"
+
+    while(fmt.length - 2 < decimals)
+      fmt = fmt + '0'
+
+    val df = new DecimalFormat(fmt)
+    df.setRoundingMode(RoundingMode.DOWN)
+    return trimZeros(df.format(x))
   }
 
-  def leftPad(str : String, len : Int, c : Char) : String =
-    "".padTo(len-str.length, c)+str
+  def marketFormat(marketUnit : Market) : NumberFormat =
+    if(marketUnit == Market.euro)
+      EuroBaseCoin.format
+    else if(marketUnit == Market.usd)
+      USDBaseCoin.format
+    else
+      BTCBaseCoin.format
 
-  private val tabs = Array(17,75)
-
-  class ExtendedString(value: String) {
-    def tab(n:Int) = value.padTo(tabs(n), ' ')
-  }
-
-  implicit def extendString(str: String) = new ExtendedString(str)
+  def asMarket(amount : Double, marketUnit : Market, decimals : Int = 2) : String =
+    Format.formatDecimal(amount, decimals) + " " + marketUnit
 }
 
 
-case class ValueTracker(baseMarket : Market)  {
+case class ValueTracker(baseMarket : Market) extends Iterable[(Market, Double)] with ToHTML {
   private val map = scala.collection.mutable.Map[Market,Double]()
 
-  def clear(): Unit = {
+  def clear(): Unit =
     map.clear()
-  }
 
-  def record(market : Market, amount : Double): Unit = {
+  def record(market : Market, amount : Double): Unit =
     map += (market -> (amount + map.getOrElse(market, 0.0)))
-  }
 
-  def sum : Double = map.values.sum
+  def sum : Double =
+    map.values.sum
 
   def keys : Iterable[Market] =
     map.keys
@@ -58,22 +90,121 @@ case class ValueTracker(baseMarket : Market)  {
   def apply(market : Market) : Double =
     map.getOrElse(market, 0.0)
 
-  def printOn(ps : PrintStream): Unit = {
-    var sum = 0.0
-    for((label,total) <- map.toList.sortBy(_._2)) {
-      sum += total
-      ps.println(
-        "%-6s ".format(label+":")+" "+Format.leftPad(Format.asMarket(total, baseMarket), 20, ' ')+
-        " " + Format.leftPad(Format.asMarket(sum, baseMarket), 20 , ' ')
-      )
-    }
-    ps.println("Total: "+Format.asMarket(map.values.sum, baseMarket))
+  override def toHTML : Elem =
+    toHTML()
+
+  def toHTML(caption : String = "") : Elem =
+    <table id='tableStyle1'>
+      <tr>
+        <th>Market</th>
+        <th>Amount</th>
+        <th>Accumulated</th>
+      </tr>
+      {if(caption.nonEmpty)
+        <caption>{caption}</caption>
+      }
+      {var sum = 0.0
+       map.toList.sortBy(_._2).map { case (label,total) =>
+         sum += total
+         <tr>
+           <td ><span class='market'>{label}</span></td>
+           <td>{HTML.asMarket(total, baseMarket)}</td>
+           <td>{HTML.asMarket(sum, baseMarket)}</td>
+        </tr>
+      }
+      }
+      <td class='embold'>Total:</td>
+      <td></td>
+      <td>{HTML.asMarket(map.values.sum, baseMarket)}</td>
+    </table>
+}
+
+
+object OperationTracker {
+  case class CSVEntry(
+    date : Date
+    , exchanger : Exchanger
+    , description : String
+    , costBasis : Double
+    , proceeds : Double
+    , fee : Double
+    )
+  private val emptyEntry = OperationTracker.CSVEntry(new Date(0,0,0), new General(""), "", 0, 0, 0)
+}
+
+
+case class OperationTracker() extends Iterable[(Int,OperationTracker.CSVEntry)] {
+  private val m = scala.collection.mutable.Map[Int, OperationTracker.CSVEntry]()
+
+  override def iterator: Iterator[(Int,OperationTracker.CSVEntry)] =
+    m.iterator.toList.sortBy(_._1).toIterator
+
+  def recordCostBasis(operationNumber : Int, amount : Double): Unit = {
+    val entry = m.getOrElse(operationNumber, OperationTracker.emptyEntry)
+    m(operationNumber) = entry.copy(costBasis = entry.costBasis + amount)
   }
+
+  def recordProceeds(operationNumber : Int, amount : Double): Unit = {
+    val entry = m.getOrElse(operationNumber, OperationTracker.emptyEntry)
+    m(operationNumber) = entry.copy(proceeds = entry.proceeds + amount)
+  }
+
+  def recordFee(operationNumber : Int, amount : Double): Unit = {
+    val entry = m.getOrElse(operationNumber, OperationTracker.emptyEntry)
+    m(operationNumber) = entry.copy(fee = entry.fee + amount)
+  }
+
+  def setDate(operationNumber : Int, date : Date): Unit = {
+    val entry = m.getOrElse(operationNumber, OperationTracker.emptyEntry)
+    m(operationNumber) = entry.copy(date = date)
+  }
+
+  def setDescription(operationNumber : Int, description : String): Unit = {
+    val entry = m.getOrElse(operationNumber, OperationTracker.emptyEntry)
+    m(operationNumber) = entry.copy(description = description)
+  }
+
+  def setExchanger(operationNumber : Int, exchanger : Exchanger): Unit = {
+    val entry = m.getOrElse(operationNumber, OperationTracker.emptyEntry)
+    m(operationNumber) = entry.copy(exchanger = exchanger)
+  }
+
+  def clear(): Unit =
+    m.clear()
+
+  def toCSVFile(fileName : String, year : Int): Unit = {
+    val csvFileName = Paths.userOutputFolder+"/%s%d.csv".format(fileName,year)
+    val ps = new PrintStream(csvFileName)
+
+    ps.println
+    ps.println("FIFO %d".format(year))
+    ps.println("")
+
+    val sep = ";"
+    val header = List("order", "date", "exchanger", "description", "cost basis/loss", "proceeds/gain", "fee")
+
+    ps.println(header.mkString(";"))
+    for((operationNumber,entry) <- this)
+      ps.println(List[Any](operationNumber, Format.shortDf.format(entry.date), entry.exchanger, entry.description, entry.costBasis, entry.proceeds, entry.fee).mkString(";"))
+
+    ps.close()
+  }
+
 }
 
 
 object FIFO {
-  import Format.extendString
+  // All quantities expressed in base coin
+  trait Realized {
+    // record realized gains/losses/paid fees per market
+    val perMarketGains : ValueTracker
+    val perMarketLooses : ValueTracker
+    val perMarketPaidFees : ValueTracker // fees are not already deducted from gains and added to looses
+
+    // Difference between these minus fees is realized gains
+    val costBasis : ValueTracker  // cost bases of sold coins
+    val proceeds : ValueTracker // value obtained for sold coins
+  }
 
   def process(): Unit = {
     val config = Config.config
@@ -83,10 +214,8 @@ object FIFO {
     if(operations.isEmpty)
       Logger.fatal("No operation was found in any exchange for user: "+config.user+".")
 
-    val outFile = Paths.userOutputFolder+"/output.txt"
-    val out = new java.io.PrintStream(outFile)
+    var processedOperations = List[Processed]()
 
-    val csv = CSV()
 
     // what market is our basis
     val baseCoin = config.baseCoin
@@ -105,188 +234,116 @@ object FIFO {
       , Bitfinex -> StackStockPool(Market.usd)
       )
 
+    // Sold stocks without corresponding buys
     var frees = List[String]()
     var price0 = List[Exchange]()
 
-
     // All quantities expressed in base coin
-    object Realized {
+    object Realized extends Realized {
       // record realized gains/losses/paid fees per market
       val perMarketGains = ValueTracker(baseMarket)
       val perMarketLooses = ValueTracker(baseMarket)
-      val perMarketPaidFees = ValueTracker(baseMarket) // fees are already deducted from gains and added to looses
+      val perMarketPaidFees = ValueTracker(baseMarket) // fees are not already deducted from gains and added to looses
 
-      // Difference between these is realized gains
-      val costBases = ValueTracker(baseMarket)  // cost bases of sold coins
-      val sellValues = ValueTracker(baseMarket) // value obtained for sold coins
+      // Difference between these minus fees is realized gains
+      val costBasis = ValueTracker(baseMarket)  // cost bases of sold coins
+      val proceeds = ValueTracker(baseMarket) // value obtained for sold coins
     }
-
 
     // order of current operation within current year
     var operationNumber = 0
 
+    val operationTracker = OperationTracker()
 
     def initializeYear(year : Int): Int = {
       Realized.perMarketGains.clear()
       Realized.perMarketLooses.clear()
       Realized.perMarketPaidFees.clear()
 
-      Realized.costBases.clear()
-      Realized.sellValues.clear()
+      Realized.costBasis.clear()
+      Realized.proceeds.clear()
 
       frees = List[String]()
       price0 = List[Exchange]()
 
       operationNumber = 0
 
-      out.println(Format.header)
-      out.println(year)
-      out.println(Format.header)
-      out.println()
+      processedOperations = List[Processed]()
 
-      val csvFile = Paths.userOutputFolder+"/output%d.csv".format(year)
-      csv.setOutputTo(csvFile)
-
-      for(i <- 1 to 1)
-        csv.println()
-      csv.println(year)
-      csv.printlnHeader
-
+      operationTracker.clear()
       return year
     }
 
 
-    def reportPortfolio(): Unit = {
-      out.println("End of year portfolio")
-      out.println(Format.header)
-      out.println("Market        Amount           Total Cost")
-      out.println(Format.header)
-      var totalCost = 0.0
-      for(queue <- stocks.iterator.toList.sortBy(_.market)) {
-        var amount = 0.0
-        var cost = 0.0
-        for(stock <- queue) {
-          amount += stock.amount
-          cost += stock.amount * stock.costBasis
-        }
-        totalCost += cost
-        if(cost > 0.001) {
-          out.print(
-            "%-6s %15.5f  ".format(queue.market+":", amount)+
-            Format.leftPad(Format.asMarket(cost, baseMarket), 20, ' ')+
-            " at "+Format.leftPad(Format.asMarket(cost/amount,baseMarket)+"/%s  ".format(queue.market), 24, ' ')+
-            "    "
-          )
-          out.println(queue)
-        }
-      }
-      out.println(Format.header)
-      out.println("Portfolio total cost: "+Format.asMarket(totalCost, baseMarket))
-    }
-
-
     def reportYear(year : Int): Unit = {
-      out.println(Format.header)
-      out.println(year)
-      out.println(Format.header)
-      out.println()
+      val htmlFIFOFile = Paths.userOutputFolder+"/FIFO%d.html".format(year)
+      val htmlFIFOTitle = "%d FIFO Report".format(year)
+      val htmlFIFO = HTML(htmlFIFOFile, htmlFIFOTitle)
 
-      reportPortfolio()
+      htmlFIFO += <div class='header'>{htmlFIFOTitle}</div>
 
-      if(Config.verbosity(Verbosity.showMoreDetails)) {
-        out.println()
-        out.println()
-        out.println("FREES")
-        for (f <- frees.reverse)
-          out.println(f)
+      for(processed <- processedOperations.reverse)
+        htmlFIFO += processed
 
-        out.println()
-        out.println()
-        out.println("PRICE0")
-        for (op <- price0.reverse)
-          out.println(op)
-      }
+      htmlFIFO += HTML.reportResults(year, Realized)
+      htmlFIFO.close()
 
-      out.println()
-      out.println(Format.header)
-      out.println("Gains per market")
-      out.println(Format.header)
-      Realized.perMarketGains.printOn(out)
 
-      out.println()
-      out.println(Format.header)
-      out.println("Looses per market")
-      out.println(Format.header)
-      Realized.perMarketLooses.printOn(out)
+      val htmlPortfolioFile = Paths.userOutputFolder+"/Portfolio%d.html".format(year)
+      val htmlPortfolioTitle = "%d End of year portfolio".format(year)
+      val htmlPortfolio = HTML(htmlPortfolioFile, htmlPortfolioTitle)
 
-      out.println()
-      out.println(Format.header)
-      out.println("Paid fees per market")
-      out.println(Format.header)
-      Realized.perMarketPaidFees.printOn(out)
-      out.println()
+      htmlPortfolio += stocks.toHTML(htmlPortfolioTitle)
+      htmlPortfolio.close()
 
-      out.print("Net result:      ")
-      out.println(Format.asMarket(Realized.perMarketGains.sum - Realized.perMarketLooses.sum, baseMarket))
-      out.println()
 
-      out.println(Format.header)
-      out.println("Realized gains/looses")
-      out.println(Format.header)
-      out.println()
-      out.println(Format.header)
-      out.println("Cost bases per market")
-      out.println(Format.header)
-      Realized.costBases.printOn(out)
-      out.println()
-      out.println(Format.header)
-      out.println("Sell values per market")
-      out.println(Format.header)
-      Realized.sellValues.printOn(out)
-      out.println()
+      val htmlExtraFile = Paths.userOutputFolder+"/Extra%d.html".format(year)
+      val htmlExtraTitle = "%d Statistics".format(year)
+      val htmlExtra = HTML(htmlExtraFile, htmlExtraTitle)
 
-      out.println(Format.header)
-      out.println("Realized Gains per market")
-      out.println(Format.header)
-      val realizedGains = {
-        val keys = Realized.costBases.keys.toSet union Realized.sellValues.keys.toSet
-        val list = keys.map(k => (k, Realized.sellValues(k) - Realized.costBases(k)))
-        val valueTracker = ValueTracker(baseMarket)
-        for((k,v) <- list)
-          valueTracker.record(k,v)
-        valueTracker
-      }
-      realizedGains.printOn(out)
-
-      out.println()
-
-      out.println()
-      out.print("Realized total cost basis:  ")
-      out.println(Format.leftPad(Format.asMarket(Realized.costBases.sum, baseMarket), 20, ' '))
-      out.print("Realized total sell value:  ")
-      out.println(Format.leftPad(Format.asMarket(Realized.sellValues.sum, baseMarket), 20, ' '))
-      out.print("Net result:                 ")
-      out.println(Format.leftPad(Format.asMarket(Realized.sellValues.sum - Realized.costBases.sum, baseMarket), 20, ' '))
-      out.println()
+      htmlExtra += <div class='header'>{htmlExtraTitle}</div>
+      htmlExtra += HTML.reportYear(year, Realized)
 
       if(Config.verbosity(Verbosity.showMoreDetails)) {
-        out.println("Opened margin longs:")
-        for(marginBuy <- marginBuysMap.values)
-          for (cont <- marginBuy)
-            if(cont.totalAmount>0)
-              out.println(cont)
+        {htmlExtra += <div>Frees:</div>}
+        <div>
+        {for(f <- frees.reverse)
+          htmlExtra += <div>{f}</div>
+        }
+        </div>
 
-        out.println("Opened margin shorts:")
-        for(marginSell <- marginSellsMap.values)
+        {htmlExtra += <div>Priced0:</div>}
+        <div>
+          {for(op <- price0.reverse)
+            htmlExtra += <div>{op}</div>
+          }
+        </div>
+
+        {htmlExtra += <div>Opened margin longs:</div>}
+        <div>
+          {for(marginBuy <- marginBuysMap.values)
+            for (cont <- marginBuy)
+              if(cont.totalAmount>0)
+                htmlExtra += cont.toHTML(showTotal = true)
+          }
+        </div>
+
+        {htmlExtra += <div>Opened margin shorts:</div>}
+        <div>
+          {for(marginSell <- marginSellsMap.values)
           for (cont <- marginSell)
             if(cont.totalAmount>0)
-              out.println(cont)
-        out.println()
+              htmlExtra += cont.toHTML(showTotal = true)
+          }
+        </div>
       }
+      htmlExtra.close()
+
+      operationTracker.toCSVFile("FIFO", year)
     }
 
 
-    def processExchange(exchange: Exchange) {
+    def preprocessExchange(exchange: Exchange) : Processed.Exchange = {
       val soldMarket = exchange.fromMarket
       val soldAmount = exchange.fromAmount
 
@@ -339,8 +396,6 @@ object FIFO {
         } else
           exchange.fee * baseCoin.priceInBaseCoin(exchange.feeMarket, exchange.date)
 
-      Realized.perMarketPaidFees.record(exchange.feeMarket, feeInBaseCoin)
-
       // Total value involved in this operation, expressed in base coin
       val (totalInBaseCoin, baseCoinProxy) =
         if (soldMarket == baseMarket)
@@ -375,34 +430,30 @@ object FIFO {
         }
 
       // Total value of sold coins, expressed in base coin
-      val sellValueInBaseCoin = totalInBaseCoin
+      val proceedsInBaseCoin = totalInBaseCoin
 
-      // Gain or fee in this exchange, expressed in base coin
+      // Gain in this exchange, expressed in base coin
       val gainInBaseCoin =
         if (soldMarket == baseMarket) // If base coin is Euros, buying with euros makes no profit
-          if (feeInBaseCoin == 0)
-            0
-          else
-            -feeInBaseCoin
+          0
         else
-          sellValueInBaseCoin - soldBasisInBaseCoin - feeInBaseCoin
+          proceedsInBaseCoin - soldBasisInBaseCoin
+
+      Realized.perMarketPaidFees.record(exchange.feeMarket, feeInBaseCoin)
 
       // Update total gains for soldMarket
-      if (gainInBaseCoin > 0) {
+      if (gainInBaseCoin > 0)
         Realized.perMarketGains.record(soldMarket, gainInBaseCoin)
-      } else if (gainInBaseCoin < 0) {
+      else if (gainInBaseCoin < 0)
         Realized.perMarketLooses.record(soldMarket, gainInBaseCoin.abs)
-      }
 
-      // Update realized cost bases and sell values
+      // Update realized cost basis and proceeds
       if(soldMarket == baseMarket) {
         // toDo this is the case for Euro -> BTC if your base is Euro.
-        // toDO Should the fee be charged to Euro instead?
-        Realized.costBases.record(boughtMarket, feeInBaseCoin)
-
+        ;
       } else {
-        Realized.costBases.record(soldMarket, soldBasisInBaseCoin)
-        Realized.sellValues.record(soldMarket, sellValueInBaseCoin - feeInBaseCoin)
+        Realized.costBasis.record(soldMarket, soldBasisInBaseCoin)
+        Realized.proceeds.record(soldMarket, proceedsInBaseCoin)
       }
 
       if (soldBasisInBaseCoin == 0 && (soldMarket != baseMarket))
@@ -410,103 +461,34 @@ object FIFO {
 
       if (noBasis.abs > 0.01 && (soldMarket != baseMarket))
       //toDO fix me
-        frees ::= "SOLD %.8f %.6f %s = %.8f %s  ".format(noBasis, soldAmount, soldMarket, noBasis * sellValueInBaseCoin / soldAmount, baseMarket)
+        frees ::= "SOLD free %.8f of %.6f %s = %.8f %s  ".format(noBasis, soldAmount, soldMarket, noBasis * proceedsInBaseCoin / soldAmount, baseMarket)
 
-
-      if (true || (exchange.fromMarket=="XRP" || exchange.toMarket=="XRP") && exchange.exchanger == RippleTrade) {
-        val qSold = stocks(soldMarket)
-        val qBought = stocks(boughtMarket)
-
-        out.println(
-          "%d. ".format(operationNumber)+
-            Format.df.format(exchange.date)+
-            ". Exchange "+
-            Format.asMarket(soldAmount, soldMarket)+" -> "+
-            Format.asMarket(boughtAmount, boughtMarket)+
-            ". Fee = "+Format.asMarket(exchange.fee, exchange.feeMarket)+
-            ". "+exchange.description
-        )
-        if(Config.verbosity(Verbosity.showRates)) {
-          out.println(
-            "EXCHANGE RATES:".tab(0) + Format.asMarket(boughtSoldExchangeRate, boughtMarket) +
-            "/%s   ".format(soldMarket) +
-            Format.asMarket(soldBoughtExchangeRate, soldMarket) + "/%s".format(boughtMarket)
-          )
-          out.println(
-            "%s RATE:".format(baseMarket).tab(0) +
-            Format.asMarket(baseCoin.priceInBaseCoin(baseCoinProxy, exchange.date), baseMarket) +
-            "/" + baseCoinProxy
-          )
-        }
-        if(Config.verbosity(Verbosity.showDetails))
-          out.print((
-            "SOLD:".tab(0)+Format.asMarket(soldAmount, soldMarket)+
-            " at "+Format.asMarket(soldPriceInBaseCoin, baseMarket)+
-            "/%s".format(soldMarket)+
-            " = "+Format.asMarket(sellValueInBaseCoin, baseMarket)).tab(1)
-          )
-        if(Config.verbosity(Verbosity.showStocks))
-          out.println(qSold)
-        else if(Config.verbosity(Verbosity.showDetails))
-          out.println()
-        if(Config.verbosity(Verbosity.showMoreDetails)) {
-          if(Config.verbosity(Verbosity.showMoreDetails)) {
-            out.print(
-              ("COST BASIS:".tab(0) + Format.asMarket(soldBasisInBaseCoin, baseMarket)).tab(1)
-            )
-            if(Config.verbosity(Verbosity.showStocks) && soldMarket != baseMarket)
-              out.print(usedStocks)
-            out.println()
-          }
-        }
-        if(Config.verbosity(Verbosity.showDetails))
-          if(!boughtBasisPriceInBaseCoin.isNaN()) {
-            out.print((
-              "BOUGHT:".tab(0) + Format.asMarket(boughtAmount, boughtMarket)+
-              " at " + Format.asMarket(boughtBasisPriceInBaseCoin, baseMarket)+
-              "/%s".format(boughtMarket)).tab(1)
-            )
-            if(Config.verbosity(Verbosity.showStocks))
-              out.println(qBought)
-            else
-              out.println()
-          }
-        if(Config.verbosity(Verbosity.showMoreDetails) && exchange.fee > 0)
-          out.println(
-            "FEE:".tab(0)+Format.asMarket(exchange.fee, exchange.feeMarket)+
-            " = "+Format.asMarket(feeInBaseCoin,baseMarket)
-          )
-        out.print((if(gainInBaseCoin>0) "GAIN:" else "LOSS:").tab(0))
-        if(Config.verbosity(Verbosity.showDetails))
-          if (soldMarket != baseMarket) // If base coin is Euros, buying with euros makes no profit
-            out.print(
-              Format.asMarket(sellValueInBaseCoin,baseMarket)+
-                " - " + Format.asMarket(soldBasisInBaseCoin,baseMarket)+
-                (if(exchange.fee >0)
-                  " - " + Format.asMarket(feeInBaseCoin,baseMarket)
-                 else
-                  ""
-                )+" = "
-            )
-        out.println(Format.asMarket(gainInBaseCoin,baseMarket))
-        out.println()
-
-        val csvEntry = csv.Entry(
-            date = Some(exchange.date)
-          , sold = Some(soldMarket)
-          , soldAmount = Some(soldAmount)
-          , bought = Some(boughtMarket)
-          , boughtAmount = Some(boughtAmount)
-          , costBasis = Some(soldBasisInBaseCoin)
-          , sellValue = Some(sellValueInBaseCoin)
-          , fee = Some(feeInBaseCoin)
-          , exchanger = exchange.exchanger
-        )
-
-        csv.println(csvEntry)
+      operationTracker.recordFee(operationNumber, feeInBaseCoin)
+      if(soldMarket == baseMarket) {
+        ;
+      } else {
+        operationTracker.recordCostBasis(operationNumber, soldBasisInBaseCoin)
+        operationTracker.recordProceeds(operationNumber, proceedsInBaseCoin)
       }
+
+      return Processed.Exchange(
+            operationNumber = operationNumber
+          , exchange = exchange
+          , baseCoinProxy = baseCoinProxy
+          , baseCoinProxyRate = baseCoin.priceInBaseCoin(baseCoinProxy, exchange.date)
+          , boughtBasisPriceInBaseCoin = boughtBasisPriceInBaseCoin
+          , soldPriceInBaseCoin = soldPriceInBaseCoin
+          , proceedsInBaseCoin = proceedsInBaseCoin
+          , soldBasisInBaseCoin = soldBasisInBaseCoin
+          , feeInBaseCoin = feeInBaseCoin
+          , gainInBaseCoin = gainInBaseCoin
+          , boughtSoldExchangeRate = boughtSoldExchangeRate, soldBoughtExchangeRate = soldBoughtExchangeRate
+          , usedStocks = usedStocks
+        )
     }
 
+
+    /*
 
     def processFee(fee : Fee) {
       val (feeCostInBaseCoin, _, usedStocks) = stocks.remove(fee.market, fee.amount)
@@ -518,7 +500,7 @@ object FIFO {
       Realized.perMarketLooses.record(fee.market, feeCostInBaseCoin)
 
       // Record cost basis of paid coins
-      Realized.costBases.record(fee.market, feeCostInBaseCoin)
+      Realized.costBasis.record(fee.market, feeCostInBaseCoin)
 
       out.println(
         "%d. ".format(operationNumber)+
@@ -548,34 +530,40 @@ object FIFO {
         out.println()
       out.println()
 
-      if(feeCostInBaseCoin>0) {
-        val csvEntry = csv.Entry(
-            date = Some(fee.date)
-          , sold = Some("Fee")
-          , fee = Some(feeCostInBaseCoin)
-          , exchanger = fee.exchanger
-        )
+      val csvEntry = csv.Entry(
+          date = Some(fee.date)
+        , sold = Some("Fee")
+        , fee = Some(feeCostInBaseCoin)
+        , exchanger = fee.exchanger
+      )
 
-        csv.println(csvEntry)
-      }
+      csv.println(csvEntry)
+
+      htmlFIFO += HTML.Fee(
+        operationNumber = operationNumber
+        , fee = fee
+        , feeCostInBaseCoin = feeCostInBaseCoin
+        , usedStocksFee = usedStocks
+      )
     }
+
 
 
     def processLoss(loss : Loss) {
       val (feeBasisInBaseCoin, _, usedStocksFee) = stocks.remove(loss.feeMarket, loss.fee)
       Realized.perMarketPaidFees.record(loss.feeMarket, feeBasisInBaseCoin)
 
-      val (basisInBaseCoin, _, usedStocks) = stocks.remove(loss.market, loss.amount)
+      val (lossBasisInBaseCoin, _, usedStocksLoss) = stocks.remove(loss.market, loss.amount)
 
       // take fee into account
-      val totalLossInBaseCoin = basisInBaseCoin + feeBasisInBaseCoin
+      val totalLossInBaseCoin = lossBasisInBaseCoin + feeBasisInBaseCoin
 
       // Update total looses for loss market
       Realized.perMarketLooses.record(loss.market, totalLossInBaseCoin)
 
       // Record cost bases of lost coins and paid fee
-      Realized.costBases.record(loss.market, basisInBaseCoin)
-      Realized.costBases.record(loss.feeMarket, feeBasisInBaseCoin)
+      Realized.costBasis.record(loss.market, lossBasisInBaseCoin)
+      Realized.costBasis.record(loss.feeMarket, feeBasisInBaseCoin)
 
       out.println(
         "%d. ".format(operationNumber)+
@@ -593,7 +581,7 @@ object FIFO {
         else
           out.println()
         out.println(
-          "COST BASIS:".tab(0) + Format.asMarket(basisInBaseCoin, baseMarket)
+          "COST BASIS:".tab(0) + Format.asMarket(lossBasisInBaseCoin, baseMarket)
         )
       }
       if(Config.verbosity(Verbosity.showMoreDetails)) {
@@ -614,7 +602,7 @@ object FIFO {
           "FEE:".tab(0) + Format.asMarket(-feeBasisInBaseCoin, baseMarket)
         )
       out.print((
-        "LOSS:".tab(0) + Format.asMarket(-basisInBaseCoin, baseMarket)).tab(1)
+        "LOSS:".tab(0) + Format.asMarket(-lossBasisInBaseCoin, baseMarket)).tab(1)
       )
       if(Config.verbosity(Verbosity.showStocks))
         out.println(stocks(loss.market))
@@ -627,23 +615,31 @@ object FIFO {
         , sold = Some(loss.market)
         , soldAmount = Some(loss.amount)
         , bought = Some("Loss")
-        , costBasis = Some(basisInBaseCoin)
+        , costBasis = Some(lossBasisInBaseCoin)
         , fee = Some(feeBasisInBaseCoin)
         , exchanger = loss.exchanger
       )
 
       csv.println(csvEntry)
+
+      htmlFIFO += HTML.Loss(
+        operationNumber = operationNumber
+        , loss = loss
+        , lossInBaseCoin = lossBasisInBaseCoin
+        , usedStocksLoss = usedStocksLoss
+        , feeInBaseCoin = feeBasisInBaseCoin
+        , usedStocksFee = usedStocksFee
+      )
     }
 
-
     def processGain(gain : Gain) {
-      val (feeBasisInBaseCoin, _, usedStocks) = stocks.remove(gain.feeMarket, gain.fee)
+      val (feeBasisInBaseCoin, _, usedStocksFee) = stocks.remove(gain.feeMarket, gain.fee)
       Realized.perMarketPaidFees.record(gain.feeMarket, feeBasisInBaseCoin)
 
       // Paying a fee implies loosing paid amount
       Realized.perMarketLooses.record(gain.feeMarket, feeBasisInBaseCoin)
 
-      // Record cost basis of gained coins
+      // Record cost basis of gained coins at current date
       val basePrice = baseCoin.priceInBaseCoin(gain.market, gain.date)
       stocks.add(gain.market, gain.amount, basePrice, gain.exchanger, gain.date)
 
@@ -653,8 +649,9 @@ object FIFO {
       Realized.perMarketGains.record(gain.market, gainInBaseCoin)
 
       // Record cost basis of paid fee and make the gain accountable now (by considering it as a sell)
-      Realized.costBases.record(gain.feeMarket, feeBasisInBaseCoin)
-      Realized.sellValues.record(gain.market, gainInBaseCoin)
+      Realized.costBasis.record(gain.feeMarket, feeBasisInBaseCoin)
+      Realized.proceeds.record(gain.market, gainInBaseCoin)
+      // toDo Maybe should only record proceeds as gainInBaseCoin - feeBasisInBaseCoin
 
       out.println(
         "%d. ".format(operationNumber)+
@@ -709,13 +706,132 @@ object FIFO {
       )
 
       csv.println(csvEntry)
+
+      htmlFIFO += HTML.Gain(
+        operationNumber = operationNumber
+        , gain = gain
+        , gainInBaseCoin = gainInBaseCoin
+        , feeInBaseCoin = feeBasisInBaseCoin
+        , basePrice = basePrice
+        , usedStocksFee = usedStocksFee
+      )
+    }
+
+*/
+
+    def preprocessFee(fee : Fee) : Processed.Fee = {
+      val (feeInBaseCoin, _, usedStocks) = stocks.remove(fee.market, fee.amount)
+
+      // Record paid fees
+      Realized.perMarketPaidFees.record(fee.market, feeInBaseCoin)
+
+      operationTracker.recordFee(operationNumber, feeInBaseCoin)
+
+      return Processed.Fee(
+        operationNumber = operationNumber
+        , fee = fee
+        , feeInBaseCoin = feeInBaseCoin
+        , usedStocks = usedStocks
+      )
+    }
+
+
+    def preprocessLoss(loss : Loss) : Processed.Loss = {
+      val (lossBasisInBaseCoin, _, usedStocks) = stocks.remove(loss.market, loss.amount)
+
+      // Record looses for loss market
+      Realized.perMarketLooses.record(loss.market, lossBasisInBaseCoin)
+
+      // Record cost bases of lost coins
+      Realized.costBasis.record(loss.market, lossBasisInBaseCoin)
+
+      operationTracker.recordCostBasis(operationNumber, lossBasisInBaseCoin)
+
+      return Processed.Loss(
+        operationNumber = operationNumber
+        , loss = loss
+        , lossInBaseCoin = lossBasisInBaseCoin
+        , usedStocks = usedStocks
+      )
+    }
+
+
+    /*
+        def preprocessGain(gain : Gain, costBasis : Double = 0) : Processed.Gain = {
+      // Record cost basis of gained coins at current date
+      val basePrice = baseCoin.priceInBaseCoin(gain.market, gain.date)
+      stocks.add(gain.market, gain.amount, basePrice, gain.exchanger, gain.date)
+
+      val gainInBaseCoin = gain.amount * basePrice
+
+      val basisInBaseCoin = costBasis * basePrice
+
+      // Update total gains for corresponding market
+      Realized.perMarketGains.record(gain.market, gainInBaseCoin)
+
+      // Make the gain accountable now (by considering it as a sell)
+      Realized.costBasis.record(gain.market, basisInBaseCoin)
+      Realized.proceeds.record(gain.market, gainInBaseCoin + basisInBaseCoin)
+      // toDo Maybe should only record proceeds as gainInBaseCoin - feeBasisInBaseCoin
+
+
+      val csvEntry = csv.Entry(
+        date = Some(gain.date)
+        , sold = Some("Gain")
+        , bought = Some(gain.market)
+        , boughtAmount = Some(gain.amount)
+        , sellValue = Some(gainInBaseCoin)
+        , exchanger = gain.exchanger
+      )
+
+      //csv.println(csvEntry)
+
+
+      if (costBasis < 0) {
+        csvTracker.recordCostBasis(operationNumber, -(costBasis + gain.amount) * basePrice)
+        csvTracker.recordProceeds(operationNumber, -costBasis * basePrice)
+      } else {
+        csvTracker.recordCostBasis(operationNumber, costBasis * basePrice)
+        csvTracker.recordProceeds(operationNumber, (costBasis + gain.amount) * basePrice)
+      }
+
+      return Processed.Gain(
+        operationNumber = operationNumber
+        , gain = gain
+        , gainInBaseCoin = gainInBaseCoin
+        , basePrice = basePrice
+      )
+    }
+     */
+
+    def preprocessGain(gain : Gain) : Processed.Gain = {
+      // Record cost basis of gained coins at current date
+      val basePrice = baseCoin.priceInBaseCoin(gain.market, gain.date)
+      stocks.add(gain.market, gain.amount, basePrice, gain.exchanger, gain.date)
+
+      val gainInBaseCoin = gain.amount * basePrice
+
+      // Update total gains for corresponding market
+      Realized.perMarketGains.record(gain.market, gainInBaseCoin)
+
+      // Make the gain accountable now (by considering it as a sell)
+      Realized.proceeds.record(gain.market, gainInBaseCoin)
+
+      operationTracker.recordProceeds(operationNumber, gainInBaseCoin)
+
+      return Processed.Gain(
+        operationNumber = operationNumber
+        , gain = gain
+        , gainInBaseCoin = gainInBaseCoin
+        , basePrice = basePrice
+      )
     }
 
 
     def marginPairKey(market1 : Market, market2: Market) : String
       = market1 ++ "/" ++ market2
 
-    def processSettlement(settlement: SettlementBuy) {
+    def preprocessSettlement(settlement: SettlementBuy) : Processed.Composed = {
       val soldMarket = settlement.fromMarket
       val soldAmount = settlement.fromAmount
 
@@ -757,47 +873,28 @@ object FIFO {
 
       val marketKey = marginPairKey(settlement.toMarket, settlement.fromMarket)
 
-      out.println(
-        "%d. ".format(operationNumber)+
-        Format.df.format(settlement.date)+
-        ". Settlement "+
-        Format.asMarket(soldAmount, soldMarket)+" -> "+
-        Format.asMarket(boughtAmount, boughtMarket)+
-        ". Fee = "+Format.asMarket(settlement.fee, settlement.feeMarket)+
-        ". "+settlement.description
-      )
-      if(Config.verbosity(Verbosity.showRates))
-        out.println((
-          "EXCHANGE RATES: "+Format.asMarket(boughtSoldExchangeRate,boughtMarket)+
-          "/%s   ".format (soldMarket)+
-          Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/%s".format(boughtMarket)).tab(1)
-        )
-
       // This is like a loss but we have to remove bought coins from stock of opened shorts
       // (we bought them to pay for a short that went against us)
       if(settlement.exchanger == Poloniex) {
         val stockContainer = marginSellsMap(Poloniex)(marketKey)
         if (stockContainer.nonEmpty) {
-          if (Config.verbosity(Verbosity.showStocks)) {
-            out.print("".tab(1))
-            out.println(stockContainer)
-          }
-
           stockContainer.removeAndGetBasis(boughtAmount)
-
-          if (Config.verbosity(Verbosity.showStocks)) {
-            out.print("".tab(1))
-            out.println(stockContainer)
-          }
         }
       }
-      out.println()
 
-      processLoss(Loss(settlement.date, settlement.id, totalInTradingBaseCoin, tradingBaseMarket, 0/*feeInTradingBaseCoin*/, tradingBaseMarket, settlement.exchanger, settlement.description))
-    }
+      val processedSettlement =
+        Processed.SettlementBuy(
+          operationNumber = operationNumber
+          , settlement = settlement
+        )
+
+      val loss = preprocessLoss(Loss(settlement.date, settlement.id, totalInTradingBaseCoin, tradingBaseMarket, settlement.exchanger, ""))
+
+      return Processed.Composed(operationNumber, List(processedSettlement, loss))
+   }
 
 
-    def processMargin(margin: Margin) {
+    def preprocessMargin(margin: Margin) : Seq[Processed] = {
       val soldMarket = margin.fromMarket
       val soldAmount = margin.fromAmount
 
@@ -840,56 +937,62 @@ object FIFO {
         else
           margin.fee * baseCoin.priceInBaseCoin(margin.feeMarket, margin.date)
 
+      var processed = List[Processed]()
+
+      var processedAux = List[Processed]()
+
       def nonZero(x : Double) : Boolean = x.abs >= 1E-7
 
-      def openShort(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market, feeInTradingBaseCoin : Double) = {
+      def openShort(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market, feeInTradingBaseCoin : Double) : List[Processed] = {
         // Opening a short
-        marginSells.add(marketKey, soldAmount, boughtSoldExchangeRate, margin.exchanger, margin.date)
+        marginSells.add(marketKey, soldMarket, soldAmount, boughtSoldExchangeRate, margin.exchanger, margin.date)
 
-        out.println(
-          "%d. ".format(operationNumber) +
-            Format.df.format(margin.date) +
-            ". Open short " +
-            Format.asMarket(soldAmount, soldMarket) + " -> " +
-            Format.asMarket(boughtAmount, boughtMarket) +
-            ". Fee = " + Format.asMarket(feeAmount, feeMarket) +
-            ". " + margin.description
-        )
-        if (Config.verbosity(Verbosity.showRates))
-          out.print(("EXCHANGE RATE:".tab(0) + Format.asMarket(boughtSoldExchangeRate, boughtMarket) + "/" + soldMarket).tab(1))
-        if (Config.verbosity(Verbosity.showStocks))
-          out.println(marginSells(marketKey))
-        out.println()
+        var processed = List[Processed]()
+
+        processed ::=
+          Processed.Margin(
+            operationNumber = operationNumber
+            , date = margin.date
+            , exchanger = margin.exchanger
+            , what = "Open short"
+            , fromAmount = soldAmount, fromMarket = soldMarket
+            , toAmount = boughtAmount, toMarket = boughtMarket
+            , exchangeRate = boughtSoldExchangeRate
+            , description = margin.description
+            , usedStocksOpt = None
+          )
 
         if(feeInTradingBaseCoin>0) {
-          val fee = Fee(margin.date, margin.id, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description + " fee")
-          processFee(fee)
+          val fee = Fee(margin.date, margin.id, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, "")
+          processed ::= preprocessFee(fee)
         }
+        return processed
       }
 
-      def openLong(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market, feeInTradingBaseCoin : Double) = {
+      def openLong(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market, feeInTradingBaseCoin : Double) : List[Processed] = {
         // Opening a long
-        marginBuys.add(marketKey, boughtAmount, soldBoughtExchangeRate, margin.exchanger, margin.date)
+        marginBuys.add(marketKey, boughtMarket, boughtAmount, soldBoughtExchangeRate, margin.exchanger, margin.date)
 
-        out.println(
-          "%d. ".format(operationNumber)+
-            Format.df.format(margin.date)+
-            ". Open long "+
-            Format.asMarket(soldAmount, soldMarket)+" -> "+
-            Format.asMarket(boughtAmount, boughtMarket)+
-            ". Fee = "+Format.asMarket(feeAmount, feeMarket)+
-            ". "+margin.description
-        )
-        if(Config.verbosity(Verbosity.showRates))
-          out.println(("EXCHANGE RATE:".tab(0)+Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/"+boughtMarket).tab(1))
-        if(Config.verbosity(Verbosity.showStocks))
-          out.println(marginBuys(marketKey))
-        out.println()
+        var processed = List[Processed]()
+
+        processed ::=
+          Processed.Margin(
+            operationNumber = operationNumber
+            , date = margin.date
+            , exchanger = margin.exchanger
+            , what = "Open long"
+            , fromAmount = soldAmount, fromMarket = soldMarket
+            , toAmount = boughtAmount, toMarket = boughtMarket
+            , exchangeRate = soldBoughtExchangeRate
+            , description = margin.description
+            , usedStocksOpt = None
+          )
 
         if(feeInTradingBaseCoin>0) {
-          val fee = Fee(margin.date, margin.id, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description + " fee")
-          processFee(fee)
+          val fee = Fee(margin.date, margin.id, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, "", Some(feeInTradingBaseCoin*boughtSoldExchangeRate, boughtMarket))
+          processed ::= preprocessFee(fee)
         }
+        return processed
       }
 
       if(margin.orderType == Operation.OrderType.Sell) {
@@ -897,46 +1000,46 @@ object FIFO {
 
         if(inLongsAmount<=0) {
           // Opening a short
-          openShort(soldAmount, boughtAmount, margin.fee, margin.feeMarket, feeInTradingBaseCoin)
+          processed = openShort(soldAmount, boughtAmount, margin.fee, margin.feeMarket, feeInTradingBaseCoin) ++ processed
         } else {
           // Closing a long
           val closedSoldAmount = soldAmount min inLongsAmount
           val closedBoughtAmount = closedSoldAmount * boughtAmount / soldAmount
 
-          out.println(
-            "%d. ".format(operationNumber)+
-            Format.df.format(margin.date)+
-            ". Close long "+
-            Format.asMarket(closedSoldAmount, soldMarket)+" -> "+
-            Format.asMarket(closedBoughtAmount, boughtMarket)+
-            ". Fee = "+Format.asMarket(margin.fee, margin.feeMarket)+
-            ". "+margin.description
-          )
-          if(Config.verbosity(Verbosity.showRates))
-            out.print(("EXCHANGE RATE:".tab(0)+Format.asMarket(boughtSoldExchangeRate,boughtMarket)+"/"+soldMarket).tab(1))
-          if(Config.verbosity(Verbosity.showStocks))
-            out.println(marginBuys(marketKey))
-          else
-            out.println()
           val (basis, noBasis, usedStocks) = marginBuys.remove(marketKey, soldAmount)
-          if(Config.verbosity(Verbosity.showStocks)) {
-            out.print("".tab(1))
-            out.println(marginBuys(marketKey))
-          }
-          out.println()
+
+          processed ::=
+            Processed.Margin(
+              operationNumber = operationNumber
+              , date = margin.date
+              , exchanger = margin.exchanger
+              , what = "Close long"
+              , fromAmount = closedSoldAmount, fromMarket = soldMarket
+              , toAmount = closedBoughtAmount, toMarket = boughtMarket
+              , exchangeRate = boughtSoldExchangeRate
+              , description = margin.description
+              , usedStocksOpt = Some(usedStocks)
+            )
 
           val gain = closedBoughtAmount - basis
 
-          if(gain>0)
-            processGain(Gain(margin.date, margin.id, gain, tradingBaseMarket, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description + " closed long"))
-          else
-            processLoss(Loss(margin.date, margin.id, gain.abs, tradingBaseMarket, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description + " closed long"))
+          if(feeInTradingBaseCoin>0) {
+            val fee = Fee(margin.date, margin.id, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, "")
+            processed ::= preprocessFee(fee)
+          }
+
+          processed ::= (
+            if(gain>0)
+              preprocessGain(Gain(margin.date, margin.id, gain, tradingBaseMarket, margin.exchanger, "") /*, basis*/)
+            else
+              preprocessLoss(Loss(margin.date, margin.id, gain.abs, tradingBaseMarket, margin.exchanger, ""))
+          )
 
           if(nonZero(noBasis)) {
             // we are also opening a short
             val longedSoldAmount = soldAmount - closedSoldAmount // same as noBasis
             val longedBoughtAmount = boughtAmount - closedBoughtAmount
-            openShort(longedSoldAmount, longedBoughtAmount, 0, margin.feeMarket, 0)
+            processedAux = openShort(longedSoldAmount, longedBoughtAmount, 0, margin.feeMarket, 0)
             // Logger.warning("Shorting No basis > 0: " + (noBasis, longedSoldAmount) + " " + margin)
           }
         }
@@ -945,75 +1048,85 @@ object FIFO {
 
         if(inShortsAmount<=0) {
           // Opening a long
-          openLong(soldAmount, boughtAmount, margin.fee, margin.feeMarket, feeInTradingBaseCoin)
+          processed = openLong(soldAmount, boughtAmount, margin.fee, margin.feeMarket, feeInTradingBaseCoin) ++ processed
         } else {
           // Closing a short
           val closedBoughtAmount = boughtAmount min inShortsAmount
           val closedSoldAmount = closedBoughtAmount * soldAmount / boughtAmount
 
-          out.println(
-            "%d. ".format(operationNumber)+
-            Format.df.format(margin.date)+
-            ". Close short "+
-            Format.asMarket(closedSoldAmount, soldMarket)+" -> "+
-            Format.asMarket(closedBoughtAmount, boughtMarket)+
-            ". Fee = "+Format.asMarket(margin.fee, margin.feeMarket)+
-            ". "+margin.description
-          )
-          if(Config.verbosity(Verbosity.showRates))
-            out.print(("EXCHANGE RATE:".tab(0)+Format.asMarket(soldBoughtExchangeRate,soldMarket)+"/"+boughtMarket).tab(1))
-          if(Config.verbosity(Verbosity.showStocks))
-            out.println(marginSells(marketKey))
-          else
-            out.println()
           val (basis, noBasis, usedStocks) = marginSells.remove(marketKey, boughtAmount)
-          if(Config.verbosity(Verbosity.showStocks)) {
-            out.print("".tab(1))
-            out.println(marginSells(marketKey))
-          }
-          out.println()
 
-          val gain = basis - (closedSoldAmount-feeInTradingBaseCoin) - feeInTradingBaseCoin
-          if(gain>0)
-            processGain(Gain(margin.date, margin.id, gain, tradingBaseMarket, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description + " closed short"))
-          else
-            processLoss(Loss(margin.date, margin.id, gain.abs, tradingBaseMarket, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, margin.description + " closed short"))
+          processed ::=
+            Processed.Margin(
+              operationNumber = operationNumber
+              , date = margin.date
+              , exchanger = margin.exchanger
+              , what = "Close short"
+              , fromAmount = closedSoldAmount, fromMarket = soldMarket
+              , toAmount = closedBoughtAmount, toMarket = boughtMarket
+              , exchangeRate = soldBoughtExchangeRate
+              , description = margin.description
+              , usedStocksOpt = Some(usedStocks)
+            )
+
+          // val gain = basis - (closedSoldAmount-feeInTradingBaseCoin) - feeInTradingBaseCoin
+          val gain = basis - closedSoldAmount
+
+          if(feeInTradingBaseCoin>0) {
+            val fee = Fee(margin.date, margin.id, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, "", alt = Some(feeInTradingBaseCoin*boughtSoldExchangeRate, boughtMarket))
+            processed ::= preprocessFee(fee)
+          }
+
+          processed ::= (
+            if(gain>0)
+              preprocessGain(Gain(margin.date, margin.id, gain, tradingBaseMarket, margin.exchanger, "") /*, -closedSoldAmount*/)
+            else
+              preprocessLoss(Loss(margin.date, margin.id, gain.abs, tradingBaseMarket, margin.exchanger, ""))
+          )
 
           if(nonZero(noBasis)) {
             // we are also opening a long
             val longedSoldAmount = soldAmount - closedSoldAmount
             val longedBoughtAmount = boughtAmount - closedBoughtAmount // same as noBasis
-            openLong(longedSoldAmount, longedBoughtAmount, 0, margin.feeMarket, 0)
+            processedAux = openLong(longedSoldAmount, longedBoughtAmount, 0, margin.feeMarket, 0)
             // Logger.warning("Longing No basis > 0: " + (noBasis, longedBoughtAmount) + " " + margin)
           }
         }
       }
+
+      var result = List(Processed.Composed(operationNumber, processed.reverse))
+      if(processedAux.nonEmpty)
+        result = result ++ List(Processed.Composed(operationNumber, processedAux.reverse))
+      return result
     }
 
 
-
     def dispatch(operation: Operation): Unit = {
+      operationTracker.setDate(operationNumber, operation.date)
+      operationTracker.setExchanger(operationNumber, operation.exchanger)
+
       operation match {
         case exchange: Exchange =>
-          processExchange(exchange)
-
-        case loss : Loss =>
-          processLoss(loss)
-
-        case gain : Gain =>
-          processGain(gain)
+          operationTracker.setDescription(operationNumber, "Exchange of %s for %s".format(Format.asMarket(exchange.fromAmount, exchange.fromMarket), Format.asMarket(exchange.toAmount, exchange.toMarket)))
+          processedOperations ::= preprocessExchange(exchange)
 
         case fee : Fee =>
-          processFee(fee)
+          operationTracker.setDescription(operationNumber, "Fee of %s".format(Format.asMarket(fee.amount, fee.market)))
+          processedOperations ::= preprocessFee(fee)
 
         case settlement : SettlementBuy =>
-          processSettlement(settlement)
+          operationTracker.setDescription(operationNumber, "Settlement exchange of %s for %s".format(Format.asMarket(settlement.fromAmount, settlement.fromMarket), Format.asMarket(settlement.toAmount, settlement.toMarket)))
+          processedOperations ::= preprocessSettlement(settlement)
 
         case margin : Margin =>
-          processMargin(margin)
-
-        case operations : Operations =>
-          operations.operations.foreach(dispatch)
+          val format =
+            if(margin.orderType == Operation.OrderType.Buy)
+              "Margin buy of %s with %s"
+            else
+              "Margin sell of %s for %s"
+          operationTracker.setDescription(operationNumber, format.format(Format.asMarket(margin.fromAmount, margin.fromMarket), Format.asMarket(margin.toAmount, margin.toMarket)))
+          for(processed <- preprocessMargin(margin))
+            processedOperations ::= processed
       }
     }
 
@@ -1023,8 +1136,7 @@ object FIFO {
     var currentYear : Int = operations.head.date.getYear
     initializeYear(currentYear)
 
-
-    var minBTC = 10000.0
+    var minBTC = Double.MaxValue
     var dateMinBTC = Date(0,0,0)
 
     for (operation <- operations if operation.date >= startDate && operation.date <= endDate) {
@@ -1047,10 +1159,8 @@ object FIFO {
 
     }
     reportYear(currentYear)
-    out.close()
-    csv.close()
 
-    Logger.trace("Output generated in file "+outFile+".")
+    Logger.trace("Output generated in %s folder.".format(Paths.userOutputFolder))
 
     println(minBTC, dateMinBTC)
   }

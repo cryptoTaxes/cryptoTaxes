@@ -40,7 +40,7 @@ object Binance extends Exchanger {
           val feeAmount = scLn.nextDouble("Fee")
           val feeCoin = Market.normalize(scLn.next("Fee Coin"))
 
-          val desc = id.toString
+          val desc = ""
 
           // Fee is 0.1% but can get deduced if BNB is used for paying fees.
           // It's applied over toMarket
@@ -83,7 +83,7 @@ object Binance extends Exchanger {
                 , description = desc
               )
 
-              return CSVReader.Ok(Operations(date = date, id = "", operations = List(exchange, fee)))
+              return CSVReader.Ok(List(exchange, fee))
             } else
               return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
           } else if (orderType == "SELL") {
@@ -121,7 +121,7 @@ object Binance extends Exchanger {
                 , description = desc
               )
 
-              return CSVReader.Ok(Operations(date = date, id = "", operations = List(exchange, fee)))
+              return CSVReader.Ok(List(exchange, fee))
             } else
               return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
 

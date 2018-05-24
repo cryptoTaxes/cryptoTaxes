@@ -47,7 +47,7 @@ object Changelly extends Exchanger {
         val realFee = amount * exchangeRate - amountReceived
         val feePercent = realFee * 100 / (amount * exchangeRate)
 
-        val desc = Changelly + " " + receiverWallet
+        val desc = "Order: " + receiverWallet
 
         val exchange =
           Exchange(
@@ -65,5 +65,6 @@ object Changelly extends Exchanger {
     }
   }
 }
+
 
 

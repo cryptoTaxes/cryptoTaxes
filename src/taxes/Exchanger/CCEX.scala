@@ -48,7 +48,7 @@ object CCEX extends Exchanger {
 
             , feeMarket = Market.bitcoin
             , exchanger = CCEX
-            , description = id
+            , description = ""
           )
 
         return CSVReader.Ok(exchange)

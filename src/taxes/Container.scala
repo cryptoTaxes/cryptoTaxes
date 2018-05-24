@@ -1,12 +1,12 @@
 package taxes
 
-trait Container[T] {
+trait Container[T] extends Iterable[T] {
   protected var xs = List[T]()
 
-  def isEmpty : Boolean =
+  override def isEmpty : Boolean =
     xs.isEmpty
 
-  def nonEmpty : Boolean =
+  override def nonEmpty : Boolean =
     xs.nonEmpty
 
   def first : T
@@ -19,10 +19,6 @@ trait Container[T] {
 
   def iterator: Iterator[T] =
     xs.iterator
-
-  def foreach(f: (T) ⇒ Unit): Unit = {
-    xs.foreach(f)
-  }
 }
 
 

@@ -40,7 +40,7 @@ object Bittrex extends Exchanger {
       val dateOpen = Date.fromString(scLn.next("Open Date") + " +0000", "MM/dd/yyyy hh:mm:ss a Z") // Bittrex time is 1 hour behind here
       val dateClose = Date.fromString(scLn.next("Close Date") + " +0000", "MM/dd/yyyy hh:mm:ss a Z")
 
-      val desc = id + " " + orderId
+      val desc = "Order: " + orderId
 
       // fees are denominated in market1. market1 is normally BTC, USDT or ETH
       val exchange =

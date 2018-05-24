@@ -54,7 +54,7 @@ object RippleTrade extends Exchanger {
             case None =>
               Logger.fatal("RippleTrade.readFile %s: could not find BTC value for hash %s".format(Paths.pathFromData(fileName), hash))
             case Some(entryBTC) => {
-              val desc = RippleTrade + " " + hash
+              val desc = "Order: " + hash
               val exchange =
                 if (entryXRP.amount < 0)
                   Exchange(
