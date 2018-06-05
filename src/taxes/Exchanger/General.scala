@@ -14,12 +14,15 @@ object General extends Exchanger {
   override val id: String = "General"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("general", ".csv") {
-      def fileSource(fileName : String) = operationsReader(fileName)
-    }
+      new UserFolderSource[Operation]("general/exchanges", ".csv") {
+        def fileSource(fileName : String) = exchangesReader(fileName)
+      }
+    , new UserFolderSource[Operation]("general/gainslosses", ".csv") {
+       def fileSource(fileName : String) = gainsLossesReader(fileName)
+      }
   )
 
-  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def exchangesReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val hasHeader: Boolean = true
 
     override def lineScanner(line: String) =
@@ -35,7 +38,6 @@ object General extends Exchanger {
       val feeMarket = scLn.next("Fee Market")
       val exchangerName = scLn.next("Exchanger")
       val desc = scLn.next("Description")
-      scLn.close()
 
       val exchange =
         Exchange(
@@ -49,6 +51,57 @@ object General extends Exchanger {
           , description = desc
         )
       return CSVReader.Ok(exchange)
+    }
+  }
+
+  private def gainsLossesReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+    override val hasHeader: Boolean = true
+
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[,]+")
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val date = Date.fromString(scLn.next(), "yyyy-MM-dd")
+      val amount = scLn.nextDouble("Amount1")
+      val market = scLn.next("Market1")
+      val fee = scLn.nextDouble("Fee")
+      val feeMarket = scLn.next("Fee Market")
+      val exchangerName = scLn.next("Exchanger")
+      val desc = scLn.next("Description")
+
+      val op =
+        if(amount>0) {
+          Gain(
+              date = date
+            , id = ""
+            , amount = amount
+            , market = market
+            , exchanger = General(exchangerName)
+            , description = desc
+          )
+        } else {
+          Loss(
+              date = date
+            , id = ""
+            , amount = amount.abs
+            , market = market
+            , exchanger = General(exchangerName)
+            , description = desc
+          )
+        }
+
+      if(fee != 0) {
+        val f = Fee(
+            date = date
+          , id = ""
+          , amount = fee
+          , market = feeMarket
+          , exchanger = General(exchangerName)
+          , description = desc
+        )
+        return CSVReader.Ok(List(op, f))
+      } else
+        return CSVReader.Ok(op)
     }
   }
 }

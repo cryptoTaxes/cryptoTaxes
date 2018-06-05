@@ -1,1 +1,0 @@
-You must place in this folder a csv file obtained by exporting your TradeHistory.xlsx (can be downloaded from Orders -> Trade History menu).

@@ -12,7 +12,7 @@ object Main extends App {
   Logger.trace("cryptoTaxes (https://github.com/cryptoTaxes/cryptoTaxes)\n")
 
   val cmdLine = args.mkString(" ")
-  //val cmdLine = "-user=user1 -verbosity=10 -currency=euro -download-prices=no"
+  //val cmdLine = "-user=user1 -verbosity=3 -currency=euro -download-prices=no"
   Config.config = ParseCommandLine(cmdLine)
 
   if(Config.config.downloadPrices) {
@@ -92,6 +92,22 @@ object ParseCommandLine {
                 case _           => Logger.fatal("Unknown price calculation method: "+value)
               }
               config = config.copy(priceCalculation = method)
+            } else if(flag == "decimal-places") {
+              val d =
+                try {
+                  value.toInt
+                } catch {
+                  case e: Exception => Logger.fatal("Non valid decimal places: "+value)
+                }
+              config = config.copy(decimalPlaces = d)
+            } else if(flag == "epsilon") {
+              val eps =
+                try {
+                  value.toDouble
+                } catch {
+                  case e: Exception => Logger.fatal("Non valid epsilon: "+value)
+                }
+              config = config.copy(epsilon = eps)
             } else
               failParse
           } else

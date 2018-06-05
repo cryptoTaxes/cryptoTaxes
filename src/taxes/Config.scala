@@ -9,6 +9,7 @@ object Verbosity extends Enumeration {
   val showMoreDetails : Level = 2
   val showRates : Level = 3
   val showStocks : Level = 4
+  val showAll : Level = 5
 }
 
 
@@ -29,6 +30,8 @@ case class Config( user : String
                   , baseCoin : BaseCoin
                   , downloadPrices : Boolean
                   , priceCalculation: PriceCalculation.Method
+                  , decimalPlaces : Int
+                  , epsilon : Double
                   )
 
 
@@ -45,5 +48,7 @@ object DefaultConfig extends Config( user = "demo"
                                      , baseCoin = EuroBaseCoin
                                      , downloadPrices = false
                                      , priceCalculation = PriceCalculation.open
+                                     , decimalPlaces = 2
+                                     , epsilon = 0.00000001
                                      )
 

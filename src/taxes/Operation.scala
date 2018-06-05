@@ -20,14 +20,23 @@ object Operation {
 }
 
 
-// fromAmount is total released amount
-// toAmount is total received amount (real quantity without what was taken by exchanger as a fee)
-// fee is absolute fee taken by exchanger
+/*************************************************************************
+  if(feeMarket == fromMarket)
+     we exchanged ((fromAmount + fee))  for  ((toAmount))
+  else if(feeMarket == toMarket)
+     we exchanged ((fromAmount))  for  ((toAmount + fee))
+
+  The fee is part of the exchange, i.e. it's not paid with other funds.
+  So if feeMarket == toMarket you're only disposing fromAmount but
+  part of these funds will be used to pay for the fee.
+  If feeMarket == fromMarket you're really disposing (fromAmount + fee)
+  ************************************************************************/
 case class Exchange( date : Date
                     , id : String
                     , fromAmount : Double, fromMarket : Market
                     , toAmount : Double, toMarket : Market
                     , fee : Double, feeMarket : Market
+                    , isSettlement : Boolean = false
                     , exchanger: Exchanger
                     , description : String
                     ) extends Operation {
@@ -37,6 +46,13 @@ case class Exchange( date : Date
 }
 
 
+/*************************************************************************
+  NOTE THE LACK OF SYMMETRY:
+  * Only toAmount (without fee, even if feeMarket == toMarket)
+    will be added to your stock of coins
+  * fromAmount (plus fee, if feeMarket == fromMarket)
+    will be deducted from your stocks.
+ ************************************************************************/
 case class Margin( date : Date
                   , id : String
                   , fromAmount : Double, fromMarket : Market
@@ -50,20 +66,6 @@ case class Margin( date : Date
 
   override def toString : String =
     "Margin(%s %18.8f %-5s -> %18.8f %-5s  %18.8f %-5s  %s)" format (dateToString(date), fromAmount, fromMarket, toAmount, toMarket, fee, feeMarket, description)
-}
-
-
-case class SettlementBuy( date : Date
-                         , id : String
-                         , fromAmount : Double, fromMarket : Market
-                         , toAmount : Double, toMarket : Market
-                         , fee : Double, feeMarket : Market
-                         , exchanger: Exchanger
-                         , description : String
-                         ) extends Operation {
-
-  override def toString : String =
-    "SettlementBuy(%s %18.8f %-5s -> %18.8f %-5s  %18.8f %-5s  %s)" format (dateToString(date), fromAmount, fromMarket, toAmount, toMarket, fee, feeMarket, description)
 }
 
 

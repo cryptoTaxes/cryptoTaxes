@@ -3,9 +3,9 @@
 // Used to download historical prices.
 
 BCH   -> bitcoin-cash
-BNB   -> binance-coin
 BTC   -> bitcoin
 ETH   -> ethereum
+ETC   -> ethereum-classic
 LTC   -> litecoin
 NXT   -> nxt
 STRAT -> stratis

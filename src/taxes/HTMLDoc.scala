@@ -4,35 +4,36 @@ import java.io.PrintStream
 
 import taxes.Market.Market
 import taxes.Util.Logger
-
-import scala.xml.Elem
+import HTMLDoc.HTML
 
 
 trait ToHTML {
-  def toHTML : Elem
+  def toHTML : HTML
 }
 
 
-object HTML {
+object HTMLDoc {
+  type HTML = scala.xml.Elem
+
   val df = Format.shortDf
 
   lazy val baseMarket = Config.config.baseCoin.market
 
-  def asMarket(amount: Double, marketUnit: Market, decimals : Int = 2) : Elem =
+  def asMarket(amount: Double, marketUnit: Market, decimals : Int = Config.config.decimalPlaces) : HTML =
     <span class='noLineBreak'>
       {Format.formatDecimal(amount, decimals)}
       <span class='market'>{marketUnit}</span>
     </span>
 
-  
-  def asRate(rate: Double, marketUnit0: Market, marketUnit1: Market, decimals : Int = 2) : Elem =
+
+  def asRate(rate: Double, marketUnit0: Market, marketUnit1: Market, decimals : Int = Config.config.decimalPlaces) : HTML =
     <span class='noLineBreak'>
       {asMarket(rate, marketUnit0, decimals)}
       / <span class="market">{marketUnit1}</span>
     </span>
 
 
-  def box(header : Any, boxBody : Any) : Elem =
+  def box(header : Any, boxBody : Any) : HTML =
     <div class='boxed'>
       <div class='boxHeader'>
           {header}
@@ -43,7 +44,7 @@ object HTML {
     </div>
 
 
-  def header4(header0 : Any, header1 : Any, header2 : Any, header3 : Any) : Elem =
+  def header4(header0 : Any, header1 : Any, header2 : Any, header3 : Any) : HTML =
     <span>
       <span class='header0'>
         {header0}
@@ -61,16 +62,16 @@ object HTML {
 
 
   trait Boxed {
-    def headerToHTML : Elem
+    def headerToHTML : HTML
 
-    def bodyToHTML : Elem
+    def bodyToHTML : HTML
 
-    def toHTML: Elem =
+    def toHTML: HTML =
       box(headerToHTML, bodyToHTML)
   }
 
 
-  def reportResults(year : Int, realized : FIFO.Realized) : Elem = {
+  def reportResults(year : Int, realized : FIFO.Realized) : HTML = {
     val proceeds = realized.proceeds.sum
     val costs = realized.costBasis.sum
     val fees = realized.perMarketPaidFees.sum
@@ -99,7 +100,7 @@ object HTML {
   }
 
 
-  def reportYear(year : Int, realized : FIFO.Realized) : Elem = {
+  def reportYear(year : Int, realized : FIFO.Realized) : HTML = {
     <div>
       <div>{realized.perMarketGains.toHTML("Gains per market")}</div>
       <div>{realized.perMarketLooses.toHTML("Looses per market")}</div>
@@ -131,15 +132,15 @@ object HTML {
 }
 
 
-case class HTML(fileName : String, title : String) {
+case class HTMLDoc(fileName : String, title : String) {
   private var allHTMLs = List[ToHTML]()
 
   def +=(html : ToHTML) : Unit =
     allHTMLs ::= html
 
-  def +=(html : Elem): Unit = {
+  def +=(html : HTML): Unit = {
     allHTMLs ::= new ToHTML {
-      override def toHTML : Elem = html
+      override def toHTML : HTML = html
     }
   }
 
@@ -176,42 +177,56 @@ case class HTML(fileName : String, title : String) {
 
   private val styles =
     """
-      | body {font-family: Roboto; -webkit-print-color-adjust: exact; }
+      |  body {font-family: 'Open Sans', sans-serif; -webkit-print-color-adjust: exact; }
       | .back1, .boxHeader, table#tableStyle1 caption, table#tableStyle1 tr:last-child {  background-color: #e0e0e0; }
-      | .boxPadding, .boxBody, .boxHeader, table#tableStyle1 caption, table#tableStyle1 td, th { padding-top: 2px; padding-bottom: 2px; padding-left: 4px; padding-right: 4px; }
+      | .boxPadding, .boxBody, .boxHeader, table#tableStyle1 caption, table#tableStyle1 td, th { padding-top: 0.2em; padding-bottom: 0.2em; padding-left: 0.2em; padding-right: 0.2em; }
       |
-      | .header { font-size: 130%; margin-bottom: 20px; }
-      | .boxed { width: 98%; background-color: White;  border: 1px solid black; border-collapse: collapse; margin-bottom: 10px; page-break-inside:avoid; page-break-after:auto; }
+      | .header { font-size: 130%; margin-bottom: 20px; font-weight: bold; }
+      | .boxed { width: 98%; background-color: White;  border: 1px solid black; border-collapse: collapse; margin-bottom: 1em; page-break-inside:avoid; page-break-after:auto; }
       | .boxHeader {  border-bottom: 1px solid black; border-collapse: collapse; }
       | .header0 { width: 7%; display: inline-block; }
-      | .header1 { width: 18%; display: inline-block; }
-      | .header2 { width: 55%; display: inline-block; }
-      | .header3 { width: 18%; display: inline-block; text-align: right; }
+      | .header1 { width: 15%; display: inline-block; }
+      | .header2 { width: 65%; display: inline-block; }
+      | .header3 { width: 10%; display: inline-block; text-align: right; }
       | .market { color: blue; }
       | .exchanger { color: green; }
       | .operationNumber { color: navy; }
-      | .boxBody { background-color: White; font-size: 90%; }
-      | .embold, .header { font-weight: bold;}
+      | .boxBody { background-color: White;}
+      | .embold { font-weight: bold; font-size: 95%;}
       | .small1 { font-size: 85%; }
       | .small2, .desc, .rates, .stock, .footnote { font-size: 80%; }
       | .noLineBreak { white-space:nowrap; }
-      | .marginBottom5, .desc, .rates { margin-bottom: 5px; }
-      | .marginTopBottom20, .footnote { margin-top: 20px; margin-bottom: 20px; }
-      | .paddingR10 { padding-right: 10px; }
+      | .marginBottom5, .desc, .rates { margin-bottom: 0.25em; }
+      | .marginTopBottom20, .footnote { margin-top: 0.5em; margin-bottom: 0.5em; }
+      | .paddingR10 { padding-right: 0.2em; }
       | .alignR { text-align: right; }
       |
-      | table#tableStyle1 { border: 1px solid black; border-collapse: collapse; margin-bottom: 20px; }
-      | table#tableStyle1 caption { border: 1px solid black; border-bottom: 0px solid black; font-weight: bold; font-size: 100%; text-align: left; }
+      | table#tableStyle1 { border: 1px solid black; border-collapse: collapse; margin-bottom: 20px; page-break-inside:avoid; }
+      | table#tableStyle1 caption { border: 1px solid black; border-bottom: 0px solid black; font-weight: bold; text-align: left; }
       | table#tableStyle1 tr:nth-child(odd) { background-color: #f0f0f0;  }
       | table#tableStyle1 tr:hover { background-color: #c5c5c5; }
       | table#tableStyle1 td, th { text-align: right; vertical-align: top; }
       | table#tableStyle1 td:first-child, th:first-child { text-align: left; }
+      |
+      | @media print {
+      |  body{
+      |    font-size: 65%;
+      |    column-count: 2;
+      |    -webkit-column-count: 2;
+      |    -moz-column-count: 2;
+      |  }
+      | .boxed { width: 100%; margin-bottom: 0.25em; }
+      | .boxHeader { font-size: 90%; margin-bottom: 0.2em; }
+      | .marginBottom5, .desc, .rates { margin-bottom: 0.2em; }
+      | .marginTopBottom20, .footnote { margin-top: 0.25em; margin-bottom: 0.3em; }
+      | }
       |""".stripMargin
 
-  private def page() =
+  private def page() : HTML =
     <html>
     <head>
-      <link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet'></link>
+      <meta charset="UTF-8"></meta>
+      <link href="https://fonts.googleapis.com/css?family=Open+SansOpen+Sans:300,400,600" rel="stylesheet"></link>
       <title>{optState.get.title}</title>
       <style type="text/css">
         {styles}
@@ -227,6 +242,7 @@ case class HTML(fileName : String, title : String) {
     </html>
 
   private def printlnPage() : Unit = {
+    println("<!DOCTYPE html>")
     println(page())
     allHTMLs = List[ToHTML]()
   }

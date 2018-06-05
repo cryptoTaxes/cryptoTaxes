@@ -39,7 +39,8 @@ object Kraken extends Exchanger with Initializable {
       case Some(market) => market
     }
 
-    return (Market.normalize(market1)
+    return (
+        Market.normalize(market1)
       , Market.normalize(market2)
     )
   }
@@ -79,46 +80,75 @@ object Kraken extends Exchanger with Initializable {
       val ledgers = scLn.next("Ledgers")
 
       val date = Date.fromString(time + " +0000", "yyyy-MM-dd HH:mm:ss.S Z")
-      val (market1, market2) = parsePair(pair)
+      val (market1, market2) = parsePair(pair) // already normalized
 
       val id = txid + "/" + ordertxid
       val desc = "Order: " + id
 
-      val (txidMarket2, txidMarket1) = Parse.split(ledgers, ",")
+      val (txid1, txid2) = Parse.split(ledgers, ",")
 
+      val isSell = sellBuy == "sell"
+
+      val (txidMarket1, txidMarket2) =
+        if(isSell)
+          (txid2, txid1)
+        else
+          (txid1, txid2)
+
+      // fees should be expressed in "Quote market" which is market2 unless
+      // explicitly specified (see https://www.kraken.com/help/fees). We can
+      // support this later possibility by searching in the ledger
       val Ledger(_, amount1, fee1) = ledgersCache(txidMarket1)
       val Ledger(_, amount2, fee2) = ledgersCache(txidMarket2)
 
+      /* we are having problems with fees in both markets and very small fees
+      val feeMarket =
+        if(fee2 > 0)
+          market2
+        else if(fee1 > 0)
+          market1
+        else
+          market2
+      */
+      // So we assume fee is always expressed in market2
+      val feeMarket = market2
 
-      if (sellBuy == "sell" /* && ordertype == "limit"*/ ) {
-
-        val exchange =
-          Exchange(
-            date = date
-            , id = id
-            , fromAmount = amount1 + fee1, fromMarket = Market.normalize(market1)
-            , toAmount = amount2 - fee2, toMarket = Market.normalize(market2)
-            , fee = fee2
-            , feeMarket = Market.normalize(market2)
-            , exchanger = Kraken
-            , description = desc
-          )
-        return CSVReader.Ok(exchange)
+      if (isSell /* && ordertype == "limit"*/ ) {
+        if(feeMarket==market1)
+          return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported as fee is expressed in base market: %s.".format(Kraken.id, Paths.pathFromData(fileName), line))
+        else {
+          val exchange =
+            Exchange(
+              date = date
+              , id = id
+              , fromAmount = vol - 0 * (if(feeMarket==market1) fee else 0)
+              , fromMarket = market1
+              , toAmount = cost - 1 * (if(feeMarket==market2) fee else 0)
+              , toMarket = market2
+              , fee = fee, feeMarket = feeMarket
+              , exchanger = Kraken
+              , description = desc
+            )
+          return CSVReader.Ok(exchange)
+        }
       } else if (sellBuy == "buy") {
-        val feeInMarket1 = fee / price
-
-        val exchange =
-          Exchange(
-            date = date
-            , id = id
-            , fromAmount = amount1 + fee1, fromMarket = Market.normalize(market2)
-            , toAmount = amount2 - fee2, toMarket = Market.normalize(market1)
-            , fee = fee1
-            , feeMarket = Market.normalize(market2)
-            , exchanger = Kraken
-            , description = desc
-          )
-        return CSVReader.Ok(exchange)
+        if(feeMarket==market1)
+          return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported as fee is expressed in base market: %s.".format(Kraken.id, Paths.pathFromData(fileName), line))
+        else {
+          val exchange =
+            Exchange(
+              date = date
+              , id = id
+              , fromAmount = cost - 1 * (if(feeMarket==market2) fee else 0)
+              , fromMarket = market2
+              , toAmount = vol - 0 * (if(feeMarket==market1) fee else 0)
+              , toMarket = market1
+              , fee = fee, feeMarket = feeMarket
+              , exchanger = Kraken
+              , description = desc
+            )
+          return CSVReader.Ok(exchange)
+        }
       } else
         return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
     }

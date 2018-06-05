@@ -36,13 +36,13 @@ object HitBTC extends Exchanger {
       val (market1,market2) = Parse.split(instrument,"/")
       val isSell = side == "sell"
 
-      // market1 is usually BTC
+      // market2 is usually BTC
       if(isSell) {
         val exchange = Exchange(
           date = date
           , id = tradeID + "/" + orderID
           , fromAmount = quantity, fromMarket = Market.normalize(market1)
-          , toAmount = total, toMarket = Market.normalize(market2)
+          , toAmount = volume - fee + rebate, toMarket = Market.normalize(market2)
           , fee = fee, feeMarket = Market.normalize(market2)
           , exchanger = HitBTC
           , description = desc

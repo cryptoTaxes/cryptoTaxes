@@ -38,6 +38,14 @@ class Date(milliseconds : Long) extends java.util.Date(milliseconds) with Ordere
 
     return Date(calendar.getTimeInMillis)
   }
+
+  def addSeconds(seconds : Int): Date = {
+    val calendar = Calendar.getInstance()
+    calendar.setTime(this)
+    calendar.add(Calendar.SECOND, seconds) // move onto next day
+
+    return Date(calendar.getTimeInMillis)
+  }
 }
 
 

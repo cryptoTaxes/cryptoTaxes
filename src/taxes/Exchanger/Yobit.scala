@@ -36,8 +36,11 @@ object Yobit extends Exchanger {
 
       val desc = ""
 
-      val (market1,market2) = Parse.split(pair,"/")
+      val (m1,m2) = Parse.split(pair,"/")
       val isSell = orderType == "SELL"
+
+      val market1 = Market.normalize(m1)
+      val market2 = Market.normalize(m2)
 
       if(completed>0) {
         // market1 is usually BTC
@@ -46,9 +49,9 @@ object Yobit extends Exchanger {
             Exchange(
               date = date
               , id = ""
-              , fromAmount = completed, fromMarket = Market.normalize(market1)
-              , toAmount = completed * price, toMarket = Market.normalize(market2)
-              , fee = 0, feeMarket = Market.normalize(market2)
+              , fromAmount = completed, fromMarket = market1
+              , toAmount = completed * price, toMarket = market2
+              , fee = 0, feeMarket = market2
               , exchanger = Yobit
               , description = desc
             )
@@ -56,9 +59,9 @@ object Yobit extends Exchanger {
             Exchange(
               date = date
               , id = ""
-              , fromAmount = completed * price, fromMarket = Market.normalize(market2)
-              , toAmount = completed, toMarket = Market.normalize(market1)
-              , fee = 0, feeMarket = Market.normalize(market1)
+              , fromAmount = completed * price, fromMarket = market2
+              , toAmount = completed, toMarket = market1
+              , fee = 0, feeMarket = market1
               , exchanger = Yobit
               , description = desc
             )

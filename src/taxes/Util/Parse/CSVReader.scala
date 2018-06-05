@@ -62,7 +62,7 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
       }
     }
     sc.close()
-    return xs
+    return xs.reverse
   }
 }
 

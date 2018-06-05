@@ -1,2 +1,3 @@
-Warning: Kraken. Read file. Reading this transaction is not currently supported: XXXXXX-XXXXX-XXXX10,YYYYYY-YYYYY-YYYY10,2017-12-01 10:25:22,deposit,currency,ZEUR,1000.0000,0.0000,1000.0000.
-Warning: Kraken. Read file. Reading this transaction is not currently supported: XXXXXX-XXXXX-XXXX40,YYYYYY-YYYYY-YYYY30,2017-12-04 15:44:11,deposit,currency,ZEUR,1000.0000,0.0000,1000.0000.
+Warning: Bitfinex. Read file data\usr\demo\input\bitfinex\ledger\2014-ledger-USD.csv: Reading this transaction is not currently supported: USD,Trading fee 0.1 BTC @ 315.01 (0.18% fee) on Margin wallet,-0.0567018,-0.0567018,2014-10-07 19:13:28.
+Warning: Kraken. Read file data\usr\demo\input\kraken\ledgers\ledgers.csv; Reading this transaction is not currently supported: XXXXXX-XXXXX-XXXX10,YYYYYY-YYYYY-YYYY10,2017-12-01 10:25:22,deposit,currency,ZEUR,1000.0000,0.0000,1000.0000.
+Warning: Kraken. Read file data\usr\demo\input\kraken\ledgers\ledgers.csv; Reading this transaction is not currently supported: XXXXXX-XXXXX-XXXX40,YYYYYY-YYYYY-YYYY30,2017-12-04 15:44:11,deposit,currency,ZEUR,1000.0000,0.0000,1000.0000.

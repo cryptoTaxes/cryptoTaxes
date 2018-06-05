@@ -72,10 +72,9 @@ object Shapeshift extends Exchanger {
                 Exchange(
                   date = date
                   , id = orderId
-                  , fromAmount = amount1 + txInfo.fee, fromMarket = market1
+                  , fromAmount = amount1, fromMarket = market1
                   , toAmount = amount2, toMarket = market2
-                  , fee = txInfo.fee
-                  , feeMarket = market1
+                  , fee = txInfo.fee, feeMarket = market1
                   , exchanger = Shapeshift
                   , description = desc
                 )

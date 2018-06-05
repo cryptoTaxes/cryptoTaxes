@@ -27,8 +27,11 @@ object Bittrex extends Exchanger {
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val orderId = scLn.next("Order ID")
-      val (market1, aux) = scLn.next("Pair").span(_ != '-')
-      val market2 = aux.tail
+      val (m1, aux) = scLn.next("Pair").span(_ != '-')
+      val m2 = aux.tail
+
+      val market1 = Market.normalize(m1)
+      val market2 = Market.normalize(m2)
 
       val isSell = scLn.next("Order Type") == "LIMIT_SELL"
       val quantity = scLn.nextDouble("Quantity")
@@ -42,15 +45,20 @@ object Bittrex extends Exchanger {
 
       val desc = "Order: " + orderId
 
-      // fees are denominated in market1. market1 is normally BTC, USDT or ETH
+      // market1 is normally BTC, USDT or ETH.
+      // fees are denominated in market1.
+      // Rate is computed as Price / Quantity (here Price stands really for what you're buying or selling)
+      // In a sell you release Quantity coins. You get Price minus comissionPaid coins
+      // A buy gets you Quantity coins. You pay Price but Price doesn't include comissionPaid
+
       val exchange =
         if (isSell)
           Exchange(
             date = dateClose
             , id = orderId
-            , fromAmount = quantity, fromMarket = Market.normalize(market2)
-            , toAmount = price - comissionPaid, toMarket = Market.normalize(market1)
-            , fee = comissionPaid, feeMarket = Market.normalize(market1)
+            , fromAmount = quantity, fromMarket = market2
+            , toAmount = price - comissionPaid, toMarket = market1
+            , fee = comissionPaid, feeMarket = market1
             , exchanger = Bittrex
             , description = desc
           )
@@ -58,9 +66,9 @@ object Bittrex extends Exchanger {
           Exchange(
             date = dateClose
             , id = orderId
-            , fromAmount = price + comissionPaid, fromMarket = Market.normalize(market1)
-            , toAmount = quantity, toMarket = Market.normalize(market2)
-            , fee = comissionPaid, feeMarket = Market.normalize(market1)
+            , fromAmount = price, fromMarket = market1
+            , toAmount = quantity, toMarket = market2
+            , fee = comissionPaid, feeMarket = market1
             , exchanger = Bittrex
             , description = desc
           )
@@ -144,3 +152,39 @@ object Bittrex extends Exchanger {
   }
 }
 
+
+/*
+
+https://bitcointalk.org/index.php?topic=1970414.msg28376567#msg28376567
+
+I just spent way too much time trying to figure out the answer to this question and I'm pretty sure I've got it.
+
+1. Bittrex Fees are NOT always charged in the currency that is acquired.  Fees are charged in the currency listed first on the Market.  So, fees for the USDT-BTC market are charged in USDT, regardless of whether the transaction is a buy (Bid) or sell (Ask).
+
+2. Cost/Proceeds are always expressed in the currency listed first on the Market regardless whether it's a buy or sell.  If it's a buy, then the Cost/Proceeds will be negative since you are buying the Currency listed second in exchange for the Currency listed first.  Therefore, the currency listed first will be debited from one's wallet.  If it's a Sell then Cost/Proceeds will be positive, and thus credited to one's wallet.
+
+2. Fees and Volumes for the currency listed first on the market are both always truncated (truncated) after 8 decimal places.  My guess is that Bittrex does this so that it only ever needs to keep track of 8 decimal places for any currency held on its internal ledger, and therefore any currency volumes represented in an order (on the web page) are exactly as precise as the actual numbers.
+
+3. Actual Rate differs from Bid/Ask rate because of this truncating....  At least this is one reason why the rate differs.  Presumably it could also differ because an order is filled at a more favorable rate than the Bid/Ask.
+
+Here's an example:
+Market: USDT-ETH.  Transaction: LimitBuy.  853.553  Units Filled: 0.05748706  Units Total: 0.05748706  Actual/Rate: 853.55299992  Cost/Proceeds: -49.19092315
+So I'm attempting to buy 0.05748706 ETH for USDT at a Rate of 853.553 USDT/ETH.  Since Fees are calculated in the market listed first, the fees will be taken out of the USDT, which is the currency I'm starting with.  So I need to know how many dollars (X) will I need to exchange for 0.05748706 ETH if the Buy Rate is 853.553 USDT/ETH.  The answer is:  X = 0.05748706 ETH * 853.553 USDT/ETH = 49.06825252418 USDT.  But Bittrex truncates this number after 8 decimal places.  So Trunc(X) = 49.06825252 USDT
+
+So I'm going to actually buy 0.05748706 ETH with 49.06825252 USDT NOT 49.06825252418 USDT and because of that, my actual rate will be different than my Bid rate.  My actual rate will therefore be: 49.06825252 USDT / 0.05748706 ETH = 853.552999927288 USDT / ETH, but Bittrex also truncates the Actual Rate after 8 decimal places, so my Actual Rate is 853.55299992 USDT / ETH, which exactly matches what is expected.
+
+Since USDT is listed first, the fee calculation is taken in USDT, which means its an additional expenditure to the USDT amount that I used in my exchange/buy - Trunc(X) = 49.06825252 USDT.  So the Fee is:
+0.0025*49.06825252 USDT = 0.1226706313 USDT, but the fee itself is also truncated after 8 decimal places, so the fee is 0.12267063 USDT
+
+Finally, the Cost/Proceeds is calculated as the total USDT expended for the transaction plus fees: Cost/Proceeds = 49.06825252 USDT + 0.12267063 USDT = 49.19092315 USDT.  It's represented as a negative number because USDT is debited from my wallet.
+
+Interestingly, this means that in this example, you need to start with enough USDT to pay both the fees and to exchange for ETH since the fees are taken out from the currency expended and not from the currency acquired.  I'm not sure what happens if you don't start with enough, but I would guess either Bittrex wouldn't let you do the trade or Bittrex would slightly decrease the amount of ETH you would acquire so that you would not need as much USDT to exchange and therefore would have some extra USDT to pay the fees.
+
+___
+
+A LimitSell would work similarly, but if we're selling ETH to acquire USDT then the fees would be deducted from the acquired USDT, since USDT is listed first on the USDT-ETH market.  Again, the Actual Rate would differ from the Sell Rate due to truncating the amount of acquired USDT, and then recalculating the rate based on this truncating.
+
+I've only traded on a few markets to draw these conclusions, so someone with more experience on other Bittrex markets might know otherwise, but this seems like what is going on.
+
+
+ */

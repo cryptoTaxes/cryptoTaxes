@@ -37,14 +37,17 @@ object GDAX extends Exchanger {
       val (market1, aux) = product.span(_ != '-')
       val market2 = aux.tail
 
+      val sizeMarket = Market.normalize(sizeUnit)
+      val priceFeeTotalMarket = Market.normalize(priceFeeTotalUnit)
+
       if (side == "SELL") {
         val exchange =
           Exchange(
             date = date
             , id = tradeID
-            , fromAmount = size, fromMarket = Market.normalize(sizeUnit)
-            , toAmount = total, toMarket = Market.normalize(priceFeeTotalUnit)
-            , fee = fee, feeMarket = Market.normalize(priceFeeTotalUnit)
+            , fromAmount = size, fromMarket = sizeMarket
+            , toAmount = total, toMarket = priceFeeTotalMarket
+            , fee = fee, feeMarket = priceFeeTotalMarket
             , exchanger = GDAX
             , description = desc
           )
@@ -54,9 +57,9 @@ object GDAX extends Exchanger {
           Exchange(
             date = date
             , id = tradeID
-            , fromAmount = total.abs, fromMarket = Market.normalize(priceFeeTotalUnit)
-            , toAmount = size, toMarket = Market.normalize(sizeUnit)
-            , fee = fee, feeMarket = Market.normalize(priceFeeTotalUnit)
+            , fromAmount = total.abs, fromMarket = priceFeeTotalMarket
+            , toAmount = size, toMarket = sizeMarket
+            , fee = fee, feeMarket = priceFeeTotalMarket
             , exchanger = GDAX
             , description = desc
           )

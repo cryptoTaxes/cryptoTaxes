@@ -14,7 +14,7 @@ object Poloniex extends Exchanger {
         def fileSource(fileName : String) = borrowingFeesReader(fileName)
       } */
     , new UserFolderSource[Operation]("poloniex/withdrawals", ".csv") {
-        def fileSource(fileName : String) = withdrawalReader(fileName)
+        def fileSource(fileName : String) = withdrawalsReader(fileName)
       }
     )
 
@@ -47,8 +47,6 @@ object Poloniex extends Exchanger {
       val orderNumber = scLn.next("Order Number")
       val baseTotalLessFee = scLn.nextDouble("Base Total Less Fee")
       val quoteTotalLessFee = scLn.nextDouble("Quote Total Less Fee")
-      scLn.close()
-
 
       val desc =
         if(orderNumber.nonEmpty)
@@ -56,43 +54,50 @@ object Poloniex extends Exchanger {
         else
           ""
 
-      if(amount==0 && total==0) // Must be a Poloniex error but I got an entry with no amount not total
+      if(amount==0 && total==0) // Must be a Poloniex error but I got an entry with no amount nor total
         return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
 
       if (category == "Exchange") {
+        // Rate is computed as Total / Amount
+        // A sell gets you Total minus fee coins. You release Amount coins.
+        // A buy gets you Amount minus fee coins. You release Total coins.
         val exchange =
-          if (orderType == "Sell")
+          if (orderType == "Sell") {
+            val fee = total * feePercent / 100
             Exchange(
               date = date
               , id = orderNumber
               , fromAmount = amount, fromMarket = market1
-              , toAmount = amount*price*(100-feePercent)/100, toMarket = market2
-              , fee = total*feePercent/100, feeMarket = market2
+              , toAmount = total - fee, toMarket = market2
+              , fee = fee, feeMarket = market2
               , exchanger = Poloniex
               , description = desc
             )
-          else
+          } else {
+            val fee = amount * feePercent / 100
             Exchange(
               date = date
               , id = orderNumber
               , fromAmount = total, fromMarket = market2
-              , toAmount = amount*(100-feePercent)/100, toMarket = market1
-              , fee = amount*feePercent/100, feeMarket = market1
+              , toAmount = amount - fee, toMarket = market1
+              , fee = fee, feeMarket = market1
               // Usually, market2 is BTC so we set fee in BTC
-              //, fee = amount*feePercent/100*price, feeMarket = market2
+              // fee = amount*feePercent/100*price, feeMarket = market2
               , exchanger = Poloniex
               , description = desc
             )
+          }
         return CSVReader.Ok(exchange)
       } else if(category == "Settlement" && orderType == "Buy") {
         // Just like a Exchange buy and then a loss
-        val settlement = SettlementBuy(
+        val settlement = Exchange(
           date = date
           , id = orderNumber
           , fromAmount = total, fromMarket = market2
           , toAmount = amount*(100-feePercent)/100, toMarket = market1
           , fee = amount*feePercent/100, feeMarket = market1
-          // Usually, market2 is BTC so we set fee in BTC
+          , isSettlement = true
+          // Usually, market2 is BTC so we can set fee in BTC
           //, fee = amount*feePercent/100*price, feeMarket = market2
           , exchanger = Poloniex
           , description = desc + " settlement"
@@ -100,32 +105,35 @@ object Poloniex extends Exchanger {
         return CSVReader.Ok(settlement)
       } else if(category == "Margin trade") {
         val margin =
-          if (orderType == "Sell")
+          if (orderType == "Sell") {
+            val fee = total * feePercent / 100
             Margin(
               date = date
               , id = orderNumber
-              , fromAmount = amount, fromMarket = market1
-              , toAmount = amount*price*(100-feePercent)/100, toMarket = market2
-              , fee = total*feePercent/100, feeMarket = market2
+              , fromAmount = amount, fromMarket = market1 // we short the whole amount but only pay with provided total minus fee
+              , toAmount = total, toMarket = market2
+              , fee = fee, feeMarket = market2 // market2 is usually BTC
               , orderType = Operation.OrderType.Sell
               , pair = (market1, market2)
               , exchanger = Poloniex
               , description = desc
             )
-          else
+          } else {
+            val fee = amount * feePercent / 100
             Margin(
               date = date
               , id = orderNumber
-              , fromAmount = total, fromMarket = market2
-              , toAmount = amount*(100-feePercent)/100, toMarket = market1
-              , fee = amount*feePercent/100, feeMarket = market1
-              // Usually, market2 is BTC so we set fee in BTC
+              , fromAmount = total * (100 - feePercent)/100, fromMarket = market2
+              , toAmount = quoteTotalLessFee, toMarket = market1
+              , fee = fee, feeMarket = market1
+              // Usually, market2 is BTC so we can set fee in BTC
               //, fee = amount*feePercent/100*price, feeMarket = market2
               , orderType = Operation.OrderType.Buy
               , pair = (market1, market2)
               , exchanger = Poloniex
               , description = desc
             )
+          }
         return CSVReader.Ok(margin)
       } else
         return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
@@ -188,7 +196,7 @@ object Poloniex extends Exchanger {
     }
   }
 
-  private def withdrawalReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def withdrawalsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val hasHeader: Boolean = true
 
     override def lineScanner(line: String) =

@@ -27,26 +27,26 @@ object CCEX extends Exchanger {
       if(orderType=="Transaction") {
         val date = Date.fromString(token1+" "+token2, "yyyy-MM-dd hh:mm:ss")
         val amount1 = scLn.nextDouble("Amount1")
-        val market1 = scLn.next("Market1")
+        val m1 = scLn.next("Market1")
         val amount2 = scLn.nextDouble("Amount2")
-        val market2 = scLn.next("Market2")
+        val m2 = scLn.next("Market2")
         scLn.close()
 
+        val market1 = Market.normalize(m1)
+        val market2 = Market.normalize(m2)
+
         val feePercent = 0.2
+
+        val fee = amount1 * feePercent / 100
 
         val exchange =
           Exchange(
             date = date
             , id = ""
-            , fromAmount = amount2, fromMarket = Market.normalize(market2)
-            , toAmount = amount1, toMarket = Market.normalize(market1)
-            , fee = // state fee in BTC
-              if (market1=="BTC")
-                amount1 * feePercent / 100
-              else
-                amount2 / (1 + 100/feePercent)
-
-            , feeMarket = Market.bitcoin
+            , fromAmount = amount2, fromMarket = market2
+            , toAmount = amount1, toMarket = market1  // amount1 in read csv doesn't include fee
+            , fee = fee
+            , feeMarket = market1
             , exchanger = CCEX
             , description = ""
           )

@@ -1,19 +1,105 @@
 package taxes.Exchanger
 
 import taxes._
-import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
+import taxes.Util.Parse._
 
 object Bitfinex extends Exchanger {
   override val id: String = "Bitfinex"
 
   override val sources = Seq(
+    /*
     new UserFolderSource[Operation]("bitfinex", ".csv") {
       def fileSource(fileName: String) = reportReader(fileName)
-    },
+    },*/
     new UserFolderSource[Operation]("bitfinex/ledger", ".csv") {
       def fileSource(fileName: String) = ledgerReader(fileName)
+    },
+    new UserFolderSource[Operation]("bitfinex/trades", ".csv") {
+      def fileSource(fileName: String) = tradesReader(fileName)
     }
   )
+
+  private def tradesReader(fileName: String) = new CSVSortedOperationReader(fileName) {
+    override val hasHeader: Boolean = true
+
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[,]")
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val reference = scLn.next("Reference")
+
+      val (aux1, aux2) = Parse.split(scLn.next("Pair"), "/")
+      val market1 = Market.normalize(aux1)
+      val market2 = Market.normalize(aux2)
+
+      val amount = scLn.nextDouble("Amount")
+
+      val price = scLn.nextDouble("Price")
+
+      val fee = scLn.nextDouble("Fee")
+
+      val feeCurrency = scLn.next("feeCurrency")
+      val feeMarket = Market.normalize(feeCurrency)
+
+      val date = Date.fromString(scLn.next("Date Created"), "yyyy-MM-dd HH:mm:ss")
+
+      val margin = scLn.next("Margin")
+
+      val desc = "Order: " + reference
+
+      if(margin.toLowerCase != "true") {
+        val exchange =
+          if(amount<0)
+            Exchange( // we are selling BTC for $. Fee can be in BTC or in $
+              date = date
+              , id = reference
+              , fromAmount = amount.abs - (if (feeMarket==market1) fee.abs else 0), fromMarket = market1
+              , toAmount = price * amount.abs - (if (feeMarket==market2) fee.abs else 0), toMarket = market2
+              , fee = fee.abs, feeMarket = feeMarket
+              , exchanger = Bitfinex
+              , description = desc
+            )
+          else
+            Exchange( // we are buying BTC with $. Fee can be in BTC or in $
+              date = date
+              , id = reference
+              , fromAmount = price * amount.abs - (if (feeMarket==market2) fee.abs else 0), fromMarket = market2
+              , toAmount = amount.abs - (if (feeMarket==market1) fee.abs else 0), toMarket = market1
+              , fee = fee.abs, feeMarket = feeMarket
+              , exchanger = Bitfinex
+              , description = desc
+            )
+        return CSVReader.Ok(exchange)
+      } else { // margin order
+        val margin =
+          if(amount<0)
+            Margin(
+              date = date
+              , id = reference
+              , fromAmount = amount.abs, fromMarket = market1
+              , toAmount = price * amount.abs + (if(feeMarket==market2) fee.abs else -fee.abs * price), toMarket = market2
+              , fee = fee.abs, feeMarket = feeCurrency
+              , orderType = Operation.OrderType.Sell
+              , pair = (market1, market2)
+              , exchanger = Bitfinex
+              , description = desc
+            )
+          else
+            Margin(
+              date = date
+              , id = reference
+              , fromAmount = amount.abs * price + (if (feeMarket==market2) fee.abs else -fee.abs * price), fromMarket = market2
+              , toAmount = amount.abs, toMarket = market1
+              , fee = fee.abs, feeMarket = feeCurrency
+              , orderType = Operation.OrderType.Buy
+              , pair = (market1, market2)
+              , exchanger = Bitfinex
+              , description = desc
+            )
+          return CSVReader.Ok(margin)
+        }
+    }
+  }
 
   private def reportReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val hasHeader: Boolean = true
@@ -126,18 +212,22 @@ object Bitfinex extends Exchanger {
         val price = sc.nextDouble()
         sc.close()
 
-        val settlement =
-          SettlementBuy(
-            date = date
+        val settlement = {
+          val total = amount.abs * price
+          val fee = 0.2 * total / 100
+          Exchange(
+            date = date.addSeconds(-240) // This is a bit ad-hoc but goal is to place settlement before it's used for paying a fee/loss
             , id = description
             , fromAmount = amount.abs, fromMarket = currency
-            , toAmount = amount.abs * price, toMarket = Market.usd
-            , fee = 0, feeMarket = currency
+            , toAmount = total - fee, toMarket = Market.usd
+            , fee = fee, feeMarket = Market.usd
+            , isSettlement = true
             , exchanger = Bitfinex
             , description = desc
           )
+        }
         return CSVReader.Ok(settlement)
-      } else if(description.startsWith("Trading fee") ||
+      } /* else if(description.startsWith("Trading fee") ||
                 (description.contains("Position") &&
                   (description.contains("funding") || description.contains("swap")))) {
         val fee =
@@ -150,8 +240,10 @@ object Bitfinex extends Exchanger {
             , desc
           )
         return CSVReader.Ok(fee)
-      } else
+      } */ else
         return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
     }
   }
 }
+
+

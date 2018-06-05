@@ -9,5 +9,5 @@ USD     -> 800
 USDT    -> 700
 ETH     -> 600
 LTC     -> 500
-NXT     -> 400
-BNB     -> 300
+ETC     -> 400
+NXT     -> 300
