@@ -47,6 +47,24 @@ object Bitfinex extends Exchanger {
 
       val desc = "Order: " + reference
 
+      // fee is only part of operation if expressed in one of two markets involved in this operation
+      val embedFee = feeMarket==market1 || feeMarket==market2
+      val (embeddedFeeValue, embeddedFeeMarket) =
+        if (embedFee)
+          (fee.abs, feeMarket)
+        else
+          (0.0, market1) // or market2, it doesn't matter as long as its value is 0
+
+      // only used if embedFee is false
+      lazy val detachedFee = Fee(
+        date = date
+        , id = reference + " " + fee
+        , amount = fee.abs
+        , market = feeMarket
+        , exchanger = Bitfinex
+        , description = desc +  " " + fee
+      )
+
       if(margin.toLowerCase != "true") {
         val exchange =
           if(amount<0)
@@ -55,7 +73,8 @@ object Bitfinex extends Exchanger {
               , id = reference
               , fromAmount = amount.abs - (if (feeMarket==market1) fee.abs else 0), fromMarket = market1
               , toAmount = price * amount.abs - (if (feeMarket==market2) fee.abs else 0), toMarket = market2
-              , fee = fee.abs, feeMarket = feeMarket
+              , fee = embeddedFeeValue
+              , feeMarket = embeddedFeeMarket
               , exchanger = Bitfinex
               , description = desc
             )
@@ -65,11 +84,12 @@ object Bitfinex extends Exchanger {
               , id = reference
               , fromAmount = price * amount.abs - (if (feeMarket==market2) fee.abs else 0), fromMarket = market2
               , toAmount = amount.abs - (if (feeMarket==market1) fee.abs else 0), toMarket = market1
-              , fee = fee.abs, feeMarket = feeMarket
+              , fee = embeddedFeeValue
+              , feeMarket = embeddedFeeMarket
               , exchanger = Bitfinex
               , description = desc
             )
-        return CSVReader.Ok(exchange)
+        return if(embedFee) CSVReader.Ok(exchange) else CSVReader.Ok(List(exchange, detachedFee))
       } else { // margin order
         val margin =
           if(amount<0)
@@ -77,8 +97,9 @@ object Bitfinex extends Exchanger {
               date = date
               , id = reference
               , fromAmount = amount.abs, fromMarket = market1
-              , toAmount = price * amount.abs + (if(feeMarket==market2) fee.abs else -fee.abs * price), toMarket = market2
-              , fee = fee.abs, feeMarket = feeCurrency
+              , toAmount = price * amount.abs + (if(feeMarket==market2) fee.abs else if(feeMarket==market1) -fee.abs * price else 0), toMarket = market2
+              , fee = embeddedFeeValue
+              , feeMarket = embeddedFeeMarket
               , orderType = Operation.OrderType.Sell
               , pair = (market1, market2)
               , exchanger = Bitfinex
@@ -88,16 +109,17 @@ object Bitfinex extends Exchanger {
             Margin(
               date = date
               , id = reference
-              , fromAmount = amount.abs * price + (if (feeMarket==market2) fee.abs else -fee.abs * price), fromMarket = market2
+              , fromAmount = amount.abs * price + (if (feeMarket==market2) fee.abs else if(feeMarket==market1) -fee.abs * price else 0), fromMarket = market2
               , toAmount = amount.abs, toMarket = market1
-              , fee = fee.abs, feeMarket = feeCurrency
+              , fee = embeddedFeeValue
+              , feeMarket = embeddedFeeMarket
               , orderType = Operation.OrderType.Buy
               , pair = (market1, market2)
               , exchanger = Bitfinex
               , description = desc
             )
-          return CSVReader.Ok(margin)
-        }
+          return if(embedFee) CSVReader.Ok(margin) else CSVReader.Ok(List(margin, detachedFee))
+      }
     }
   }
 
