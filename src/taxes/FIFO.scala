@@ -7,6 +7,8 @@ import taxes.HTMLDoc.HTML
 import taxes.Market.Market
 import taxes.Util.Logger
 
+import scala.collection.mutable.ListBuffer
+
 
 case class ValueTracker(baseMarket : Market) extends Iterable[(Market, Double)] with ToHTML {
   private val map = scala.collection.mutable.Map[Market,Double]()
@@ -122,9 +124,9 @@ case class OperationTracker() extends Iterable[(Int,OperationTracker.CSVEntry)] 
     val sep = ";"
     val header = List("order", "date", "exchanger", "description", "cost basis/loss", "proceeds/gain", "fee")
 
-    ps.println(header.mkString(";"))
+    ps.println(header.mkString(sep))
     for((operationNumber,entry) <- this)
-      ps.println(List[Any](operationNumber, Format.shortDf.format(entry.date), entry.exchanger, entry.description, entry.costBasis, entry.proceeds, entry.fee).mkString(";"))
+      ps.println(List[Any](operationNumber, Format.shortDf.format(entry.date), entry.exchanger, entry.description, entry.costBasis, entry.proceeds, entry.fee).mkString(sep))
 
     ps.close()
   }
@@ -152,7 +154,7 @@ object FIFO {
     if(operations.isEmpty)
       Logger.fatal("No operation was found in any exchange for user: "+config.user+".")
 
-    var processedOperations = List[Processed]()
+    val processedOperations = ListBuffer[Processed]()
 
 
     // what market is our basis
@@ -173,8 +175,8 @@ object FIFO {
       )
 
     // Sold stocks without corresponding buys
-    var partiallyFrees = List[String]()
-    var frees = List[Exchange]()
+    val partiallyFrees = ListBuffer[String]()
+    val frees = ListBuffer[Exchange]()
 
     // All quantities expressed in base coin
     object Realized extends Realized {
@@ -201,12 +203,12 @@ object FIFO {
       Realized.costBasis.clear()
       Realized.proceeds.clear()
 
-      partiallyFrees = List[String]()
-      frees = List[Exchange]()
+      partiallyFrees.clear()
+      frees.clear()
 
       operationNumber = 0
 
-      processedOperations = List[Processed]()
+      processedOperations.clear()
 
       operationTracker.clear()
       return year
@@ -220,7 +222,7 @@ object FIFO {
 
       htmlFIFO += <div class='header'>{htmlFIFOTitle}</div>
 
-      for(processed <- processedOperations.reverse)
+      for(processed <- processedOperations)
         htmlFIFO += processed
 
       htmlFIFO += HTMLDoc.reportResults(year, Realized)
@@ -245,14 +247,14 @@ object FIFO {
       if(Config.verbosity(Verbosity.showMoreDetails)) {
         {htmlExtra += <div>Frees:</div>}
         <div>
-        {for(f <- partiallyFrees.reverse)
+        {for(f <- partiallyFrees)
           htmlExtra += <div>{f}</div>
         }
         </div>
 
         {htmlExtra += <div>Priced0:</div>}
         <div>
-          {for(op <- frees.reverse)
+          {for(op <- frees)
             htmlExtra += <div>{op}</div>
           }
         </div>
@@ -406,11 +408,11 @@ object FIFO {
       }
 
       if (totalSoldBasisInBaseCoin == 0 && (soldMarket != baseMarket))
-        frees ::= exchange // These assets were acquired for free
+        frees += exchange // These assets were acquired for free
 
       if (noBasis.abs > 0.01 && (soldMarket != baseMarket))
         // Part of these assets were acquired for free
-        partiallyFrees ::= "Was SOLD but were partially free %.8f of %.6f %s = %.8f %s  ".format(noBasis, totalSoldAmount, soldMarket, noBasis * proceedsInBaseCoin / soldAmount, baseMarket)
+        partiallyFrees += "Was SOLD but were partially free %.8f of %.6f %s = %.8f %s  ".format(noBasis, totalSoldAmount, soldMarket, noBasis * proceedsInBaseCoin / soldAmount, baseMarket)
 
 
       operationTracker.recordFee(operationNumber, feeInBaseCoin)
@@ -761,19 +763,19 @@ object FIFO {
       operation match {
         case exchange: Exchange =>
           operationTracker.setDescription(operationNumber, "Exchange of %s for %s".format(Format.asMarket(exchange.fromAmount, exchange.fromMarket), Format.asMarket(exchange.toAmount, exchange.toMarket)))
-          processedOperations ::= preprocessExchange(exchange)
+          processedOperations += preprocessExchange(exchange)
 
         case gain : Gain =>
           operationTracker.setDescription(operationNumber, "Gain of %s".format(Format.asMarket(gain.amount, gain.market)))
-          processedOperations ::= preprocessGain(gain)
+          processedOperations += preprocessGain(gain)
 
         case loss : Loss =>
           operationTracker.setDescription(operationNumber, "Loss of %s".format(Format.asMarket(loss.amount, loss.market)))
-          processedOperations ::= preprocessLoss(loss)
+          processedOperations += preprocessLoss(loss)
 
         case fee : Fee =>
           operationTracker.setDescription(operationNumber, "Fee of %s".format(Format.asMarket(fee.amount, fee.market)))
-          processedOperations ::= preprocessFee(fee)
+          processedOperations += preprocessFee(fee)
 
         case margin : Margin =>
           val format =
@@ -783,7 +785,7 @@ object FIFO {
               "Margin sell of %s for %s"
           operationTracker.setDescription(operationNumber, format.format(Format.asMarket(margin.fromAmount, margin.fromMarket), Format.asMarket(margin.toAmount, margin.toMarket)))
           for(processed <- preprocessMargin(margin))
-            processedOperations ::= processed
+            processedOperations += processed
       }
     }
 

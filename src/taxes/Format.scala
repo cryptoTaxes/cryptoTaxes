@@ -17,7 +17,7 @@ object Format {
     var str = str0.reverse
     if(str0.contains(decimalSep)) {
       str = str.dropWhile(_ == '0')
-      if (str.nonEmpty && str.head == decimalSep)
+      if(str.nonEmpty && str.head == decimalSep)
         str = str.tail
     }
     return str.reverse

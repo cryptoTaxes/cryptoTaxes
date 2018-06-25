@@ -3,6 +3,8 @@ package taxes.Util.Parse
 import taxes.Util.Logger
 import taxes.{FileSource, Operation}
 
+import scala.collection.mutable.ListBuffer
+
 object CSVReader {
   class Result[+A]
 
@@ -31,7 +33,7 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
     val f = new java.io.File(fileName)
     val sc = new java.util.Scanner(f, charSet)
 
-    var xs = List[A]()
+    val xs = ListBuffer[A]()
     var lnNumber = 0
 
     if(hasHeader) {
@@ -48,7 +50,7 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
           readLine(ln, scLn) match {
             case Ok(ys) =>
               for(y <- ys)
-                xs ::= y
+                xs += y
             case Warning(err) =>
               Logger.warning(err)
             case Ignore =>
@@ -62,7 +64,7 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
       }
     }
     sc.close()
-    return xs.reverse
+    return xs.toList
   }
 }
 

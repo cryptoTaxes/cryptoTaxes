@@ -1,12 +1,11 @@
 package taxes.PriceHistory
 
-import java.io.PrintStream
-
 import taxes.Market.Market
 import taxes.Util.Logger
 import taxes.Util.Parse.Parse
 import taxes._
 
+import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
 object CoinMarketCapPrice extends Initializable {
@@ -66,7 +65,7 @@ object CoinMarketCapPrice extends Initializable {
     return contents
   }
 
-  private def scrapPrices(coinMarketCapID: String) : List[String] = {
+  private def scrapPrices(coinMarketCapID: String) : Seq[String] = {
     val url = "https://coinmarketcap.com/currencies/"+coinMarketCapID+"/historical-data/?start=20130101&end=20500101"
     val src = Source.fromURL(url)
     /*
@@ -83,7 +82,7 @@ object CoinMarketCapPrice extends Initializable {
     if(inLines.isEmpty)
       Logger.fatal("Error reading coinmarketcap prices. Couldn't find %s.".format(tokenBegin))
 
-    var outLines = List[String]()
+    val outLines = ListBuffer[String]()
 
     var goOn = true
     while(goOn) {
@@ -100,7 +99,7 @@ object CoinMarketCapPrice extends Initializable {
         for(i <- 0 until 3)
           inLines.next()
 
-        outLines ::= List(date,open,high,low,close).mkString("\t")
+        outLines += List(date,open,high,low,close).mkString("\t")
       } else {
         goOn = false
         if(line1 != tokenEnd)
@@ -108,7 +107,7 @@ object CoinMarketCapPrice extends Initializable {
       }
     }
     src.close()
-    return outLines.reverse
+    return outLines
   }
 
   def downloadPrices(): Unit = {
@@ -150,7 +149,7 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
             case PriceCalculation.openClose => (open + close) / 2
             case PriceCalculation.high      => high
             case PriceCalculation.low       => low
-            case PriceCalculation.`lowHigh`   => (high + low) / 2
+            case PriceCalculation.lowHigh   => (high + low) / 2
           }
         } catch {
           case _ => Logger.warning("CoinMarketCapPrice. Could not read line %d \"%s\" in file %s" format(lineNumber, line, file.getName))
@@ -183,5 +182,4 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
       ps.println(ln)
     ps.close()
   }
-
 }

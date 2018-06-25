@@ -89,7 +89,7 @@ trait StockContainer extends Container[Stock] with ToHTML {
             ""
           }
           {HTMLDoc.asRate(stock.costBasis, baseMarket, market)}
-            {if (i < iterator.length - 1) "," else ""}
+            {if (i < size - 1) "," else ""}
         </span>
       </span>
       </span>

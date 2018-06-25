@@ -3,6 +3,8 @@ package taxes.Exchanger
 import taxes.Util.Logger
 import taxes._
 
+import scala.collection.mutable.ListBuffer
+
 trait Exchanger extends Initializable {
   val id : String
 
@@ -31,8 +33,8 @@ object Exchangers {
       , Yobit
       )
 
-  def readAllOperations(): List[Operation] = {
-    var operations = List[Operation]()
+  def readAllOperations(): Seq[Operation] = {
+    val operations = ListBuffer[Operation]()
     for (exchanger <- allExchangers) {
       Logger.trace("Reading data for %s.".format(exchanger))
       for (src <- exchanger.sources)

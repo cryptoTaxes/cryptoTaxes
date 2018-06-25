@@ -2,6 +2,8 @@ package taxes
 
 import taxes.Util.Logger
 
+import scala.collection.mutable.ListBuffer
+
 trait Source[+A] {
   def read() : Seq[A]
 }
@@ -12,7 +14,7 @@ abstract class FolderSource[+A](folderPath : String, extension : String) extends
   def fileSource(fileName : String) : FileSource[A]
 
   def read(): Seq[A] = {
-    var xs = List[A]()
+    val xs = ListBuffer[A]()
     val files = Paths.findFilesAt(folderPath, extension)
     if (files != null)
       for (file <- files) {

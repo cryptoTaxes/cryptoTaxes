@@ -14,7 +14,7 @@ case class CSV() {
 
   private var optState : Option[State] = None
 
-  private val header = List("Date","Sold","Amount", "Bought", "Amount", "Cost basis", "Proceeds", "Fee", "Exchanger")
+  private val header = List("Date", "Sold", "Amount", "Bought", "Amount", "Cost basis", "Proceeds", "Fee", "Exchanger")
 
   private val df = new SimpleDateFormat("yyyy-MM-dd")
 
