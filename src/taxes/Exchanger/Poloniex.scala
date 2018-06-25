@@ -19,7 +19,7 @@ object Poloniex extends Exchanger {
     )
 
   private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
-    override val hasHeader: Boolean = true
+    override val linesToSkip = 1
 
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,%]")
@@ -168,7 +168,7 @@ object Poloniex extends Exchanger {
     }
 
   private def borrowingFeesReader(fileName : String) = new CSVSortedOperationReader(fileName) {
-    override val hasHeader: Boolean = true
+    override val linesToSkip = 1
 
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,%]")
@@ -197,7 +197,7 @@ object Poloniex extends Exchanger {
   }
 
   private def withdrawalsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
-    override val hasHeader: Boolean = true
+    override val linesToSkip = 1
 
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,%]")

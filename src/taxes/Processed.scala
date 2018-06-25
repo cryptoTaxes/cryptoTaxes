@@ -118,7 +118,7 @@ object Processed {
             <span>
               {asMarket(soldBasisInBaseCoin, baseMarket)}
             </span>
-            {if(Config.verbosity(Verbosity.showRates) && usedStocks.nonEmpty)
+            {if(Config.verbosity(Verbosity.showRates) && usedStocks.nonEmpty && exchange.fromMarket != baseMarket)
               <span class='stock'>. Used
                 {(if(usedStocks.size > 1) "batches" else "batch")+":"}
                 ({usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})

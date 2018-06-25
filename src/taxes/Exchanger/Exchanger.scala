@@ -22,6 +22,7 @@ object Exchangers {
       , Bittrex
       , CCEX
       , Changelly
+      , Coinbase
       , General
       , GDAX
       , HitBTC

@@ -13,7 +13,7 @@ object GDAX extends Exchanger {
   )
 
   private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
-    override val hasHeader: Boolean = true
+    override val linesToSkip = 1
 
     override def lineScanner(line: String): Scanner =
       SeparatedScanner(line, "[,]")

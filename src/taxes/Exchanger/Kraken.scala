@@ -59,7 +59,7 @@ object Kraken extends Exchanger with Initializable {
   private val ledgersCache = scala.collection.mutable.Map[TxID, Ledger]()
 
   private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
-    override val hasHeader: Boolean = true
+    override val linesToSkip = 1
 
     override def lineScanner(line: String): Scanner =
       QuotedScanner(line, '\"', ',')
@@ -156,7 +156,7 @@ object Kraken extends Exchanger with Initializable {
 
 
   private def ledgerReader(fileName: String) = new CSVReader[Operation](fileName) {
-    override val hasHeader: Boolean = true
+    override val linesToSkip = 1
 
     override def lineScanner(line: String): Scanner =
       QuotedScanner(line, '\"', ',')

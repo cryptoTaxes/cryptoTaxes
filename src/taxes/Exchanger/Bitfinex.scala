@@ -20,7 +20,7 @@ object Bitfinex extends Exchanger {
   )
 
   private def tradesReader(fileName: String) = new CSVSortedOperationReader(fileName) {
-    override val hasHeader: Boolean = true
+    override val linesToSkip = 1
 
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,]")
@@ -58,11 +58,11 @@ object Bitfinex extends Exchanger {
       // only used if embedFee is false
       lazy val detachedFee = Fee(
         date = date
-        , id = reference + " " + fee
+        , id = reference + " fee"
         , amount = fee.abs
         , market = feeMarket
         , exchanger = Bitfinex
-        , description = desc +  " " + fee
+        , description = desc +  " fee"
       )
 
       if(margin.toLowerCase != "true") {
@@ -124,7 +124,7 @@ object Bitfinex extends Exchanger {
   }
 
   private def reportReader(fileName: String) = new CSVSortedOperationReader(fileName) {
-    override val hasHeader: Boolean = true
+    override val linesToSkip = 1
 
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,]")
@@ -210,7 +210,7 @@ object Bitfinex extends Exchanger {
   }
 
   private def ledgerReader(fileName: String) = new CSVSortedOperationReader(fileName) {
-    override val hasHeader: Boolean = true
+    override val linesToSkip = 1
 
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,]")

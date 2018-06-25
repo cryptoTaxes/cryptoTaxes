@@ -29,7 +29,7 @@ object TransactionsCache extends Initializable with Finalizable {
 
   def loadFromDisk(): Unit = {
     def cacheReader(fileName : String) = new CSVReader[(TxKey, TxInfo)](fileName) {
-      override val hasHeader: Boolean = true
+      override val linesToSkip = 1
 
       override def lineScanner(line: String) =
         SeparatedScanner(line, "[,]")

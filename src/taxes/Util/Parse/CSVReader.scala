@@ -21,7 +21,10 @@ object CSVReader {
 abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
   import CSVReader._
 
-  val hasHeader : Boolean
+  // number of non-empty lines to skip before data
+  val linesToSkip : Int
+
+  lazy val skippedLines = new Array[String](linesToSkip)
 
   val charSet : String = "UTF-8"
 
@@ -36,9 +39,14 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
     val xs = ListBuffer[A]()
     var lnNumber = 0
 
-    if(hasHeader) {
+    var skipped = 0
+    while(skipped < linesToSkip) {
       lnNumber += 1
-      sc.nextLine()
+      val ln = Parse.trimSpaces(sc.nextLine())
+      if(ln.nonEmpty) {
+        skippedLines(skipped) = ln
+        skipped += 1
+      }
     }
 
     while(sc.hasNextLine) {
