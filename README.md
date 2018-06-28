@@ -37,21 +37,21 @@ The following command line parameters can be written after the command:
 
 * `-download-prices=yes` in order to update prices from [Coinmarketcap](coinmarketcap.com) and [BDE](www.bde.es).
 
-* `-accounting-method=method` where `method` is either FIFO or LIFO.
+* `-accounting-method=method` where `method` is either `fifo` or `lifo`.
 
 * `-price-calculation=method` to use different methods in order to compute daily prices in your currency, where `method` can be one of:
 
-    * open, to use daily open price of the market.
+    * `open`, to use daily open price of the market.
 
-    * close, to use daily close price of the market.
+    * `close`, to use daily close price of the market.
 
-    * openClose, to use average of daily open and close prices of the market.
+    * `openClose`, to use average of daily open and close prices of the market.
 
-    * high, to use highest daily price of the market.
+    * `high`, to use highest daily price of the market.
 
-    * low, to use lowest daily price of the market.
+    * `low`, to use lowest daily price of the market.
 
-    * highLow, to use average of daily high and low prices of the market.
+    * `highLow`, to use average of daily high and low prices of the market.
 
 After running the program, output report will be produced in folder `data/usr/yourUser/output`.
 

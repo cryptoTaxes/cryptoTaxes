@@ -94,9 +94,9 @@ object ParseCommandLine {
               config = config.copy(priceCalculation = method)
             } else if(flag == "accounting-method") {
               val method = value match {
-                case "FIFO"     => Accounting.FIFO
-                case "LIFO"     => Accounting.LIFO
-                case _          => Logger.fatal("Unknown accounting method: "+value)
+                case "fifo" | "FIFO"  => Accounting.FIFO
+                case "lifo" | "LIFO"  => Accounting.LIFO
+                case _                => Logger.fatal("Unknown accounting method: "+value)
               }
               config = config.copy(accountingMethod = method)
             } else if(flag == "decimal-places") {
