@@ -32,7 +32,7 @@ object Main extends App {
   for(initializable <- initializables)
     initializable.init()
 
-  private val nets = FIFO.process()
+  private val nets = Report.process()
 
   // Modules that should be finalize
   private val finalizables = List(Logger, TransactionsCache)
@@ -92,6 +92,13 @@ object ParseCommandLine {
                 case _           => Logger.fatal("Unknown price calculation method: "+value)
               }
               config = config.copy(priceCalculation = method)
+            } else if(flag == "accounting-method") {
+              val method = value match {
+                case "FIFO"     => Accounting.FIFO
+                case "LIFO"     => Accounting.LIFO
+                case _          => Logger.fatal("Unknown accounting method: "+value)
+              }
+              config = config.copy(accountingMethod = method)
             } else if(flag == "decimal-places") {
               val d =
                 try {

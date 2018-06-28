@@ -9,9 +9,9 @@ import taxes.Market.Market
 
 
 // basis is expressed in base unit. exchanger is where it was bought
-case class Stock(var amount : Double, costBasis : Price, exchanger : Exchanger, date : Date) {
+case class Stock(var amount : Double, costBasis : Price, exchanger : Exchanger, date : Date, exchangeRate : Price, exchangeMarket : Market) {
   override def toString : String =
-    "Stock(%.4f, %.8f, %s, ".format(amount, costBasis, exchanger) +
+    "Stock(%.4f, %.8f, %s, %.8f, %s, ".format(amount, costBasis, exchanger, exchangeRate, exchangeMarket) +
     new SimpleDateFormat("yyyy-MM-dd").format(date) +
     ")"
 }
@@ -64,7 +64,7 @@ trait StockContainer extends Container[Stock] with ToHTML {
 
   override def toHTML : HTML = toHTML()
 
-  def toHTML(showTotal : Boolean = true, showAmounts : Boolean = true) : HTML =
+  def toHTML(showTotal : Boolean = true, showAmounts : Boolean = true, showExchangeRates : Boolean = false) : HTML =
     <span>
       {if(showTotal) {
         <span>
@@ -82,6 +82,17 @@ trait StockContainer extends Container[Stock] with ToHTML {
         <span class='exchanger'>
           {stock.exchanger}
         </span>
+        {if(showExchangeRates && stock.exchangeMarket != baseMarket)
+          <span>
+            {if(showAmounts)
+              Format.formatDecimal(stock.amount)+" x"
+             else
+              ""
+            }
+            {HTMLDoc.asRate(stock.exchangeRate, stock.exchangeMarket, market)}
+            =
+          </span>
+        }
         <span>
           {if(showAmounts)
             Format.formatDecimal(stock.amount)+" x"
@@ -131,20 +142,22 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
   def iterator: Iterator[StockContainer] =
     containers.iterator.map(_._2)
 
-  def add(id : String, boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : Date): Unit = {
+  def add(id : String, boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : Date, exchangeRate : Price, exchangeMarket : Market): Unit = {
     val container = containers.getOrElse(id, newContainer(id, boughtMarket))
 
     container.insert(
-      Stock(boughtAmount, costBasis, exchanger, date)
-      , (x: Stock, y: Stock) => (x.costBasis - y.costBasis).abs < container.eps && x.exchanger == y.exchanger && x.date.sameDayAs(y.date)
+      Stock(boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeMarket)
+      , (x: Stock, y: Stock) => (x.costBasis - y.costBasis).abs < container.eps && x.exchanger == y.exchanger
+          && x.date.sameDayAs(y.date)
+          && x.exchangeMarket == y.exchangeMarket && (x.exchangeRate - y.exchangeRate).abs < container.eps
       , (x: Stock, y: Stock) => x.copy(amount = x.amount + y.amount)
     )
     containers(id) = container
   }
 
   // Assumes id = boughtMarket. Useful for non-margin markets where ids are markets themselves
-  def add(boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : Date): Unit = {
-    add(boughtMarket, boughtMarket, boughtAmount, costBasis, exchanger, date)
+  def add(boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : Date, exchangeRate : Price, exchangeMarket : Market): Unit = {
+    add(boughtMarket, boughtMarket, boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeMarket)
   }
 
   def remove(id : String, soldAmount : Double) : (Price, Price, StockContainer) = {
@@ -182,7 +195,7 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
             <td>{HTMLDoc.asMarket(amount, queue.market, decimals = 4)}</td>
             <td>{HTMLDoc.asMarket(cost, baseMarket)}</td>
             <td class='noLineBreak'>{HTMLDoc.asMarket(cost / amount, baseMarket)} /<span class='market'>{queue.market}</span></td>
-            <td class='small2'>{queue.toHTML(showTotal = false)}</td>
+            <td class='small2'>{queue.toHTML(showTotal = false, showExchangeRates = true)}</td>
           </tr>
         }
        }

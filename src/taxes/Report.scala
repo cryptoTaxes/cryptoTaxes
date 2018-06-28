@@ -118,7 +118,7 @@ case class OperationTracker() extends Iterable[(Int,OperationTracker.CSVEntry)] 
     val ps = new PrintStream(csvFileName)
 
     ps.println()
-    ps.println("FIFO %d".format(year))
+    ps.println("%s %d".format(Accounting.toString(Config.config.accountingMethod), year))
     ps.println("")
 
     val sep = ";"
@@ -133,7 +133,7 @@ case class OperationTracker() extends Iterable[(Int,OperationTracker.CSVEntry)] 
 }
 
 
-object FIFO {
+object Report {
   // All quantities expressed in base coin
   trait Realized {
     // record realized gains/losses/paid fees per market
@@ -162,7 +162,14 @@ object FIFO {
     val baseMarket = baseCoin.market
 
     // current stock of assets with their cost bases (expressed in base coin)
-    val stocks = QueueStockPool(baseMarket)
+    val accountingMethod = Config.config.accountingMethod
+    val stocks =
+      if(accountingMethod == Accounting.FIFO)
+        QueueStockPool(baseMarket)
+      else if (accountingMethod == Accounting.LIFO)
+        StackStockPool(baseMarket)
+      else
+        Logger.fatal("Unkown accounting method: %s".format(Accounting.toString(accountingMethod)))
 
     // current in longs/shorts assets for margin trading operations
     val marginBuysMap = scala.collection.immutable.Map[Exchanger, StockPool](
@@ -216,17 +223,19 @@ object FIFO {
 
 
     def reportYear(year : Int): Unit = {
-      val htmlFIFOFile = Paths.userOutputFolder+"/FIFO%d.html".format(year)
-      val htmlFIFOTitle = "%d FIFO Report".format(year)
-      val htmlFIFO = HTMLDoc(htmlFIFOFile, htmlFIFOTitle)
+      val method = Accounting.toString(Config.config.accountingMethod)
 
-      htmlFIFO += <div class='header'>{htmlFIFOTitle}</div>
+      val htmlReportFile = Paths.userOutputFolder+"/%s%d.html".format(method, year)
+      val htmlReportTitle = "%d %s Report".format(year, method)
+      val htmlReport = HTMLDoc(htmlReportFile, htmlReportTitle)
+
+      htmlReport += <div class='header'>{htmlReportTitle}</div>
 
       for(processed <- processedOperations)
-        htmlFIFO += processed
+        htmlReport += processed
 
-      htmlFIFO += HTMLDoc.reportResults(year, Realized)
-      htmlFIFO.close()
+      htmlReport += HTMLDoc.reportResults(year, Realized)
+      htmlReport.close()
 
 
       val htmlPortfolioFile = Paths.userOutputFolder+"/Portfolio%d.html".format(year)
@@ -355,7 +364,7 @@ object FIFO {
 
       // Add bought coins (without paid fee) with their cost basis to our stock of assets
       if (!boughtBasisPriceInBaseCoin.isNaN && boughtAmount > 0) {
-        stocks.add(boughtMarket, boughtAmount, boughtBasisPriceInBaseCoin, exchange.exchanger, exchange.date)
+        stocks.add(boughtMarket, boughtAmount, boughtBasisPriceInBaseCoin, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldMarket)
       }
 
       // Get cost basis for total sold coins from current stock
@@ -503,7 +512,7 @@ object FIFO {
     def preprocessGain(gain : Gain) : Processed.Gain = {
       // Record cost basis of gained coins at price corresponding to gain date
       val basePrice = baseCoin.priceInBaseCoin(gain.market, gain.date)
-      stocks.add(gain.market, gain.amount, basePrice, gain.exchanger, gain.date)
+      stocks.add(gain.market, gain.amount, basePrice, gain.exchanger, gain.date, basePrice, baseMarket)
 
       val gainInBaseCoin = gain.amount * basePrice
 
@@ -585,7 +594,7 @@ object FIFO {
 
       def openShort(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market, feeInTradingBaseCoin : Double) : List[Processed] = {
         // Opening a short
-        marginSells.add(marketKey, soldMarket, soldAmount, marginBoughtSoldExchangeRate, margin.exchanger, margin.date)
+        marginSells.add(marketKey, soldMarket, soldAmount, marginBoughtSoldExchangeRate, margin.exchanger, margin.date, marginBoughtSoldExchangeRate, boughtMarket)
 
         var processed = List[Processed]()
 
@@ -613,7 +622,7 @@ object FIFO {
 
       def openLong(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market, feeInTradingBaseCoin : Double) : List[Processed] = {
         // Opening a long
-        marginBuys.add(marketKey, boughtMarket, boughtAmount, marginSoldBoughtExchangeRate, margin.exchanger, margin.date)
+        marginBuys.add(marketKey, boughtMarket, boughtAmount, marginSoldBoughtExchangeRate, margin.exchanger, margin.date, marginSoldBoughtExchangeRate, soldMarket)
 
         var processed = List[Processed]()
 

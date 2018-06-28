@@ -25,11 +25,26 @@ object PriceCalculation extends Enumeration {
 }
 
 
+object Accounting extends Enumeration {
+  type Method = Int
+
+  val FIFO : Method = 0
+  val LIFO : Method = 1
+
+  def toString(accountingMethod : Method) : String =
+    accountingMethod match {
+      case `FIFO` => "FIFO"
+      case `LIFO` => "LIFO"
+    }
+}
+
+
 case class Config( user : String
                   , verbosityLevel : Verbosity.Level
                   , baseCoin : BaseCoin
                   , downloadPrices : Boolean
                   , priceCalculation: PriceCalculation.Method
+                  , accountingMethod: Accounting.Method
                   , decimalPlaces : Int
                   , epsilon : Double
                   )
@@ -48,6 +63,7 @@ object DefaultConfig extends Config( user = "demo"
                                      , baseCoin = EuroBaseCoin
                                      , downloadPrices = false
                                      , priceCalculation = PriceCalculation.open
+                                     , accountingMethod = Accounting.FIFO
                                      , decimalPlaces = 2
                                      , epsilon = 0.00000001
                                      )

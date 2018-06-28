@@ -73,7 +73,7 @@ object HTMLDoc {
   }
 
 
-  def reportResults(year : Int, realized : FIFO.Realized) : HTML = {
+  def reportResults(year : Int, realized : Report.Realized) : HTML = {
     val proceeds = realized.proceeds.sum
     val costs = realized.costBasis.sum
     val fees = realized.perMarketPaidFees.sum
@@ -102,7 +102,7 @@ object HTMLDoc {
   }
 
 
-  def reportYear(year : Int, realized : FIFO.Realized) : HTML = {
+  def reportYear(year : Int, realized : Report.Realized) : HTML = {
     <div>
       <div>{realized.perMarketGains.toHTML("Gains per market")}</div>
       <div>{realized.perMarketLooses.toHTML("Looses per market")}</div>
