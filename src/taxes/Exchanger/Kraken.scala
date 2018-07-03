@@ -125,7 +125,7 @@ object Kraken extends Exchanger with Initializable {
               , fromMarket = market1
               , toAmount = cost - 1 * (if(feeMarket==market2) fee else 0)
               , toMarket = market2
-              , fee = fee, feeMarket = feeMarket
+              , feeAmount = fee, feeMarket = feeMarket
               , exchanger = Kraken
               , description = desc
             )
@@ -143,7 +143,7 @@ object Kraken extends Exchanger with Initializable {
               , fromMarket = market2
               , toAmount = vol - 0 * (if(feeMarket==market1) fee else 0)
               , toMarket = market1
-              , fee = fee, feeMarket = feeMarket
+              , feeAmount = fee, feeMarket = feeMarket
               , exchanger = Kraken
               , description = desc
             )

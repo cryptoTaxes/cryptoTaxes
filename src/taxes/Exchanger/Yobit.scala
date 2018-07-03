@@ -51,7 +51,7 @@ object Yobit extends Exchanger {
               , id = ""
               , fromAmount = completed, fromMarket = market1
               , toAmount = completed * price, toMarket = market2
-              , fee = 0, feeMarket = market2
+              , feeAmount = 0, feeMarket = market2
               , exchanger = Yobit
               , description = desc
             )
@@ -61,7 +61,7 @@ object Yobit extends Exchanger {
               , id = ""
               , fromAmount = completed * price, fromMarket = market2
               , toAmount = completed, toMarket = market1
-              , fee = 0, feeMarket = market1
+              , feeAmount = 0, feeMarket = market1
               , exchanger = Yobit
               , description = desc
             )

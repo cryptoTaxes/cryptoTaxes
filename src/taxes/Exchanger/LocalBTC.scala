@@ -46,7 +46,7 @@ object LocalBTC extends Exchanger {
           , id = orderId
           , fromAmount = fiat_amount, fromMarket = Market.normalize(currency)
           , toAmount = btc_amount_less_fee, toMarket = Market.bitcoin
-          , fee = fee_btc, feeMarket = Market.bitcoin
+          , feeAmount = fee_btc, feeMarket = Market.bitcoin
           , exchanger = LocalBTC
           , description = desc
         )

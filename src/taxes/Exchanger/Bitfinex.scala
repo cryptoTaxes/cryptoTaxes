@@ -47,25 +47,7 @@ object Bitfinex extends Exchanger {
 
       val desc = "Order: " + reference
 
-      // fee is only part of operation if expressed in one of two markets involved in this operation
-      val embedFee = feeMarket==market1 || feeMarket==market2
-      val (embeddedFeeValue, embeddedFeeMarket) =
-        if (embedFee)
-          (fee.abs, feeMarket)
-        else
-          (0.0, market1) // or market2, it doesn't matter as long as its value is 0
-
-      // only used if embedFee is false
-      lazy val detachedFee = Fee(
-        date = date
-        , id = reference + " fee"
-        , amount = fee.abs
-        , market = feeMarket
-        , exchanger = Bitfinex
-        , description = desc +  " fee"
-      )
-
-      if(margin.toLowerCase != "true") {
+      if(margin.toLowerCase == "false") { // exchange order
         val exchange =
           if(amount<0)
             Exchange( // we are selling BTC for $. Fee can be in BTC or in $
@@ -73,8 +55,8 @@ object Bitfinex extends Exchanger {
               , id = reference
               , fromAmount = amount.abs - (if (feeMarket==market1) fee.abs else 0), fromMarket = market1
               , toAmount = price * amount.abs - (if (feeMarket==market2) fee.abs else 0), toMarket = market2
-              , fee = embeddedFeeValue
-              , feeMarket = embeddedFeeMarket
+              , feeAmount = fee.abs
+              , feeMarket = feeMarket
               , exchanger = Bitfinex
               , description = desc
             )
@@ -84,13 +66,23 @@ object Bitfinex extends Exchanger {
               , id = reference
               , fromAmount = price * amount.abs - (if (feeMarket==market2) fee.abs else 0), fromMarket = market2
               , toAmount = amount.abs - (if (feeMarket==market1) fee.abs else 0), toMarket = market1
-              , fee = embeddedFeeValue
-              , feeMarket = embeddedFeeMarket
+              , feeAmount = fee.abs
+              , feeMarket = feeMarket
               , exchanger = Bitfinex
               , description = desc
             )
-        return if(embedFee) CSVReader.Ok(exchange) else CSVReader.Ok(List(exchange, detachedFee))
-      } else { // margin order
+        return CSVReader.Ok(exchange)
+      } else if (margin.toLowerCase == "true") { // margin order
+        // toDo integrate fee in margin operation and move code to process detached fee to processMargin just like we did for exchanges
+
+        // fee is only part of operation if expressed in one of two markets involved in this operation
+        val isDetachedFee = feeMarket!=market1 && feeMarket!=market2
+        val (attachedFeeValue, attachedFeeMarket) =
+          if (isDetachedFee)
+            (0.0, market1) // or market2, it doesn't matter as long as its value is 0
+          else
+            (fee.abs, feeMarket)
+
         val margin =
           if(amount<0)
             Margin(
@@ -98,8 +90,8 @@ object Bitfinex extends Exchanger {
               , id = reference
               , fromAmount = amount.abs, fromMarket = market1
               , toAmount = price * amount.abs + (if(feeMarket==market2) fee.abs else if(feeMarket==market1) -fee.abs * price else 0), toMarket = market2
-              , fee = embeddedFeeValue
-              , feeMarket = embeddedFeeMarket
+              , fee = attachedFeeValue
+              , feeMarket = attachedFeeMarket
               , orderType = Operation.OrderType.Sell
               , pair = (market1, market2)
               , exchanger = Bitfinex
@@ -111,15 +103,31 @@ object Bitfinex extends Exchanger {
               , id = reference
               , fromAmount = amount.abs * price + (if (feeMarket==market2) fee.abs else if(feeMarket==market1) -fee.abs * price else 0), fromMarket = market2
               , toAmount = amount.abs, toMarket = market1
-              , fee = embeddedFeeValue
-              , feeMarket = embeddedFeeMarket
+              , fee = attachedFeeValue
+              , feeMarket = attachedFeeMarket
               , orderType = Operation.OrderType.Buy
               , pair = (market1, market2)
               , exchanger = Bitfinex
               , description = desc
             )
-          return if(embedFee) CSVReader.Ok(margin) else CSVReader.Ok(List(margin, detachedFee))
+
+          if(isDetachedFee) {
+            val detachedFee =
+              Fee(
+                date = date
+                , id = reference + " fee"
+                , amount = fee.abs
+                , market = feeMarket
+                , exchanger = Bitfinex
+                , description = desc +  " fee"
+              )
+
+            return CSVReader.Ok(List(margin, detachedFee))
+          } else
+            return CSVReader.Ok(margin)
       }
+      else
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s. Margin should be true or false but it is %s".format(id, Paths.pathFromData(fileName), line, margin))
     }
   }
 
@@ -161,7 +169,7 @@ object Bitfinex extends Exchanger {
                 , id = reference
                 , fromAmount = amountExecuted.abs, fromMarket = Market.normalize(market1)
                 , toAmount = averageExecutionPrice * amountExecuted.abs, toMarket = Market.normalize(market2)
-                , fee = 0, feeMarket = Market.normalize(market1)
+                , feeAmount = 0, feeMarket = Market.normalize(market1)
                 , exchanger = Bitfinex
                 , description = desc
               )
@@ -171,7 +179,7 @@ object Bitfinex extends Exchanger {
                 , id = reference
                 , fromAmount = averageExecutionPrice * amountExecuted.abs, fromMarket = Market.normalize(market2)
                 , toAmount = amountExecuted.abs, toMarket = Market.normalize(market1)
-                , fee = 0, feeMarket = Market.normalize(market1)
+                , feeAmount = 0, feeMarket = Market.normalize(market1)
                 , exchanger = Bitfinex
                 , description = desc
               )
@@ -242,7 +250,7 @@ object Bitfinex extends Exchanger {
             , id = description
             , fromAmount = amount.abs, fromMarket = currency
             , toAmount = total - fee, toMarket = Market.usd
-            , fee = fee, feeMarket = Market.usd
+            , feeAmount = fee, feeMarket = Market.usd
             , isSettlement = true
             , exchanger = Bitfinex
             , description = desc

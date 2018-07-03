@@ -130,7 +130,7 @@ object Processed {
         <div>
           <span class='embold'>Fee:</span>
           <span>
-            {asMarket(exchange.fee, exchange.feeMarket)}
+            {asMarket(exchange.feeAmount, exchange.feeMarket)}
           </span>
           {if(exchange.feeMarket != baseMarket)
             <span>
@@ -292,7 +292,7 @@ object Processed {
           {asMarket(fee.amount, fee.market)}
           {if(fee.market != baseMarket)
             <span>
-            {if(Config.verbosity(Verbosity.showRates))
+            {if(fee.market != baseMarket && Config.verbosity(Verbosity.showRates))
               <span class='small2'>
                 ({if(usedStocks.nonEmpty)
                   <span>

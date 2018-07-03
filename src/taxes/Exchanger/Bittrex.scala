@@ -58,7 +58,7 @@ object Bittrex extends Exchanger {
             , id = orderId
             , fromAmount = quantity, fromMarket = market2
             , toAmount = price - comissionPaid, toMarket = market1
-            , fee = comissionPaid, feeMarket = market1
+            , feeAmount = comissionPaid, feeMarket = market1
             , exchanger = Bittrex
             , description = desc
           )
@@ -68,12 +68,14 @@ object Bittrex extends Exchanger {
             , id = orderId
             , fromAmount = price, fromMarket = market1
             , toAmount = quantity, toMarket = market2
-            , fee = comissionPaid, feeMarket = market1
+            , feeAmount = comissionPaid, feeMarket = market1
             , exchanger = Bittrex
             , description = desc
           )
       return CSVReader.Ok(exchange)
     }
+
+    // toDo some bittrex operations have same close date so their order will depend on order in csv file which can change for different downloads
   }
 
   private def withdrawalsReader(fileName: String) = new FileSource[Operation](fileName) {

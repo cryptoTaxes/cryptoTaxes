@@ -55,7 +55,7 @@ object Changelly extends Exchanger {
             , id = receivedMarket
             , fromAmount = amount, fromMarket = Market.normalize(soldMarket)
             , toAmount = amountReceived, toMarket = Market.normalize(receivedMarket)
-            , fee = realFee, feeMarket = Market.normalize(feeMarket)
+            , feeAmount = realFee, feeMarket = Market.normalize(feeMarket)
             , exchanger = Changelly
             , description = desc
           )

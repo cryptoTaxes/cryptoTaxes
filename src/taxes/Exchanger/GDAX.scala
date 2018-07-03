@@ -47,7 +47,7 @@ object GDAX extends Exchanger {
             , id = tradeID
             , fromAmount = size, fromMarket = sizeMarket
             , toAmount = total, toMarket = priceFeeTotalMarket
-            , fee = fee, feeMarket = priceFeeTotalMarket
+            , feeAmount = fee, feeMarket = priceFeeTotalMarket
             , exchanger = GDAX
             , description = desc
           )
@@ -59,7 +59,7 @@ object GDAX extends Exchanger {
             , id = tradeID
             , fromAmount = total.abs, fromMarket = priceFeeTotalMarket
             , toAmount = size, toMarket = sizeMarket
-            , fee = fee, feeMarket = priceFeeTotalMarket
+            , feeAmount = fee, feeMarket = priceFeeTotalMarket
             , exchanger = GDAX
             , description = desc
           )

@@ -45,7 +45,7 @@ object CCEX extends Exchanger {
             , id = ""
             , fromAmount = amount2, fromMarket = market2
             , toAmount = amount1, toMarket = market1  // amount1 in read csv doesn't include fee
-            , fee = fee
+            , feeAmount = fee
             , feeMarket = market1
             , exchanger = CCEX
             , description = ""

@@ -39,6 +39,8 @@ The following command line parameters can be written after the command:
 
 * `-accounting-method=method` where `method` is either `fifo` or `lifo`.
 
+* `-decimal-places=n` to use `n` decimal places when showing real numbers.
+
 * `-price-calculation=method` to use different methods in order to compute daily prices in your currency, where `method` can be one of:
 
     * `open`, to use daily open price of the market.

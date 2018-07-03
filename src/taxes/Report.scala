@@ -302,14 +302,23 @@ object Report {
       val boughtAmount = exchange.toAmount // without fee
 
       val feeMarket = exchange.feeMarket
+      // if fee is explicitly market as detached or if it is not
+      // expressed in any of two markets involved in this exchange
+      // then detach if from this exchange
+      val isDetachedFee = exchange.isDetachedFee || (feeMarket != soldMarket && feeMarket != boughtMarket)
+      val feeAmount = // only if fee is included in this exchange
+        if(isDetachedFee)
+          0
+        else
+          exchange.feeAmount
 
       val (totalSoldAmount, totalBoughtAmount) = // including fee
-        if (exchange.fee == 0)
+        if (feeAmount == 0)
           (soldAmount, boughtAmount)
         else if(feeMarket == soldMarket)
-          (soldAmount + exchange.fee, boughtAmount)
+          (soldAmount + feeAmount, boughtAmount)
         else if(feeMarket == boughtMarket)
-          (soldAmount, boughtAmount + exchange.fee)
+          (soldAmount, boughtAmount + feeAmount)
         else
           Logger.fatal("Cannot process exchange as fee is not expressed in same unit as from or to markets." + exchange.toString)
 
@@ -339,20 +348,21 @@ object Report {
           (totalBoughtAmount * rate, boughtMarket, rate)
         }
 
-      // fee for this operation, expressed in base coin
+      // fee for this operation, expressed in base coin,
+      // only if fee is included in this exchange
       val feeInBaseCoin =
-        if (exchange.fee == 0)
+        if (isDetachedFee || feeAmount == 0)
           0
         else if (exchange.feeMarket == baseMarket)
-          exchange.fee
+          feeAmount
         else if (exchange.feeMarket == boughtMarket && soldMarket == baseMarket)
-          soldBoughtExchangeRate * exchange.fee
+          soldBoughtExchangeRate * feeAmount
         else if (exchange.feeMarket == soldMarket && boughtMarket == baseMarket)
-          boughtSoldExchangeRate * exchange.fee
+          boughtSoldExchangeRate * feeAmount
         else if (exchange.feeMarket == boughtMarket)
-          exchange.fee * totalInBaseCoin / totalBoughtAmount
+          feeAmount * totalInBaseCoin / totalBoughtAmount
         else if (exchange.feeMarket == soldMarket)
-          exchange.fee * totalInBaseCoin / totalSoldAmount
+          feeAmount * totalInBaseCoin / totalSoldAmount
         else
           Logger.fatal("Cannot process exchange as fee is not expressed in same unit as from or to markets." + exchange.toString)
 
@@ -399,7 +409,8 @@ object Report {
           proceedsInBaseCoin - soldBasisInBaseCoin
 
       // Update paid fees
-      Realized.perMarketPaidFees.record(exchange.feeMarket, feeInBaseCoin)
+      if(!isDetachedFee)
+        Realized.perMarketPaidFees.record(exchange.feeMarket, feeInBaseCoin)
 
       // Update total gains for soldMarket
       if (gainInBaseCoin > 0)
@@ -423,8 +434,9 @@ object Report {
         // Part of these assets were acquired for free
         partiallyFrees += "Was SOLD but were partially free %.8f of %.6f %s = %.8f %s  ".format(noBasis, totalSoldAmount, soldMarket, noBasis * proceedsInBaseCoin / soldAmount, baseMarket)
 
+      if(!isDetachedFee)
+        operationTracker.recordFee(operationNumber, feeInBaseCoin)
 
-      operationTracker.recordFee(operationNumber, feeInBaseCoin)
       if(soldMarket == baseMarket) {
         ;
       } else {
@@ -454,7 +466,7 @@ object Report {
       var processed = List[Processed]()
 
       // A settlement is bought to pay some dues so this is like a buy followed
-      // by loss but
+      // by a loss but
       if(exchange.isSettlement && exchange.exchanger == Poloniex) {
         val marketKey = marginPairKey(exchange.toMarket, exchange.fromMarket)
 
@@ -464,13 +476,36 @@ object Report {
           // We bought these to pay for fees and looses of a short that went against us.
           // We need to clear remaining margin sells
         }
-        val loss = preprocessLoss(Loss(exchange.date, exchange.id, totalBoughtAmount, exchange.toMarket, exchange.exchanger, ""))
-        processed ::= loss
+        val processedLoss = preprocessLoss(
+          Loss(
+            date = exchange.date
+            , id = exchange.id
+            , amount = totalBoughtAmount
+            , market = exchange.toMarket
+            , exchanger = exchange.exchanger
+            , description = ""
+            ))
+        processed ::= processedLoss
+      }
+
+      // If fee is not part of the exchange add it to composed result
+      if(isDetachedFee) {
+        val processedFee = preprocessFee(
+          Fee(
+            date = exchange.date
+            , id = exchange.id
+            , amount = exchange.feeAmount
+            , market = exchange.feeMarket
+            , exchanger = exchange.exchanger
+            , description = ""
+            ))
+        processed ::= processedFee
       }
 
       processed ::= processedExchange // order for a Composed is important. Exchange must be at front
       return Processed.Composed(operationNumber, processed)
     }
+
 
     def preprocessFee(fee : Fee) : Processed.Fee = {
       val (feeInBaseCoin, _, usedStocks) = stocks.remove(fee.market, fee.amount)

@@ -43,13 +43,13 @@ object HitBTC extends Exchanger {
           , id = tradeID + "/" + orderID
           , fromAmount = quantity, fromMarket = Market.normalize(market1)
           , toAmount = volume - fee + rebate, toMarket = Market.normalize(market2)
-          , fee = fee, feeMarket = Market.normalize(market2)
+          , feeAmount = fee, feeMarket = Market.normalize(market2)
           , exchanger = HitBTC
           , description = desc
         )
 
         return CSVReader.Ok(exchange)
-      } else
+      } else //toDo add support for buy orders
         return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
     }
   }

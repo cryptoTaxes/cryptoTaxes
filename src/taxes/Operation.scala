@@ -21,28 +21,35 @@ object Operation {
 
 
 /*************************************************************************
-  if(feeMarket == fromMarket)
-     we exchanged ((fromAmount + fee))  for  ((toAmount))
-  else if(feeMarket == toMarket)
-     we exchanged ((fromAmount))  for  ((toAmount + fee))
+  if isDetachedFee is false and fee is expressed
+  in same currency as fromMarket or toMarket:
 
-  The fee is part of the exchange, i.e. it's not paid with other funds.
-  So if feeMarket == toMarket you're only disposing fromAmount but
-  part of these funds will be used to pay for the fee.
-  If feeMarket == fromMarket you're really disposing (fromAmount + fee)
+      if(feeMarket == fromMarket)
+         we exchanged ((fromAmount + feeAmount))  for  ((toAmount))
+      else if(feeMarket == toMarket)
+         we exchanged ((fromAmount))  for  ((toAmount + feeAmount))
+
+      The fee is part of the exchange, i.e. it's not paid with other funds.
+      So if feeMarket == toMarket you're only disposing fromAmount but
+      part of these funds will be used to pay for the fee.
+      If feeMarket == fromMarket you're really disposing (fromAmount + feeAmount)
+
+  otherwise, feeAmount is not part of the exchange hence
+      we exchanged ((fromAmount)) for ((toAmount))
   ************************************************************************/
-case class Exchange( date : Date
+case class Exchange(date : Date
                     , id : String
                     , fromAmount : Double, fromMarket : Market
                     , toAmount : Double, toMarket : Market
-                    , fee : Double, feeMarket : Market
+                    , feeAmount : Double, feeMarket : Market
                     , isSettlement : Boolean = false
+                    , isDetachedFee : Boolean = false
                     , exchanger: Exchanger
                     , description : String
                     ) extends Operation {
 
   override def toString : String =
-    "Exchange(%s %18.8f %-5s -> %18.8f %-5s  %18.8f %-5s  %s)" format (dateToString(date), fromAmount, fromMarket, toAmount, toMarket, fee, feeMarket, description)
+    "Exchange(%s %18.8f %-5s -> %18.8f %-5s  %18.8f %-5s  %s)" format (dateToString(date), fromAmount, fromMarket, toAmount, toMarket, feeAmount, feeMarket, description)
 }
 
 

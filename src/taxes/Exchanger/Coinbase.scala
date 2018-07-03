@@ -43,17 +43,8 @@ object Coinbase extends Exchanger {
 
       val market2 = Market.normalize(currency)
 
-      // Coinbase doesn't use fee to compute exchange rate so we add fee apart
-      lazy val detachedFee = Fee(
-        date = date
-        , id = id + " fee"
-        , amount = total - subtotal
-        , market = market2
-        , exchanger = Coinbase
-        , description = desc + " fee"
-      )
+      val feeAmount = total - subtotal
 
-      // toDo put together exchange and detachedFee so that they get later an uniq op number. Same for Bitfinex or Binance
       if (orderType == "Sell") {
         val exchange =
           Exchange(
@@ -61,11 +52,12 @@ object Coinbase extends Exchanger {
             , id = id
             , fromAmount = amount, fromMarket = market1
             , toAmount = subtotal.abs, toMarket = market2
-            , fee = 0, feeMarket = market2
+            , isDetachedFee = true // Coinbase doesn't use fee to compute exchange rate so we add fee apart
+            , feeAmount = feeAmount, feeMarket = market2
             , exchanger = Coinbase
             , description = desc
           )
-        return CSVReader.Ok(List(exchange, detachedFee))
+        return CSVReader.Ok(exchange)
       } else if (orderType == "Buy") {
         val exchange =
           Exchange(
@@ -73,11 +65,12 @@ object Coinbase extends Exchanger {
             , id = id
             , fromAmount = subtotal.abs, fromMarket = market2
             , toAmount = amount, toMarket = market1
-            , fee = 0, feeMarket = market2
+            , isDetachedFee = true // Coinbase doesn't use fee to compute exchange rate so we add fee apart
+            , feeAmount = feeAmount, feeMarket = market2
             , exchanger = Coinbase
             , description = desc
           )
-        return CSVReader.Ok(List(exchange, detachedFee))
+        return CSVReader.Ok(exchange)
       } else
         return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
     }

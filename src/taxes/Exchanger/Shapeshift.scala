@@ -74,7 +74,7 @@ object Shapeshift extends Exchanger {
                   , id = orderId
                   , fromAmount = amount1, fromMarket = market1
                   , toAmount = amount2, toMarket = market2
-                  , fee = txInfo.fee, feeMarket = market1
+                  , feeAmount = txInfo.fee, feeMarket = market1
                   , exchanger = Shapeshift
                   , description = desc
                 )

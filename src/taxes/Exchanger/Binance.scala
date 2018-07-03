@@ -48,6 +48,8 @@ object Binance extends Exchanger {
           // If feeCoin is BNB you get `amount' but you additionally pay a BNB fee
           // Else feeCoin is toMarket and you really get `amount' - `feeAmount'
 
+          // toDo check an example where you buy or sell BNB
+
           if (orderType == "BUY") {
             val toMarket = market1
 
@@ -57,7 +59,7 @@ object Binance extends Exchanger {
                 , id = ""
                 , fromAmount = total, fromMarket = market2
                 , toAmount = amount - feeAmount, toMarket = market1
-                , fee = feeAmount, feeMarket = feeCoin
+                , feeAmount = feeAmount, feeMarket = feeCoin
                 , exchanger = Binance
                 , description = desc
               )
@@ -69,21 +71,13 @@ object Binance extends Exchanger {
                 , id = ""
                 , fromAmount = total, fromMarket = market2
                 , toAmount = amount, toMarket = market1
-                , fee = 0, feeMarket = market1
+                , feeAmount = feeAmount, feeMarket = feeCoin
+                , isDetachedFee = true
                 , exchanger = Binance
                 , description = desc
               )
 
-              val fee = Fee(
-                date = date
-                , id = ""
-                , amount = feeAmount
-                , market = feeCoin
-                , exchanger = Binance
-                , description = desc
-              )
-
-              return CSVReader.Ok(List(exchange, fee))
+              return CSVReader.Ok(exchange)
             } else
               return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
           } else if (orderType == "SELL") {
@@ -95,7 +89,7 @@ object Binance extends Exchanger {
                 , id = ""
                 , fromAmount = amount, fromMarket = market1
                 , toAmount = total - feeAmount, toMarket = market2
-                , fee = feeAmount, feeMarket = feeCoin
+                , feeAmount = feeAmount, feeMarket = feeCoin
                 , exchanger = Binance
                 , description = desc
               )
@@ -107,21 +101,13 @@ object Binance extends Exchanger {
                 , id = ""
                 , fromAmount = amount, fromMarket = market1
                 , toAmount = total, toMarket = market2
-                , fee = 0, feeMarket = market2
+                , feeAmount = feeAmount, feeMarket = feeCoin
+                , isDetachedFee = true
                 , exchanger = Binance
                 , description = desc
               )
 
-              val fee = Fee(
-                date = date
-                , id = ""
-                , amount = feeAmount
-                , market = feeCoin
-                , exchanger = Binance
-                , description = desc
-              )
-
-              return CSVReader.Ok(List(exchange, fee))
+              return CSVReader.Ok(exchange)
             } else
               return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
 

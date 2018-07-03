@@ -194,7 +194,7 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
             <td ><span class='market'>{queue.market}</span></td>
             <td>{HTMLDoc.asMarket(amount, queue.market, decimals = 4)}</td>
             <td>{HTMLDoc.asMarket(cost, baseMarket)}</td>
-            <td class='noLineBreak'>{HTMLDoc.asMarket(cost / amount, baseMarket)} /<span class='market'>{queue.market}</span></td>
+            <td class='noLineBreak'>{HTMLDoc.asMarket(cost / amount, baseMarket)} / <span class='market'>{queue.market}</span></td>
             <td class='small2'>{queue.toHTML(showTotal = false, showExchangeRates = true)}</td>
           </tr>
         }

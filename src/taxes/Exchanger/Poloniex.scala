@@ -69,7 +69,7 @@ object Poloniex extends Exchanger {
               , id = orderNumber
               , fromAmount = amount, fromMarket = market1
               , toAmount = total - fee, toMarket = market2
-              , fee = fee, feeMarket = market2
+              , feeAmount = fee, feeMarket = market2
               , exchanger = Poloniex
               , description = desc
             )
@@ -80,7 +80,7 @@ object Poloniex extends Exchanger {
               , id = orderNumber
               , fromAmount = total, fromMarket = market2
               , toAmount = amount - fee, toMarket = market1
-              , fee = fee, feeMarket = market1
+              , feeAmount = fee, feeMarket = market1
               // Usually, market2 is BTC so we set fee in BTC
               // fee = amount*feePercent/100*price, feeMarket = market2
               , exchanger = Poloniex
@@ -95,7 +95,7 @@ object Poloniex extends Exchanger {
           , id = orderNumber
           , fromAmount = total, fromMarket = market2
           , toAmount = amount*(100-feePercent)/100, toMarket = market1
-          , fee = amount*feePercent/100, feeMarket = market1
+          , feeAmount = amount*feePercent/100, feeMarket = market1
           , isSettlement = true
           // Usually, market2 is BTC so we can set fee in BTC
           //, fee = amount*feePercent/100*price, feeMarket = market2
@@ -149,7 +149,7 @@ object Poloniex extends Exchanger {
         val op = exchange1.copy(
             fromAmount = exchange1.fromAmount + exchange2.fromAmount
           , toAmount = exchange1.toAmount + exchange2.toAmount
-          , fee = exchange1.fee + exchange2.fee
+          , feeAmount = exchange1.feeAmount + exchange2.feeAmount
         )
         group(op :: ops)
       }
