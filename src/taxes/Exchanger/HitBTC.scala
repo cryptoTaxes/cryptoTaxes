@@ -18,8 +18,10 @@ object HitBTC extends Exchanger {
     override def lineScanner(line: String): Scanner =
       QuotedScanner(line, '\"', ',')
 
+    // toDO parse header for extracting time zone
+
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = Date.fromString(scLn.next("Date"), "yyyy-MM-dd hh:mm:ss")
+      val date = Date.fromString(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss")
       val instrument = scLn.next("Instrument")
       val tradeID = scLn.next("Trade ID")
       val orderID = scLn.next("Order ID")

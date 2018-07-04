@@ -62,7 +62,7 @@ object BlockExplorerSearcher {
     val str = BlockExplorerSearcher.fromURL(url)
 
     val dateStr = locateAndSkip(str, "<td>Received Time</td>", '>', 1, "</td>")
-    val date = Date.fromString(dateStr, "yyyy-MM-dd hh:mm:ss")
+    val date = Date.fromString(dateStr, "yyyy-MM-dd HH:mm:ss")
 
     val amountStr = locateAndSkip(str, "%s</a>".format(address), '>', 2, " BTC")
     val amount = Parse.asDouble(amountStr)

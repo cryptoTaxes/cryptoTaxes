@@ -25,7 +25,7 @@ object CCEX extends Exchanger {
       val orderType = scLn.next("Order Type")
 
       if(orderType=="Transaction") {
-        val date = Date.fromString(token1+" "+token2, "yyyy-MM-dd hh:mm:ss")
+        val date = Date.fromString(token1+" "+token2, "yyyy-MM-dd HH:mm:ss")
         val amount1 = scLn.nextDouble("Amount1")
         val m1 = scLn.next("Market1")
         val amount2 = scLn.nextDouble("Amount2")

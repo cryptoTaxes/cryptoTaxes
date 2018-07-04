@@ -22,7 +22,7 @@ object Binance extends Exchanger {
     private val baseMarkets = List[Market]("BNB", "BTC", "ETH", "USDT")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = Date.fromString(scLn.next("Date"), "yyyy-MM-dd hh:mm:ss")
+      val date = Date.fromString(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss")
       val pair = scLn.next("Market")
 
       baseMarkets.find(pair.endsWith) match {
