@@ -1,8 +1,10 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Util.Logger
-import taxes.Util.Parse.{AdvancedJSONParser, Parse}
 import taxes._
+import taxes.date._
+import taxes.util._
+import taxes.util.parse.{AdvancedJSONParser, Parse}
+
 
 object Shapeshift extends Exchanger {
   override val id: String = "Shapeshift"
@@ -54,27 +56,27 @@ object Shapeshift extends Exchanger {
             else if(json[String]("status") != "complete")
               Logger.warning("%s. %s Line %d: Status should be complete.".format(id, Paths.pathFromData(fileName), lnNumber))
             else {
-              val amount1 = json.getDouble("incomingCoin")
-              val market1 = Market.normalize(json[String]("incomingType"))
+              val fromAmount = json.getDouble("incomingCoin")
+              val fromMarket = Market.normalize(json[String]("incomingType"))
               val address1 = json[String]("address")
 
-              val amount2 = json.getDouble("outgoingCoin")
-              val market2 = Market.normalize(json[String]("outgoingType"))
+              val toAmount = json.getDouble("outgoingCoin")
+              val toMarket = Market.normalize(json[String]("outgoingType"))
 
               val ln3 = nextLine()
               val txid = ln3
 
-              val txInfo = TransactionsCache.lookup(market1, txid, address1)
+              val txInfo = TransactionsCache.lookup(fromMarket, txid, address1)
 
-              val date = txInfo.date
+              val date = txInfo.localDate
 
               val exchange =
                 Exchange(
                   date = date
                   , id = orderId
-                  , fromAmount = amount1, fromMarket = market1
-                  , toAmount = amount2, toMarket = market2
-                  , feeAmount = txInfo.fee, feeMarket = market1
+                  , fromAmount = fromAmount, fromMarket = fromMarket
+                  , toAmount = toAmount, toMarket = toMarket
+                  , feeAmount = txInfo.fee, feeMarket = fromMarket
                   , exchanger = Shapeshift
                   , description = desc
                 )

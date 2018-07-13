@@ -1,7 +1,8 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 import taxes._
+import taxes.date._
+import taxes.util.parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 
 
 case class General(name : String) extends Exchanger {
@@ -22,6 +23,10 @@ object General extends Exchanger {
       }
   )
 
+  // we assume all dates are in ourm time zone
+  private def parseDate(str : String) : LocalDateTime =
+    LocalDateTime.parseAsMyZoneId(str+" 00:00:00", "yyyy-[MM][M]-[dd][d] HH:mm:ss")
+
   private def exchangesReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
@@ -29,11 +34,11 @@ object General extends Exchanger {
       SeparatedScanner(line, "[,]+")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = Date.fromString(scLn.next(), "yyyy-MM-dd")
-      val amount1 = scLn.nextDouble("Amount1")
-      val market1 = scLn.next("Market1")
-      val amount2 = scLn.nextDouble("Amount2")
-      val market2 = scLn.next("Market2")
+      val date = parseDate(scLn.next())
+      val fromAmount = scLn.nextDouble("Amount1")
+      val fromMarket = scLn.next("Market1")
+      val toAmount = scLn.nextDouble("Amount2")
+      val toMarket = scLn.next("Market2")
       val fee = scLn.nextDouble("Fee")
       val feeMarket = scLn.next("Fee Market")
       val exchangerName = scLn.next("Exchanger")
@@ -43,8 +48,8 @@ object General extends Exchanger {
         Exchange(
           date = date
           , id = ""
-          , fromAmount = amount1, fromMarket = Market.normalize(market1)
-          , toAmount = amount2, toMarket = Market.normalize(market2)
+          , fromAmount = fromAmount, fromMarket = Market.normalize(fromMarket)
+          , toAmount = toAmount, toMarket = Market.normalize(toMarket)
           , feeAmount = fee
           , feeMarket = Market.normalize(feeMarket)
           , exchanger = General(exchangerName)
@@ -61,7 +66,7 @@ object General extends Exchanger {
       SeparatedScanner(line, "[,]+")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = Date.fromString(scLn.next(), "yyyy-MM-dd")
+      val date = parseDate(scLn.next())
       val amount = scLn.nextDouble("Amount1")
       val market = scLn.next("Market1")
       val fee = scLn.nextDouble("Fee")

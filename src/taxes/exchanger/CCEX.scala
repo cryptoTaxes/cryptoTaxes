@@ -1,10 +1,11 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 import taxes._
+import taxes.date._
+import taxes.util.parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
+
 
 object CCEX extends Exchanger {
-
   override val id: String = "C-CEX"
 
   override val sources = Seq(
@@ -25,28 +26,25 @@ object CCEX extends Exchanger {
       val orderType = scLn.next("Order Type")
 
       if(orderType=="Transaction") {
-        val date = Date.fromString(token1+" "+token2, "yyyy-MM-dd HH:mm:ss")
-        val amount1 = scLn.nextDouble("Amount1")
-        val m1 = scLn.next("Market1")
-        val amount2 = scLn.nextDouble("Amount2")
-        val m2 = scLn.next("Market2")
+        val date = LocalDateTime.parseAsUTC(token1+" "+token2, "yyyy-MM-dd HH:mm:ss") // C-CEX uses UTC
+        val toAmount = scLn.nextDouble("Amount1")
+        val toMarket = Market.normalize(scLn.next("Market1"))
+        val fromAmount = scLn.nextDouble("Amount2")
+        val fromMarket = Market.normalize(scLn.next("Market2"))
         scLn.close()
-
-        val market1 = Market.normalize(m1)
-        val market2 = Market.normalize(m2)
 
         val feePercent = 0.2
 
-        val fee = amount1 * feePercent / 100
+        val fee = toAmount * feePercent / 100
 
         val exchange =
           Exchange(
             date = date
             , id = ""
-            , fromAmount = amount2, fromMarket = market2
-            , toAmount = amount1, toMarket = market1  // amount1 in read csv doesn't include fee
+            , fromAmount = fromAmount, fromMarket = fromMarket
+            , toAmount = toAmount, toMarket = toMarket  // toAmount in csv doesn't include fee
             , feeAmount = fee
-            , feeMarket = market1
+            , feeMarket = toMarket
             , exchanger = CCEX
             , description = ""
           )

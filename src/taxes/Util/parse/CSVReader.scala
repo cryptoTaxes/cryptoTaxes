@@ -1,9 +1,11 @@
-package taxes.Util.Parse
+package taxes.util.parse
 
-import taxes.Util.Logger
+import taxes.date._
+import taxes.util._
 import taxes.{FileSource, Operation}
 
 import scala.collection.mutable.ListBuffer
+
 
 object CSVReader {
   class Result[+A]

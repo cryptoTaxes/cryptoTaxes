@@ -1,8 +1,8 @@
 package taxes
 
-import taxes.Exchanger.Exchanger
 import taxes.HTMLDoc._
-import taxes.Market.Market
+import taxes.date._
+import taxes.exchanger.Exchanger
 
 
 trait Processed extends Boxed with ToHTML {
@@ -42,7 +42,7 @@ object Processed {
     override def headerToHTML: HTML =
       header4(
         <span class='operationNumber'>{operationNumber}</span>
-        , df.format(exchange.date)
+        , exchange.date.format(df)
         , <span>
           {(if (exchange.isSettlement) "Settlement " else "")+" Exchange of"}
           <span>
@@ -165,12 +165,13 @@ object Processed {
      , gain : taxes.Gain
      , gainInBaseCoin : Double
      , basePrice : Double
+     , stocks : StockContainer
    ) extends Processed {
 
     override def headerToHTML: HTML =
       header4(
         <span class='operationNumber'>{operationNumber}</span>
-        , df.format(gain.date)
+        , gain.date.format(df)
         , <span> Gain of
           {asMarket(gain.amount, gain.market, decimals = headerDecimals)}
         </span>
@@ -195,11 +196,16 @@ object Processed {
                 ({asRate(basePrice, baseMarket, gain.market)})
               </span>
             }
-            =
+            = {asMarket(gainInBaseCoin, baseMarket)}
             </span>
           }
-          {asMarket(gainInBaseCoin, baseMarket)}
         </div>
+        {if(Config.verbosity(Verbosity.showStocks))
+        <div class='stock marginTopBottom20'>
+          <div class='embold'>Stocks:</div>
+          <div>{stocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
+        </div>
+        }
       </span>
   }
 
@@ -209,12 +215,13 @@ object Processed {
     , loss : taxes.Loss
     , lossInBaseCoin : Double
     , usedStocks : StockContainer
+    , stocks : StockContainer
     ) extends Processed {
 
     override def headerToHTML: HTML =
       header4(
         <span class='operationNumber'>{operationNumber}</span>
-        , df.format(loss.date)
+        , loss.date.format(df)
         , <span> Loss of
           {asMarket(loss.amount, loss.market, decimals = headerDecimals)}
         </span>
@@ -245,11 +252,16 @@ object Processed {
                 })
               </span>
             }
-            =
+            = {asMarket(lossInBaseCoin, baseMarket)}
             </span>
           }
-          {asMarket(lossInBaseCoin, baseMarket)}
         </div>
+        {if(Config.verbosity(Verbosity.showStocks))
+        <div class='stock marginTopBottom20'>
+          <div class='embold'>Stocks:</div>
+          <div>{stocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
+        </div>
+        }
       </span>
   }
 
@@ -258,12 +270,13 @@ object Processed {
       , fee : taxes.Fee
       , feeInBaseCoin : Double
       , usedStocks : StockContainer
+      , stocks : StockContainer
   ) extends Processed {
 
     override def headerToHTML: HTML =
       header4(
         <span class='operationNumber'>{operationNumber}</span>
-        , df.format(fee.date)
+        , fee.date.format(df)
         , <span> Fee of
           {fee.alt match {
             case None => asMarket(fee.amount, fee.market, decimals = headerDecimals)
@@ -304,18 +317,23 @@ object Processed {
                 })
               </span>
             }
-            =
+            = {asMarket(feeInBaseCoin, baseMarket)}
             </span>
           }
-          {asMarket(feeInBaseCoin, baseMarket)}
         </div>
+        {if(Config.verbosity(Verbosity.showStocks))
+        <div class='stock marginTopBottom20'>
+          <div class='embold'>Stocks:</div>
+          <div>{stocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
+        </div>
+        }
       </span>
   }
 
 
   case class Margin(
      operationNumber : Int
-     , date : Date
+     , date : LocalDateTime
      , exchanger: Exchanger
      , what : String
      , fromAmount : Double, fromMarket : Market
@@ -338,7 +356,7 @@ object Processed {
     override def headerToHTML: HTML =
       header4(
         <span class='operationNumber'>{operationNumber}</span>
-        , df.format(date)
+        , date.format(df)
         , <span> {what}
           {asMarket(amount1, market1, decimals = headerDecimals)}
           for

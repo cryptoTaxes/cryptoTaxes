@@ -3,9 +3,9 @@ package taxes
 import java.io.PrintStream
 import java.text.SimpleDateFormat
 
-import taxes.Exchanger.Exchanger
-import taxes.Market.Market
-import taxes.Util.Logger
+import taxes.date._
+import taxes.exchanger.Exchanger
+import taxes.util.Logger
 
 
 case class CSV() {
@@ -23,7 +23,7 @@ case class CSV() {
 
   private val sep = ";"
 
-  case class Entry(date : Option[Date] = None, sold : Option[Market] = None, soldAmount : Option[Double] = None, bought : Option[Market] = None, boughtAmount : Option[Double] = None, costBasis : Option[Double] = None, sellValue : Option[Double] = None, fee : Option[Double] = None, exchanger: Exchanger) {
+  case class Entry(date : Option[LocalDateTime] = None, sold : Option[Market] = None, soldAmount : Option[Double] = None, bought : Option[Market] = None, boughtAmount : Option[Double] = None, costBasis : Option[Double] = None, sellValue : Option[Double] = None, fee : Option[Double] = None, exchanger: Exchanger) {
 
     private def doFormat[A](opt : Option[A], f : A => String) : String = opt match {
       case None => ""
@@ -32,7 +32,7 @@ case class CSV() {
 
     override def toString = {
       val xs = List[String](
-                     doFormat[Date](date, df.format(_))
+                     doFormat[LocalDateTime](date, df.format(_))
                    , doFormat[String](sold, "%s".format(_))
                    , doFormat[Double](soldAmount, af.format(_))
                    , doFormat[String](bought, "%s".format(_))

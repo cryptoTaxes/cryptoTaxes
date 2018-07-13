@@ -1,7 +1,9 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Util.Parse._
 import taxes._
+import taxes.date._
+import taxes.util.parse._
+
 
 object Coinbase extends Exchanger {
   override val id: String = "Coinbase"
@@ -18,7 +20,7 @@ object Coinbase extends Exchanger {
     override def lineScanner(line: String): Scanner =
       QuotedScanner(line.replace('“', '\"').replace('”', '\"'), '\"', ',')
 
-    lazy val market1 = {
+    lazy val baseMarket = {
       val sc = SeparatedScanner(skippedLines(2), "[,]")
       sc.next()
       sc.next()
@@ -39,9 +41,9 @@ object Coinbase extends Exchanger {
 
       val desc = paymentMethod
       val id = desc
-      val date = Date.fromString(timeStamp, "yyyy-MM-dd HH:mm:ss Z")
+      val date = LocalDateTime.parse(timeStamp, "yyyy-MM-dd HH:mm:ss Z")
 
-      val market2 = Market.normalize(currency)
+      val quoteMarket = Market.normalize(currency)
 
       val feeAmount = total - subtotal
 
@@ -50,10 +52,10 @@ object Coinbase extends Exchanger {
           Exchange(
             date = date
             , id = id
-            , fromAmount = amount, fromMarket = market1
-            , toAmount = subtotal.abs, toMarket = market2
-            , isDetachedFee = true // Coinbase doesn't use fee to compute exchange rate so we add fee apart
-            , feeAmount = feeAmount, feeMarket = market2
+            , fromAmount = amount, fromMarket = baseMarket
+            , toAmount = subtotal.abs, toMarket = quoteMarket
+            , detachedFee = Some(feeAmount, quoteMarket) // Coinbase doesn't use fee to compute exchange rate so we add fee apart
+            , feeAmount = 0, feeMarket = quoteMarket
             , exchanger = Coinbase
             , description = desc
           )
@@ -63,10 +65,10 @@ object Coinbase extends Exchanger {
           Exchange(
             date = date
             , id = id
-            , fromAmount = subtotal.abs, fromMarket = market2
-            , toAmount = amount, toMarket = market1
-            , isDetachedFee = true // Coinbase doesn't use fee to compute exchange rate so we add fee apart
-            , feeAmount = feeAmount, feeMarket = market2
+            , fromAmount = subtotal.abs, fromMarket = quoteMarket
+            , toAmount = amount, toMarket = baseMarket
+            , detachedFee = Some(feeAmount, quoteMarket) // Coinbase doesn't use fee to compute exchange rate so we add fee apart
+            , feeAmount = 0, feeMarket = quoteMarket
             , exchanger = Coinbase
             , description = desc
           )

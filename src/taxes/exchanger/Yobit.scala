@@ -1,7 +1,9 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Util.Parse._
 import taxes._
+import taxes.date._
+import taxes.util.parse._
+
 
 object Yobit extends Exchanger {
   override val id: String = "Yobit"
@@ -24,7 +26,7 @@ object Yobit extends Exchanger {
       val date3 = scLn.next("Date3")
       val date4 = scLn.next("Date4")
 
-      val date = Date.fromString(date3+" "+date4, "yyyy-MM-dd HH:mm:ss")
+      val date = LocalDateTime.parseAsUTC(date3+" "+date4, "yyyy-MM-dd HH:mm:ss")
 
       val pair = scLn.next("Pair")
       val orderType = scLn.next("Order Type")
@@ -39,19 +41,19 @@ object Yobit extends Exchanger {
       val (m1,m2) = Parse.split(pair,"/")
       val isSell = orderType == "SELL"
 
-      val market1 = Market.normalize(m1)
-      val market2 = Market.normalize(m2)
+      val baseMarket = Market.normalize(m1)
+      val quoteMarket = Market.normalize(m2)
 
       if(completed>0) {
-        // market1 is usually BTC
+        // quoteMarket is usually BTC
         val exchange =
           if (isSell)
             Exchange(
               date = date
               , id = ""
-              , fromAmount = completed, fromMarket = market1
-              , toAmount = completed * price, toMarket = market2
-              , feeAmount = 0, feeMarket = market2
+              , fromAmount = completed, fromMarket = baseMarket
+              , toAmount = completed * price, toMarket = quoteMarket
+              , feeAmount = 0, feeMarket = quoteMarket
               , exchanger = Yobit
               , description = desc
             )
@@ -59,9 +61,9 @@ object Yobit extends Exchanger {
             Exchange(
               date = date
               , id = ""
-              , fromAmount = completed * price, fromMarket = market2
-              , toAmount = completed, toMarket = market1
-              , feeAmount = 0, feeMarket = market1
+              , fromAmount = completed * price, fromMarket = quoteMarket
+              , toAmount = completed, toMarket = baseMarket
+              , feeAmount = 0, feeMarket = quoteMarket
               , exchanger = Yobit
               , description = desc
             )

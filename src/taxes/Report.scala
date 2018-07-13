@@ -2,10 +2,9 @@ package taxes
 
 import java.io.PrintStream
 
-import taxes.Exchanger._
-import taxes.HTMLDoc.HTML
-import taxes.Market.Market
-import taxes.Util.Logger
+import taxes.date._
+import taxes.exchanger._
+import taxes.util.Logger
 
 import scala.collection.mutable.ListBuffer
 
@@ -63,14 +62,14 @@ case class ValueTracker(baseMarket : Market) extends Iterable[(Market, Double)] 
 
 object OperationTracker {
   case class CSVEntry(
-    date : Date
+    date : LocalDateTime
     , exchanger : Exchanger
     , description : String
     , costBasis : Double
     , proceeds : Double
     , fee : Double
     )
-  private val emptyEntry = OperationTracker.CSVEntry(new Date(0,0,0), new General(""), "", 0, 0, 0)
+  private val emptyEntry = OperationTracker.CSVEntry(LocalDateTime(), new General(""), "", 0, 0, 0)
 }
 
 
@@ -95,7 +94,7 @@ case class OperationTracker() extends Iterable[(Int,OperationTracker.CSVEntry)] 
     m(operationNumber) = entry.copy(fee = entry.fee + amount)
   }
 
-  def setDate(operationNumber : Int, date : Date): Unit = {
+  def setDate(operationNumber : Int, date : LocalDateTime): Unit = {
     val entry = m.getOrElse(operationNumber, OperationTracker.emptyEntry)
     m(operationNumber) = entry.copy(date = date)
   }
@@ -126,7 +125,7 @@ case class OperationTracker() extends Iterable[(Int,OperationTracker.CSVEntry)] 
 
     ps.println(header.mkString(sep))
     for((operationNumber,entry) <- this)
-      ps.println(List[Any](operationNumber, Format.shortDf.format(entry.date), entry.exchanger, entry.description, entry.costBasis, entry.proceeds, entry.fee).mkString(sep))
+      ps.println(List[Any](operationNumber, entry.date.format(Format.shortDf), entry.exchanger, entry.description, entry.costBasis, entry.proceeds, entry.fee).mkString(sep))
 
     ps.close()
   }
@@ -165,20 +164,22 @@ object Report {
     val accountingMethod = Config.config.accountingMethod
     val stocks =
       if(accountingMethod == Accounting.FIFO)
-        QueueStockPool(baseMarket)
+        QueueStockPool()
       else if (accountingMethod == Accounting.LIFO)
-        StackStockPool(baseMarket)
+        StackStockPool()
       else
         Logger.fatal("Unkown accounting method: %s".format(Accounting.toString(accountingMethod)))
 
     // current in longs/shorts assets for margin trading operations
     val marginBuysMap = scala.collection.immutable.Map[Exchanger, StockPool](
-        Poloniex -> QueueStockPool(Market.bitcoin)
-      , Bitfinex -> StackStockPool(Market.usd)
+        Bitfinex -> StackStockPool() // note that Bitfinex processes margin in a LIFO way
+      , Kraken -> QueueStockPool()
+      , Poloniex -> QueueStockPool()
       )
     val marginSellsMap = scala.collection.immutable.Map[Exchanger, StockPool](
-        Poloniex -> QueueStockPool(Market.bitcoin)
-      , Bitfinex -> StackStockPool(Market.usd)
+        Bitfinex -> StackStockPool()
+      , Kraken -> QueueStockPool()
+      , Poloniex -> QueueStockPool()
       )
 
     // Sold stocks without corresponding buys
@@ -292,7 +293,7 @@ object Report {
     }
 
     def marginPairKey(market1 : Market, market2: Market) : String
-    = market1 ++ "/" ++ market2
+      = market1 ++ "/" ++ market2
 
     def preprocessExchange(exchange: Exchange) : Processed.Composed = {
       val soldMarket = exchange.fromMarket
@@ -302,15 +303,7 @@ object Report {
       val boughtAmount = exchange.toAmount // without fee
 
       val feeMarket = exchange.feeMarket
-      // if fee is explicitly market as detached or if it is not
-      // expressed in any of two markets involved in this exchange
-      // then detach if from this exchange
-      val isDetachedFee = exchange.isDetachedFee || (feeMarket != soldMarket && feeMarket != boughtMarket)
-      val feeAmount = // only if fee is included in this exchange
-        if(isDetachedFee)
-          0
-        else
-          exchange.feeAmount
+      val feeAmount = exchange.feeAmount
 
       val (totalSoldAmount, totalBoughtAmount) = // including fee
         if (feeAmount == 0)
@@ -324,7 +317,7 @@ object Report {
 
 
       if(totalSoldAmount==0)
-        Logger.warning("Warning: no sold coins in tis exchange %s.".format(exchange))
+        Logger.warning("Warning: no sold coins in this exchange %s.".format(exchange))
       if(totalBoughtAmount==0)
         Logger.warning("Warning: no bought coins in this exchange %s.".format(exchange))
 
@@ -351,7 +344,7 @@ object Report {
       // fee for this operation, expressed in base coin,
       // only if fee is included in this exchange
       val feeInBaseCoin =
-        if (isDetachedFee || feeAmount == 0)
+        if (feeAmount == 0) // we don't care about feemarket in this case
           0
         else if (exchange.feeMarket == baseMarket)
           feeAmount
@@ -374,16 +367,16 @@ object Report {
 
       // Add bought coins (without paid fee) with their cost basis to our stock of assets
       if (!boughtBasisPriceInBaseCoin.isNaN && boughtAmount > 0) {
-        stocks.add(boughtMarket, boughtAmount, boughtBasisPriceInBaseCoin, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldMarket)
+        stocks.add(boughtMarket, boughtAmount, boughtBasisPriceInBaseCoin, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldMarket)(baseMarket)
       }
 
       // Get cost basis for total sold coins from current stock
       val (totalSoldBasisInBaseCoin, noBasis, usedStocks) =
         if (soldMarket != baseMarket)
-          stocks.remove(soldMarket, totalSoldAmount)
+          stocks.remove(soldMarket, totalSoldAmount)(baseMarket)
         else {
           // If our base coin is Euro, cost basis is the amount of Euros involved
-          val (_,_,usedStocks) = stocks.remove(soldMarket, totalSoldAmount)
+          val (_,_,usedStocks) = stocks.remove(soldMarket, totalSoldAmount)(baseMarket)
           (totalSoldAmount, 0.0, usedStocks)
         }
 
@@ -409,8 +402,7 @@ object Report {
           proceedsInBaseCoin - soldBasisInBaseCoin
 
       // Update paid fees
-      if(!isDetachedFee)
-        Realized.perMarketPaidFees.record(exchange.feeMarket, feeInBaseCoin)
+      Realized.perMarketPaidFees.record(exchange.feeMarket, feeInBaseCoin)
 
       // Update total gains for soldMarket
       if (gainInBaseCoin > 0)
@@ -434,8 +426,7 @@ object Report {
         // Part of these assets were acquired for free
         partiallyFrees += "Was SOLD but were partially free %.8f of %.6f %s = %.8f %s  ".format(noBasis, totalSoldAmount, soldMarket, noBasis * proceedsInBaseCoin / soldAmount, baseMarket)
 
-      if(!isDetachedFee)
-        operationTracker.recordFee(operationNumber, feeInBaseCoin)
+      operationTracker.recordFee(operationNumber, feeInBaseCoin)
 
       if(soldMarket == baseMarket) {
         ;
@@ -459,8 +450,8 @@ object Report {
           , boughtSoldExchangeRate = boughtSoldExchangeRate
           , soldBoughtExchangeRate = soldBoughtExchangeRate
           , usedStocks = usedStocks
-          , buys = stocks(boughtMarket).copy
-          , sells = stocks(soldMarket).copy
+          , buys = stocks(boughtMarket)(baseMarket).copy
+          , sells = stocks(soldMarket)(baseMarket).copy
         )
 
       var processed = List[Processed]()
@@ -470,7 +461,7 @@ object Report {
       if(exchange.isSettlement && exchange.exchanger == Poloniex) {
         val marketKey = marginPairKey(exchange.toMarket, exchange.fromMarket)
 
-        val stockContainer = marginSellsMap(Poloniex)(marketKey)
+        val stockContainer = marginSellsMap(Poloniex).apply(marketKey)(baseMarket)
         if (stockContainer.nonEmpty) {
           stockContainer.removeAndGetBasis(totalBoughtAmount)
           // We bought these to pay for fees and looses of a short that went against us.
@@ -488,18 +479,20 @@ object Report {
         processed ::= processedLoss
       }
 
-      // If fee is not part of the exchange add it to composed result
-      if(isDetachedFee) {
-        val processedFee = preprocessFee(
-          Fee(
-            date = exchange.date
-            , id = exchange.id
-            , amount = exchange.feeAmount
-            , market = exchange.feeMarket
-            , exchanger = exchange.exchanger
-            , description = ""
+      // A fee that is not part of the exchange is added to composed result
+      exchange.detachedFee match {
+        case None => ;
+        case Some((feeAmount, feeMarket)) =>
+          val processedFee = preprocessFee(
+            Fee(
+              date = exchange.date
+              , id = exchange.id
+              , amount = feeAmount
+              , market = feeMarket
+              , exchanger = exchange.exchanger
+              , description = ""
             ))
-        processed ::= processedFee
+          processed ::= processedFee
       }
 
       processed ::= processedExchange // order for a Composed is important. Exchange must be at front
@@ -508,7 +501,9 @@ object Report {
 
 
     def preprocessFee(fee : Fee) : Processed.Fee = {
-      val (feeInBaseCoin, _, usedStocks) = stocks.remove(fee.market, fee.amount)
+      val (feeInBaseCoin0, _, usedStocks) = stocks.remove(fee.market, fee.amount)(baseMarket)
+
+      val feeInBaseCoin = if(fee.market == baseMarket) fee.amount else feeInBaseCoin0
 
       // Record paid fees
       Realized.perMarketPaidFees.record(fee.market, feeInBaseCoin)
@@ -520,12 +515,15 @@ object Report {
         , fee = fee
         , feeInBaseCoin = feeInBaseCoin
         , usedStocks = usedStocks
+        , stocks = stocks(fee.market)(baseMarket).copy
       )
     }
 
 
     def preprocessLoss(loss : Loss) : Processed.Loss = {
-      val (lossBasisInBaseCoin, _, usedStocks) = stocks.remove(loss.market, loss.amount)
+      val (lossBasisInBaseCoin0, _, usedStocks) = stocks.remove(loss.market, loss.amount)(baseMarket)
+
+      val lossBasisInBaseCoin = if(loss.market == baseMarket) loss.amount else lossBasisInBaseCoin0
 
       // Record looses for loss market
       Realized.perMarketLooses.record(loss.market, lossBasisInBaseCoin)
@@ -540,6 +538,7 @@ object Report {
         , loss = loss
         , lossInBaseCoin = lossBasisInBaseCoin
         , usedStocks = usedStocks
+        , stocks = stocks(loss.market)(baseMarket).copy
       )
     }
 
@@ -547,7 +546,7 @@ object Report {
     def preprocessGain(gain : Gain) : Processed.Gain = {
       // Record cost basis of gained coins at price corresponding to gain date
       val basePrice = baseCoin.priceInBaseCoin(gain.market, gain.date)
-      stocks.add(gain.market, gain.amount, basePrice, gain.exchanger, gain.date, basePrice, baseMarket)
+      stocks.add(gain.market, gain.amount, basePrice, gain.exchanger, gain.date, basePrice, baseMarket)(baseMarket)
 
       val gainInBaseCoin = gain.amount * basePrice
 
@@ -564,6 +563,7 @@ object Report {
         , gain = gain
         , gainInBaseCoin = gainInBaseCoin
         , basePrice = basePrice
+        , stocks = stocks(gain.market)(baseMarket).copy
       )
     }
 
@@ -575,49 +575,36 @@ object Report {
       val boughtMarket = margin.toMarket
       val boughtAmount = margin.toAmount
 
-      val (tradedMarket, tradingBaseMarket) = margin.pair
+      // gain/looses are expressed in marginBaseMarket
+      val (tradedMarket, marginBaseMarket) = margin.pair
 
-      val marketKey = marginPairKey(tradedMarket, tradingBaseMarket)
+      val marketKey = marginPairKey(tradedMarket, marginBaseMarket)
 
       val marginBuys = marginBuysMap(margin.exchanger)
       val marginSells = marginSellsMap(margin.exchanger)
 
       // Check that markets involved in margin operation are those in traded pair
       if(margin.orderType == Operation.OrderType.Sell) {
-        if(soldMarket != tradedMarket || boughtMarket != tradingBaseMarket)
+        if(soldMarket != tradedMarket || boughtMarket != marginBaseMarket)
           Logger.fatal("Wrong markets in margin sell: "+margin)
       } else if(margin.orderType == Operation.OrderType.Buy) {
-        if(soldMarket != tradingBaseMarket || boughtMarket != tradedMarket)
+        if(soldMarket != marginBaseMarket || boughtMarket != tradedMarket)
           Logger.fatal("Wrong markets in margin buy: "+margin)
       }
 
-      // Compute exchange rates (without considering fees)
-      val (boughtSoldExchangeRate, soldBoughtExchangeRate) =
-        if (margin.feeMarket == boughtMarket)
-          (boughtAmount / soldAmount, soldAmount / boughtAmount)
-        else if (margin.feeMarket == soldMarket)
-          (boughtAmount / soldAmount, soldAmount / boughtAmount)
-        else
-          Logger.fatal("Cannot compute exchange rates as fee is not expressed in same unit as from or to units " + margin.toString)
-
       // Compute margin exchange rates
-      val (marginBoughtSoldExchangeRate, marginSoldBoughtExchangeRate) =
-        if (margin.feeMarket == boughtMarket)
-          ((boughtAmount - margin.fee) / soldAmount, soldAmount / (boughtAmount - margin.fee))
-        else if (margin.feeMarket == soldMarket)
-          (boughtAmount / (soldAmount - margin.fee), (soldAmount - margin.fee) / boughtAmount)
-        else
-          Logger.fatal("Cannot compute exchange rates as fee is not expressed in same unit as from or to units " + margin.toString)
+      val (boughtSoldExchangeRate, soldBoughtExchangeRate) =
+        (boughtAmount / soldAmount, soldAmount / boughtAmount)
 
-      // The fee for this operation, expressed in trading base coin
-      val feeInTradingBaseCoin =
+      // The fee for this operation, expressed in margin base coin
+      val feeInMarginBaseCoin =
         if (margin.fee == 0)
           0
-        else if (margin.feeMarket == tradingBaseMarket)
+        else if (margin.feeMarket == marginBaseMarket)
           margin.fee
-        else if (margin.feeMarket == boughtMarket && soldMarket == tradingBaseMarket)
+        else if (margin.feeMarket == boughtMarket && soldMarket == marginBaseMarket)
           soldBoughtExchangeRate * margin.fee
-        else if (margin.feeMarket == soldMarket && boughtMarket == tradingBaseMarket)
+        else if (margin.feeMarket == soldMarket && boughtMarket == marginBaseMarket)
           boughtSoldExchangeRate * margin.fee
         else
           Logger.fatal("Cannot compute fee as fee is not expressed in same unit as from or to units " + margin.toString)
@@ -627,9 +614,9 @@ object Report {
 
       def nonZero(x : Double) : Boolean = x.abs >= 1E-7
 
-      def openShort(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market, feeInTradingBaseCoin : Double) : List[Processed] = {
+      def openShort(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market) : List[Processed] = {
         // Opening a short
-        marginSells.add(marketKey, soldMarket, soldAmount, marginBoughtSoldExchangeRate, margin.exchanger, margin.date, marginBoughtSoldExchangeRate, boughtMarket)
+        marginSells.add(marketKey, soldMarket, soldAmount, boughtSoldExchangeRate, margin.exchanger, margin.date, boughtSoldExchangeRate, boughtMarket)(marginBaseMarket)
 
         var processed = List[Processed]()
 
@@ -641,23 +628,23 @@ object Report {
             , what = "Open short"
             , fromAmount = soldAmount, fromMarket = soldMarket
             , toAmount = boughtAmount, toMarket = boughtMarket
-            , exchangeRate = marginBoughtSoldExchangeRate
+            , exchangeRate = boughtSoldExchangeRate
             , description = margin.description
             , usedStocksOpt = None
-            , marginBuys = marginBuys(marketKey).copy
-            , marginSells = marginSells(marketKey).copy
+            , marginBuys = marginBuys(marketKey)(marginBaseMarket).copy
+            , marginSells = marginSells(marketKey)(marginBaseMarket).copy
           )
 
-        if(feeInTradingBaseCoin>0) {
-          val fee = Fee(margin.date, margin.id, margin.fee, margin.feeMarket, margin.exchanger, "")
+        if(feeAmount>0) {
+          val fee = Fee(margin.date, margin.id, feeAmount, feeMarket, margin.exchanger, "")
           processed ::= preprocessFee(fee)
         }
         return processed
       }
 
-      def openLong(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market, feeInTradingBaseCoin : Double) : List[Processed] = {
+      def openLong(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market, feeInMarginBaseCoin : Double) : List[Processed] = {
         // Opening a long
-        marginBuys.add(marketKey, boughtMarket, boughtAmount, marginSoldBoughtExchangeRate, margin.exchanger, margin.date, marginSoldBoughtExchangeRate, soldMarket)
+        marginBuys.add(marketKey, boughtMarket, boughtAmount, soldBoughtExchangeRate, margin.exchanger, margin.date, soldBoughtExchangeRate, soldMarket)(marginBaseMarket)
 
         var processed = List[Processed]()
 
@@ -669,36 +656,36 @@ object Report {
             , what = "Open long"
             , fromAmount = soldAmount, fromMarket = soldMarket
             , toAmount = boughtAmount, toMarket = boughtMarket
-            , exchangeRate = marginSoldBoughtExchangeRate
+            , exchangeRate = soldBoughtExchangeRate
             , description = margin.description
             , usedStocksOpt = None
-            , marginBuys = marginBuys(marketKey).copy
-            , marginSells = marginSells(marketKey).copy
+            , marginBuys = marginBuys(marketKey)(marginBaseMarket).copy
+            , marginSells = marginSells(marketKey)(marginBaseMarket).copy
           )
 
-        if(feeInTradingBaseCoin>0) {
+        if(feeAmount>0) {
           val fee =
             if(margin.exchanger == Poloniex)
-              Fee(margin.date, margin.id, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, "", Some(feeInTradingBaseCoin*boughtSoldExchangeRate, boughtMarket))
+              Fee(margin.date, margin.id, feeInMarginBaseCoin, marginBaseMarket, margin.exchanger, "", Some(feeInMarginBaseCoin*boughtSoldExchangeRate, boughtMarket))
             else
-              Fee(margin.date, margin.id, margin.fee, margin.feeMarket, margin.exchanger, "")
+              Fee(margin.date, margin.id, feeAmount, feeMarket, margin.exchanger, "")
           processed ::= preprocessFee(fee)
         }
         return processed
       }
 
       if(margin.orderType == Operation.OrderType.Sell) {
-        val inLongsAmount = marginBuys(marketKey).totalAmount
+        val inLongsAmount = marginBuys(marketKey)(marginBaseMarket).totalAmount
 
         if(inLongsAmount<=0) {
           // Opening a short
-          processed = openShort(soldAmount, boughtAmount, margin.fee, margin.feeMarket, feeInTradingBaseCoin) ++ processed
+          processed = openShort(soldAmount, boughtAmount, margin.fee, margin.feeMarket) ++ processed
         } else {
           // Closing a long
           val closedSoldAmount = soldAmount min inLongsAmount
-          val closedBoughtAmount = closedSoldAmount * marginBoughtSoldExchangeRate
+          val closedBoughtAmount = closedSoldAmount * boughtSoldExchangeRate
 
-          val (basis, noBasis, usedStocks) = marginBuys.remove(marketKey, soldAmount)
+          val (basis, noBasis, usedStocks) = marginBuys.remove(marketKey, soldAmount)(baseMarket)
 
           processed ::=
             Processed.Margin(
@@ -708,22 +695,22 @@ object Report {
               , what = "Close long"
               , fromAmount = closedSoldAmount, fromMarket = soldMarket
               , toAmount = closedBoughtAmount, toMarket = boughtMarket
-              , exchangeRate = marginBoughtSoldExchangeRate
+              , exchangeRate = boughtSoldExchangeRate
               , description = margin.description
               , usedStocksOpt = Some(usedStocks)
-              , marginBuys = marginBuys(marketKey).copy
-              , marginSells = marginSells(marketKey).copy
+              , marginBuys = marginBuys(marketKey)(marginBaseMarket).copy
+              , marginSells = marginSells(marketKey)(marginBaseMarket).copy
             )
 
           val gain = closedBoughtAmount - basis
 
           val gainLoss =
             if(gain>0)
-              preprocessGain(Gain(margin.date, margin.id, gain, tradingBaseMarket, margin.exchanger, ""))
+              preprocessGain(Gain(margin.date, margin.id, gain, marginBaseMarket, margin.exchanger, ""))
             else
-              preprocessLoss(Loss(margin.date, margin.id, gain.abs, tradingBaseMarket, margin.exchanger, ""))
+              preprocessLoss(Loss(margin.date, margin.id, gain.abs, marginBaseMarket, margin.exchanger, ""))
 
-          if(feeInTradingBaseCoin>0) {
+          if(feeInMarginBaseCoin>0) {
             val fee = Fee(margin.date, margin.id, margin.fee, margin.feeMarket, margin.exchanger, "")
             processed ::= preprocessFee(fee)
           }
@@ -734,21 +721,21 @@ object Report {
             // we are also opening a short
             val longedSoldAmount = soldAmount - closedSoldAmount // same as noBasis
             val longedBoughtAmount = boughtAmount - closedBoughtAmount
-            processedAux = openShort(longedSoldAmount, longedBoughtAmount, 0, margin.feeMarket, 0)
+            processedAux = openShort(longedSoldAmount, longedBoughtAmount, 0, margin.feeMarket)
           }
         }
       } else if(margin.orderType == Operation.OrderType.Buy) {
-        val inShortsAmount = marginSells(marketKey).totalAmount
+        val inShortsAmount = marginSells(marketKey)(marginBaseMarket).totalAmount
 
         if(inShortsAmount<=0) {
           // Opening a long
-          processed = openLong(soldAmount, boughtAmount, margin.fee, margin.feeMarket, feeInTradingBaseCoin) ++ processed
+          processed = openLong(soldAmount, boughtAmount, margin.fee, margin.feeMarket, feeInMarginBaseCoin) ++ processed
         } else {
           // Closing a short
           val closedBoughtAmount = boughtAmount min inShortsAmount
-          val closedSoldAmount = closedBoughtAmount * marginSoldBoughtExchangeRate
+          val closedSoldAmount = closedBoughtAmount * soldBoughtExchangeRate
 
-          val (basis, noBasis, usedStocks) = marginSells.remove(marketKey, boughtAmount)
+          val (basis, noBasis, usedStocks) = marginSells.remove(marketKey, boughtAmount)(baseMarket)
 
           processed ::=
             Processed.Margin(
@@ -758,25 +745,25 @@ object Report {
               , what = "Close short"
               , fromAmount = closedSoldAmount, fromMarket = soldMarket
               , toAmount = closedBoughtAmount, toMarket = boughtMarket
-              , exchangeRate = marginSoldBoughtExchangeRate
+              , exchangeRate = soldBoughtExchangeRate
               , description = margin.description
               , usedStocksOpt = Some(usedStocks)
-              , marginBuys = marginBuys(marketKey).copy
-              , marginSells = marginSells(marketKey).copy
+              , marginBuys = marginBuys(marketKey)(marginBaseMarket).copy
+              , marginSells = marginSells(marketKey)(marginBaseMarket).copy
             )
 
           val gain = basis - closedSoldAmount
 
           val gainLoss =
             if(gain>0)
-              preprocessGain(Gain(margin.date, margin.id, gain, tradingBaseMarket, margin.exchanger, "") /*, -closedSoldAmount*/)
+              preprocessGain(Gain(margin.date, margin.id, gain, marginBaseMarket, margin.exchanger, "") /*, -closedSoldAmount*/)
             else
-              preprocessLoss(Loss(margin.date, margin.id, gain.abs, tradingBaseMarket, margin.exchanger, ""))
+              preprocessLoss(Loss(margin.date, margin.id, gain.abs, marginBaseMarket, margin.exchanger, ""))
 
-          if(feeInTradingBaseCoin>0) {
+          if(feeInMarginBaseCoin>0) {
             val fee =
               if(margin.exchanger == Poloniex)
-                Fee(margin.date, margin.id, feeInTradingBaseCoin, tradingBaseMarket, margin.exchanger, "", alt = Some(feeInTradingBaseCoin*boughtSoldExchangeRate, boughtMarket))
+                Fee(margin.date, margin.id, feeInMarginBaseCoin, marginBaseMarket, margin.exchanger, "", alt = Some(feeInMarginBaseCoin*boughtSoldExchangeRate, boughtMarket))
               else
                 Fee(margin.date, margin.id, margin.fee, margin.feeMarket, margin.exchanger, "")
             processed ::= preprocessFee(fee)
@@ -798,7 +785,6 @@ object Report {
         result = result ++ List(Processed.Composed(operationNumber, processedAux.reverse))
       return result
     }
-
 
     def dispatch(operation: Operation): Unit = {
       operationTracker.setDate(operationNumber, operation.date)
@@ -834,13 +820,13 @@ object Report {
     }
 
 
-    val startDate = Date(2000,1,1)
-    val endDate = Date(2500,12,31)
+    val startDate = LocalDateTime(2000,1,1)
+    val endDate = LocalDateTime(2500,12,31)
     var currentYear : Int = operations.head.date.getYear
     initializeYear(currentYear)
 
     var minBTC = Double.MaxValue
-    var dateMinBTC = Date(0,0,0)
+    var dateMinBTC = LocalDateTime()
 
     for (operation <- operations if operation.date >= startDate && operation.date <= endDate) {
       val newYear = operation.date.getYear
@@ -854,7 +840,7 @@ object Report {
 
       dispatch(operation)
 
-      val m = stocks.apply(Market.bitcoin).totalAmount
+      val m = stocks.apply(Market.bitcoin)(baseMarket).totalAmount
       if(m < minBTC) {
         minBTC = m
         dateMinBTC = operation.date

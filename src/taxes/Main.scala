@@ -1,9 +1,9 @@
 package taxes
 
-import taxes.Exchanger.{Exchanger, Exchangers}
-import taxes.PriceHistory.{CoinMarketCapPrice, EuroUSDParity}
-import taxes.Util.Logger
-import taxes.Util.Parse.Parse
+import taxes.exchanger.{Exchanger, Exchangers}
+import taxes.priceHistory.{CoinMarketCapPrice, EuroUSDParity}
+import taxes.util.Logger
+import taxes.util.parse.Parse
 
 
 object Main extends App {
@@ -115,6 +115,8 @@ object ParseCommandLine {
                   case e: Exception => Logger.fatal("Non valid epsilon: "+value)
                 }
               config = config.copy(epsilon = eps)
+            } else if(flag == "time-zone") {
+              config = config.copy(timeZone = java.time.ZoneId.of(value))
             } else
               failParse
           } else

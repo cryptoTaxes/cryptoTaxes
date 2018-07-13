@@ -38,22 +38,19 @@ class DoubleEndedContainer[T] extends Iterable[T] {
 
   def append(x : T): Unit = {
     val node = Node(x, null)
-    if(isEmpty) {
+    if(isEmpty)
       firstNode = node
-      lastNode = node
-    } else {
+    else
       lastNode.next = node
-      lastNode = node
-    }
+    lastNode = node
     sz += 1
   }
 
   def removeFirst(): Unit = {
     if(isEmpty)
       throw new NoSuchElementException("removeFirst on empty DoubleEndedContainer")
-    else {
+    else
       firstNode = firstNode.next
-    }
     sz -= 1
   }
 
@@ -65,9 +62,9 @@ class DoubleEndedContainer[T] extends Iterable[T] {
   }
 
   def combineLast(x : T, eq : (T,T) => Boolean, combine : (T,T) => T): Unit = {
-    if(nonEmpty && eq(lastNode.x, x)) {
+    if(nonEmpty && eq(lastNode.x, x))
       lastNode.x = combine(lastNode.x, x)
-    } else
+    else
       append(x)
   }
 

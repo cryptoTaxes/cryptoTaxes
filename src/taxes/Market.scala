@@ -1,12 +1,10 @@
 package taxes
 
-import taxes.Util.Parse.Parse
+import taxes.util.parse.Parse
 
 object Market extends Initializable {
-  type Market = String
-
   private val conversions : Map[Market, Market] = {
-    def parsePair(t : (Market, String)) = t match {
+    def parsePair(t : (Market, Market)) = t match {
       case (market1, market2) => (market1.toUpperCase(), market2.toUpperCase())
     }
     Parse.readAssociations ( Paths.configFile("marketsNormalization.txt")
@@ -49,7 +47,9 @@ object Market extends Initializable {
     def parsePair(t : (Market, String)) = t match {
       case (market, str) => (normalize(market), str.toInt)
     }
-    Parse.readAssociations(Paths.configFile("parityPriorities.txt"), "Reading market priorities").map(parsePair)
+    Parse.readAssociations( Paths.configFile("parityPriorities.txt")
+                          , "Reading market priorities"
+                          ).map(parsePair)
   }
 
   def priority(market : Market) : Int =

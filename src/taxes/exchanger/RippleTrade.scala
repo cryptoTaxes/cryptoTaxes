@@ -1,11 +1,12 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Market.Market
-import taxes.Util.Logger
-import taxes.Util.Parse._
 import taxes._
+import taxes.date._
+import taxes.util._
+import taxes.util.parse._
 
 import scala.io.Source
+
 
 object RippleTrade extends Exchanger {
   override val id: String = "XRPTrade"
@@ -19,7 +20,7 @@ object RippleTrade extends Exchanger {
     }
   )
 
-  private case class Entry(hash : String, amount : Double, currency : Market, date : Date)
+  private case class Entry(hash : String, amount : Double, currency : Market, date : LocalDateTime)
 
   private def readFile(fileName : String) : List[Exchange] = {
     val src = Source.fromFile(fileName)
@@ -33,7 +34,7 @@ object RippleTrade extends Exchanger {
     val entries = for(change <- changes)
       yield
         Entry(
-            date = Date.fromString(change[String]("executed_time"), "yyyy-MM-dd'T'HH:mm:ssX")
+            date = LocalDateTime.parse(change[String]("executed_time"), "yyyy-MM-dd'T'HH:mm:ssX")
           , hash = change[String]("tx_hash")
           , amount = Parse.asDouble(change[String]("amount_change"))
           , currency = change[String]("currency")

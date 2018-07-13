@@ -1,9 +1,10 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Market.Market
-import taxes.Util.Logger
-import taxes.Util.Parse._
 import taxes._
+import taxes.date._
+import taxes.util.Logger
+import taxes.util.parse._
+
 
 object Bittrex extends Exchanger {
   override val id: String = "Bittrex"
@@ -30,8 +31,8 @@ object Bittrex extends Exchanger {
       val (m1, aux) = scLn.next("Pair").span(_ != '-')
       val m2 = aux.tail
 
-      val market1 = Market.normalize(m1)
-      val market2 = Market.normalize(m2)
+      val quoteMarket = Market.normalize(m1)
+      val baseMarket = Market.normalize(m2)
 
       val isSell = scLn.next("Order Type") == "LIMIT_SELL"
       val quantity = scLn.nextDouble("Quantity")
@@ -40,13 +41,14 @@ object Bittrex extends Exchanger {
 
       val price = scLn.nextDouble("Price")
 
-      val dateOpen = Date.fromString(scLn.next("Open Date") + " +0000", "MM/dd/yyyy hh:mm:ss a Z") // Bittrex time is 1 hour behind here
-      val dateClose = Date.fromString(scLn.next("Close Date") + " +0000", "MM/dd/yyyy hh:mm:ss a Z")
+      val fmt = "[M][MM]/[d][dd]/yyyy [h][hh]:mm:ss a"
+      val dateOpen = LocalDateTime.parseAsUTC(scLn.next("Open Date"), fmt)   // Bittrex csv trade history uses UTC time zone
+      val dateClose = LocalDateTime.parseAsUTC(scLn.next("Close Date"), fmt) // but notice that the GUI uses your local time
 
       val desc = "Order: " + orderId
 
-      // market1 is normally BTC, USDT or ETH.
-      // fees are denominated in market1.
+      // quoteMarket is normally BTC, USDT or ETH.
+      // fees are denominated in quoteMarket.
       // Rate is computed as Price / Quantity (here Price stands really for what you're buying or selling)
       // In a sell you release Quantity coins. You get Price minus comissionPaid coins
       // A buy gets you Quantity coins. You pay Price but Price doesn't include comissionPaid
@@ -56,9 +58,9 @@ object Bittrex extends Exchanger {
           Exchange(
             date = dateClose
             , id = orderId
-            , fromAmount = quantity, fromMarket = market2
-            , toAmount = price - comissionPaid, toMarket = market1
-            , feeAmount = comissionPaid, feeMarket = market1
+            , fromAmount = quantity, fromMarket = baseMarket
+            , toAmount = price - comissionPaid, toMarket = quoteMarket
+            , feeAmount = comissionPaid, feeMarket = quoteMarket
             , exchanger = Bittrex
             , description = desc
           )
@@ -66,9 +68,9 @@ object Bittrex extends Exchanger {
           Exchange(
             date = dateClose
             , id = orderId
-            , fromAmount = price, fromMarket = market1
-            , toAmount = quantity, toMarket = market2
-            , feeAmount = comissionPaid, feeMarket = market1
+            , fromAmount = price, fromMarket = quoteMarket
+            , toAmount = quantity, toMarket = baseMarket
+            , feeAmount = comissionPaid, feeMarket = quoteMarket
             , exchanger = Bittrex
             , description = desc
           )
@@ -79,7 +81,7 @@ object Bittrex extends Exchanger {
   }
 
   private def withdrawalsReader(fileName: String) = new FileSource[Operation](fileName) {
-    def withdrawalFee(market : Market, date : Date) : Double = {
+    def withdrawalFee(market : Market, date : LocalDateTime) : Double = {
       market match {
         case Market.bitcoin =>
           if(date.getYear<2017)
@@ -116,7 +118,7 @@ object Bittrex extends Exchanger {
         if (ok) {
           val scLn = opts.map { case Some(ln) => SeparatedScanner(ln, "[ \t]+") }
           try {
-            val date = Date.fromString(scLn(0).next(), "MM/dd/yyyy")
+            val date = LocalDateTime.parseAsMyZoneId(scLn(0).next()+" 00:00:00", "MM/dd/yyyy HH:mm:ss") // this is local time as it's taken from the GUI
             val currency = Market.normalize(scLn(0).next())
             val amount = scLn(0).nextDouble()
             val status = scLn(0).next()

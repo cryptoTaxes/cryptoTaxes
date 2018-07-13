@@ -1,9 +1,9 @@
-package taxes.Util.Parse
+package taxes.util.parse
 
-import taxes.Util.Logger
+import taxes.util.Logger
 
-package object Parse {
 
+object Parse {
   def asDouble(str : String) : Double = {
     val sc = new java.util.Scanner(str)
     val double = sc.nextDouble()
@@ -62,11 +62,11 @@ package object Parse {
     while (sc.hasNextLine) {
       val line = sc.nextLine()
       lineNumber += 1
-      if(!Parse.isComment(line)) {
+      if(!isComment(line)) {
         try {
-          val (list, normalized0) = Parse.split(line, "->")
+          val (list, normalized0) = split(line, "->")
           val normalized = normalized0.toUpperCase()
-          val alternatives = Parse.sepBy(list, ",")
+          val alternatives = sepBy(list, ",")
           for (alt <- alternatives)
             associations += (alt.toUpperCase() -> normalized)
         } catch {

@@ -1,7 +1,9 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 import taxes._
+import taxes.date._
+import taxes.util.parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
+
 
 object LocalBTC extends Exchanger {
   override val id: String = "LocalBTC"
@@ -20,7 +22,7 @@ object LocalBTC extends Exchanger {
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val orderId = scLn.next("Order ID")
-      val date = Date.fromOffsetString(scLn.next("Date").replace(' ','T'))
+      val date = LocalDateTime.parse(scLn.next("Date"), "yyyy-MM-dd HH:mm:ssXXX") // LocalBTC includes a +hh:mm Offset
       val buyer = scLn.next("Buyer")
       val seller = scLn.next("Seller")
       val tradeType = scLn.next("Trade Type")
@@ -40,7 +42,7 @@ object LocalBTC extends Exchanger {
       scLn.close()
 
       val desc = "Order: " + orderId + "/" + reference
-      if(tradeType=="ONLINE_SELL") {
+      if(tradeType=="ONLINE_SELL") { // ONLINE_SELL is really a buy
         val exchange = Exchange(
           date = date
           , id = orderId
@@ -53,6 +55,7 @@ object LocalBTC extends Exchanger {
 
         return CSVReader.Ok(exchange)
       } else
+        // toDo support sells at LocalBTC
         return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
       /*
           Exchange(

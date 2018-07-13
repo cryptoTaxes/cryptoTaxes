@@ -1,7 +1,9 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 import taxes._
+import taxes.date._
+import taxes.util.Logger
+import taxes.util.parse._
 
 object GDAX extends Exchanger {
   override val id: String = "GDAX"
@@ -32,21 +34,25 @@ object GDAX extends Exchanger {
       scLn.close()
 
       val desc = "Order: " + tradeID
-      val date = Date.fromString(createdAt, "yyyy-MM-dd'T'HH:mm:ss.SSSX")
+      val date = LocalDateTime.parse(createdAt, "yyyy-MM-dd'T'HH:mm:ss.SSSX") // GDAX includes a zone-offset 'Z' at the end
 
-      val (market1, aux) = product.span(_ != '-')
-      val market2 = aux.tail
+      val (baseMarket_0, quoteMarket_0) = Parse.split(product, "-")
+      val baseMarket = Market.normalize(baseMarket_0)
+      val quoteMarket = Market.normalize(quoteMarket_0)
 
       val sizeMarket = Market.normalize(sizeUnit)
       val priceFeeTotalMarket = Market.normalize(priceFeeTotalUnit)
+
+      if(sizeMarket != baseMarket)
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s\nas sizeMarket(%s) and quoteMarket(%s) are different.".format(id, Paths.pathFromData(fileName), line, sizeMarket, quoteMarket))
 
       if (side == "SELL") {
         val exchange =
           Exchange(
             date = date
             , id = tradeID
-            , fromAmount = size, fromMarket = sizeMarket
-            , toAmount = total, toMarket = priceFeeTotalMarket
+            , fromAmount = size, fromMarket = baseMarket
+            , toAmount = total, toMarket = quoteMarket
             , feeAmount = fee, feeMarket = priceFeeTotalMarket
             , exchanger = GDAX
             , description = desc
@@ -57,8 +63,8 @@ object GDAX extends Exchanger {
           Exchange(
             date = date
             , id = tradeID
-            , fromAmount = total.abs, fromMarket = priceFeeTotalMarket
-            , toAmount = size, toMarket = sizeMarket
+            , fromAmount = total.abs, fromMarket = quoteMarket
+            , toAmount = size, toMarket = baseMarket
             , feeAmount = fee, feeMarket = priceFeeTotalMarket
             , exchanger = GDAX
             , description = desc

@@ -1,6 +1,8 @@
-package taxes.Util.Parse
+package taxes.util.parse
+
 
 case class ScannerException(msg : String) extends RuntimeException(msg)
+
 
 trait Scanner {
   def next() : String

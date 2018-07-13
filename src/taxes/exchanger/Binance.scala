@@ -1,8 +1,9 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Market.Market
-import taxes.Util.Parse._
 import taxes._
+import taxes.date._
+import taxes.util.parse._
+
 
 object Binance extends Exchanger {
   override val id: String = "Binance"
@@ -22,7 +23,7 @@ object Binance extends Exchanger {
     private val baseMarkets = List[Market]("BNB", "BTC", "ETH", "USDT")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = Date.fromString(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss")
+      val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Binance trade history xlsx file uses UTC time zone
       val pair = scLn.next("Market")
 
       baseMarkets.find(pair.endsWith) match {
@@ -30,8 +31,8 @@ object Binance extends Exchanger {
           return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s. Base pair unknown.".format(id, Paths.pathFromData(fileName), line))
         case Some(suffix) =>
 
-          val market1 = Market.normalize(pair.take(pair.length - suffix.length))
-          val market2 = Market.normalize(suffix)
+          val baseMarket = Market.normalize(pair.take(pair.length - suffix.length))
+          val quoteMarket = Market.normalize(suffix)
 
           val orderType = scLn.next("Type")
           val price = scLn.nextDouble("Price")
@@ -48,31 +49,30 @@ object Binance extends Exchanger {
           // If feeCoin is BNB you get `amount' but you additionally pay a BNB fee
           // Else feeCoin is toMarket and you really get `amount' - `feeAmount'
 
-          // toDo check an example where you buy or sell BNB
-
           if (orderType == "BUY") {
-            val toMarket = market1
-
-            if(feeCoin == toMarket) {
+            // toDo check this
+            // This has to be the first case as if you're buying BNB and you pay
+            // your fee with BNB, your fee is a deducted one so I assume the case
+            // where you get `amount` should apply for when you buy BNB
+            if(feeCoin == Market.normalize("BNB")) {
               val exchange = Exchange(
                 date = date
                 , id = ""
-                , fromAmount = total, fromMarket = market2
-                , toAmount = amount - feeAmount, toMarket = market1
-                , feeAmount = feeAmount, feeMarket = feeCoin
+                , fromAmount = total, fromMarket = quoteMarket
+                , toAmount = amount, toMarket = baseMarket
+                , feeAmount = 0, feeMarket = feeCoin
+                , detachedFee = Some(feeAmount, feeCoin)
                 , exchanger = Binance
                 , description = desc
               )
-
               return CSVReader.Ok(exchange)
-            } else if(feeCoin == Market.normalize("BNB")) {
+            } else if(feeCoin == baseMarket) {
               val exchange = Exchange(
                 date = date
                 , id = ""
-                , fromAmount = total, fromMarket = market2
-                , toAmount = amount, toMarket = market1
+                , fromAmount = total, fromMarket = quoteMarket
+                , toAmount = amount - feeAmount, toMarket = baseMarket // this has been confirmed
                 , feeAmount = feeAmount, feeMarket = feeCoin
-                , isDetachedFee = true
                 , exchanger = Binance
                 , description = desc
               )
@@ -81,28 +81,26 @@ object Binance extends Exchanger {
             } else
               return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
           } else if (orderType == "SELL") {
-            val toMarket = market2
-
-            if(feeCoin == toMarket) {
+            if(feeCoin == Market.normalize("BNB")) {
               val exchange = Exchange(
                 date = date
                 , id = ""
-                , fromAmount = amount, fromMarket = market1
-                , toAmount = total - feeAmount, toMarket = market2
-                , feeAmount = feeAmount, feeMarket = feeCoin
+                , fromAmount = amount, fromMarket = baseMarket
+                , toAmount = total, toMarket = quoteMarket
+                , feeAmount = 0, feeMarket = feeCoin
+                , detachedFee = Some(feeAmount, feeCoin)
                 , exchanger = Binance
                 , description = desc
               )
 
               return CSVReader.Ok(exchange)
-            } else if(feeCoin == Market.normalize("BNB")) {
+            } else if(feeCoin == quoteMarket) {
               val exchange = Exchange(
                 date = date
                 , id = ""
-                , fromAmount = amount, fromMarket = market1
-                , toAmount = total, toMarket = market2
+                , fromAmount = amount, fromMarket = baseMarket
+                , toAmount = total - feeAmount, toMarket = quoteMarket // toDo the fact that we don't get total but total - feeAmount whe selling needs to be confirmed
                 , feeAmount = feeAmount, feeMarket = feeCoin
-                , isDetachedFee = true
                 , exchanger = Binance
                 , description = desc
               )

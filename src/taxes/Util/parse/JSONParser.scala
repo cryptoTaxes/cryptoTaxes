@@ -1,6 +1,8 @@
-package taxes.Util.Parse
+package taxes.util.parse
+
 
 case class JSONException(msg : String) extends RuntimeException(msg)
+
 
 trait JSONParser {
   def getString(key : String) : String

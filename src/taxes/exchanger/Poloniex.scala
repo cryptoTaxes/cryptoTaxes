@@ -1,7 +1,9 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Util.Parse._
 import taxes._
+import taxes.date._
+import taxes.util.parse.{Scanner, SeparatedScanner, _}
+
 
 object Poloniex extends Exchanger {
   override val id: String = "Poloniex"
@@ -25,11 +27,26 @@ object Poloniex extends Exchanger {
       SeparatedScanner(line, "[,%]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = Date.fromString(scLn.next("Date")+" +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
+      val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Poloniex csv trade history uses UTC time zone
 
-      val (aux1, aux2) = scLn.next("Pair").span(_ != '/')
-      val market1 = Market.normalize(aux1)
-      val market2 = Market.normalize(aux2.tail)
+      val (aux1, aux2) = Parse.split(scLn.next("Pair"), "/")
+      val baseMarket = Market.normalize(aux1)
+      val quoteMarket = Market.normalize(aux2)
+
+      // BEWARE!!!
+      // According to the Wikipedia (https://en.wikipedia.org/wiki/Currency_pair),
+      // throughout this program we call quote the market unit used for the price and
+      // base the other market in the pair. In other words, price is expressed as a quote per base ratio.
+      //
+      // So, if price for ETH/BTC pair is 0.07 BTC/ETH, quote is BTC and base is ETH.
+      // When you sell a pair, you release coins from the base market and
+      // when you buy, you acquire coins from the base market.
+      //
+      // This seems to be the usual convention but Poloniex uses the opposite one. Nevertheless
+      // we still maintain the same terminology used in the rest of this program for Poloniex too.
+      // As a consequence:
+      // field `Base Total Less Fee` in csv really stands for `Quote Total Less Fee` and
+      // field `Quote Total Less Fee` in csv really stands for `Base Total Less Fee`.
 
       val category = scLn.next("Category")
       val orderType = scLn.next("Order Type")
@@ -67,9 +84,9 @@ object Poloniex extends Exchanger {
             Exchange(
               date = date
               , id = orderNumber
-              , fromAmount = amount, fromMarket = market1
-              , toAmount = total - fee, toMarket = market2
-              , feeAmount = fee, feeMarket = market2
+              , fromAmount = amount, fromMarket = baseMarket
+              , toAmount = total - fee, toMarket = quoteMarket
+              , feeAmount = fee, feeMarket = quoteMarket
               , exchanger = Poloniex
               , description = desc
             )
@@ -78,11 +95,11 @@ object Poloniex extends Exchanger {
             Exchange(
               date = date
               , id = orderNumber
-              , fromAmount = total, fromMarket = market2
-              , toAmount = amount - fee, toMarket = market1
-              , feeAmount = fee, feeMarket = market1
-              // Usually, market2 is BTC so we set fee in BTC
-              // fee = amount*feePercent/100*price, feeMarket = market2
+              , fromAmount = total, fromMarket = quoteMarket
+              , toAmount = amount - fee, toMarket = baseMarket
+              , feeAmount = fee, feeMarket = baseMarket
+              // Usually, quoteMarket is BTC so we set fee in BTC
+              // fee = amount*feePercent/100*price, feeMarket = quoteMarket
               , exchanger = Poloniex
               , description = desc
             )
@@ -93,12 +110,12 @@ object Poloniex extends Exchanger {
         val settlement = Exchange(
           date = date
           , id = orderNumber
-          , fromAmount = total, fromMarket = market2
-          , toAmount = amount*(100-feePercent)/100, toMarket = market1
-          , feeAmount = amount*feePercent/100, feeMarket = market1
+          , fromAmount = total, fromMarket = quoteMarket
+          , toAmount = amount*(100-feePercent)/100, toMarket = baseMarket
+          , feeAmount = amount*feePercent/100, feeMarket = baseMarket
           , isSettlement = true
-          // Usually, market2 is BTC so we can set fee in BTC
-          //, fee = amount*feePercent/100*price, feeMarket = market2
+          // Usually, quoteMarket is BTC so we can set fee in BTC
+          //, fee = amount*feePercent/100*price, feeMarket = quoteMarket
           , exchanger = Poloniex
           , description = desc + " settlement"
         )
@@ -110,11 +127,11 @@ object Poloniex extends Exchanger {
             Margin(
               date = date
               , id = orderNumber
-              , fromAmount = amount, fromMarket = market1 // we short the whole amount but only pay with provided total minus fee
-              , toAmount = total, toMarket = market2
-              , fee = fee, feeMarket = market2 // market2 is usually BTC
+              , fromAmount = amount, fromMarket = baseMarket // we short the whole amount but only pay with provided total minus fee
+              , toAmount = total - fee /*this total*/ /* baseTotalLessFee */, toMarket = quoteMarket
+              , fee = fee, feeMarket = quoteMarket // quoteMarket is usually BTC
               , orderType = Operation.OrderType.Sell
-              , pair = (market1, market2)
+              , pair = (baseMarket, quoteMarket)
               , exchanger = Poloniex
               , description = desc
             )
@@ -123,13 +140,13 @@ object Poloniex extends Exchanger {
             Margin(
               date = date
               , id = orderNumber
-              , fromAmount = total * (100 - feePercent)/100, fromMarket = market2
-              , toAmount = quoteTotalLessFee, toMarket = market1
-              , fee = fee, feeMarket = market1
-              // Usually, market2 is BTC so we can set fee in BTC
-              //, fee = amount*feePercent/100*price, feeMarket = market2
+              , fromAmount = total /*this * (100 - feePercent)/100 */, fromMarket = quoteMarket
+              , toAmount = quoteTotalLessFee, toMarket = baseMarket
+              , fee = fee, feeMarket = baseMarket
+              // Usually, quoteMarket is BTC so we can set fee in BTC
+              //, fee = amount*feePercent/100*price, feeMarket = quoteMarket
               , orderType = Operation.OrderType.Buy
-              , pair = (market1, market2)
+              , pair = (baseMarket, quoteMarket)
               , exchanger = Poloniex
               , description = desc
             )
@@ -179,8 +196,8 @@ object Poloniex extends Exchanger {
       val amount = scLn.nextDouble("Amount")
       val duration = scLn.nextDouble("Duration")
       val totalFee = scLn.nextDouble("Total Fee")
-      val open = Date.fromString(scLn.next("Open Date") + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
-      val close = Date.fromString(scLn.next("Close Date") + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
+      val open = LocalDateTime.parseAsUTC(scLn.next("Open Date"), "yyyy-MM-dd HH:mm:ss") // Poloniex csv borrowing history uses UTC time zone
+      val close = LocalDateTime.parseAsUTC(scLn.next("Close Date"), "yyyy-MM-dd HH:mm:ss") // Poloniex csv borrowing history uses UTC time zone
 
       val desc = "Borrowing fee"
 
@@ -203,7 +220,7 @@ object Poloniex extends Exchanger {
       SeparatedScanner(line, "[,%]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = Date.fromString(scLn.next("Date") + " +0000", "yyyy-MM-dd HH:mm:ss Z") // Poloniex time is 1 hour behind here
+      val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Poloniex csv withdrawal history uses UTC time zone
       val currency = Market.normalize(scLn.next("Currency"))
       val amount = scLn.nextDouble("Amount")
       val address = scLn.next("Address")

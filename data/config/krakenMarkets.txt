@@ -5,8 +5,22 @@
 
 BCH       -> BCH
 EUR, ZEUR -> EURO
-XXBT      -> BTC
+XBT, XXBT -> BTC
 XETC      -> ETC
 XETH      -> ETH
+XICN      -> ICN
 XLTC      -> LTC
+XMLN      -> MLN
+XNMC      -> NMC
+XREP      -> REP
+XXDG      -> XDG
+XXLM      -> XLM
+XXMR      -> XMR
 XXRP      -> XRP
+XXVN      -> XVN
+XZEC      -> ZEC
+ZCAD      -> CAD
+ZGBP      -> GBP
+ZJPY      -> JPY
+ZKRW      -> KRW
+ZUSD      -> USD

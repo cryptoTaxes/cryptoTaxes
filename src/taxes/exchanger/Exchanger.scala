@@ -1,9 +1,10 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Util.Logger
 import taxes._
+import taxes.util.Logger
 
 import scala.collection.mutable.ListBuffer
+
 
 trait Exchanger extends Initializable {
   val id : String

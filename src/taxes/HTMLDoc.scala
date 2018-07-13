@@ -2,9 +2,7 @@ package taxes
 
 import java.io.PrintStream
 
-import taxes.Market.Market
-import taxes.Util.Logger
-import HTMLDoc.HTML
+import taxes.util.Logger
 
 import scala.collection.mutable.ListBuffer
 
@@ -15,8 +13,6 @@ trait ToHTML {
 
 
 object HTMLDoc {
-  type HTML = scala.xml.Elem
-
   val df = Format.shortDf
 
   lazy val baseMarket = Config.config.baseCoin.market

@@ -19,8 +19,8 @@ object PriceCalculation extends Enumeration {
   val open : Method = 0
   val close : Method = 1
   val openClose : Method = 2
-  val high : Method = 3
-  val low : Method = 4
+  val low : Method = 3
+  val high : Method = 4
   val lowHigh : Method = 5
 }
 
@@ -47,6 +47,7 @@ case class Config( user : String
                   , accountingMethod: Accounting.Method
                   , decimalPlaces : Int
                   , epsilon : Double
+                  , timeZone : java.time.ZoneId
                   )
 
 
@@ -66,5 +67,6 @@ object DefaultConfig extends Config( user = "demo"
                                      , accountingMethod = Accounting.FIFO
                                      , decimalPlaces = 2
                                      , epsilon = 0.00000001
+                                     , timeZone = java.time.ZoneId.systemDefault()
                                      )
 

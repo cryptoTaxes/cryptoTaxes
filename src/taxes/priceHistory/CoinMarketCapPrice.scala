@@ -1,31 +1,32 @@
-package taxes.PriceHistory
+package taxes.priceHistory
 
-import taxes.Market.Market
-import taxes.Util.Logger
-import taxes.Util.Parse.Parse
 import taxes._
+import taxes.date._
+import taxes.util._
+import taxes.util.parse.Parse
 
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
+
 
 object CoinMarketCapPrice extends Initializable {
   def apply(market : Market, fileFullPath : String, coinMarketCapID: String) : CoinMarketCapPrice =
     new CoinMarketCapPrice(market, fileFullPath, coinMarketCapID)
 
-  private def parseMonth(month : String) : String =
+  private def parseMonth(month : String) : Int =
     month match {
-      case "Jan" => "01"
-      case "Feb" => "02"
-      case "Mar" => "03"
-      case "Apr" => "04"
-      case "May" => "05"
-      case "Jun" => "06"
-      case "Jul" => "07"
-      case "Aug" => "08"
-      case "Sep" => "09"
-      case "Oct" => "10"
-      case "Nov" => "11"
-      case "Dec" => "12"
+      case "Jan" =>  1
+      case "Feb" =>  2
+      case "Mar" =>  3
+      case "Apr" =>  4
+      case "May" =>  5
+      case "Jun" =>  6
+      case "Jul" =>  7
+      case "Aug" =>  8
+      case "Sep" =>  9
+      case "Oct" => 10
+      case "Nov" => 11
+      case "Dec" => 12
     }
 
   private def parsePair(t : (Market, String)) = t match {
@@ -44,9 +45,9 @@ object CoinMarketCapPrice extends Initializable {
   }
 
   // returns price in USD for a market at a given date
-  def apply(market : Market, date : Date) : Price =
+  def apply(market : Market, date : LocalDateTime) : Price =
     markets2CoinMarketPrices.get(market) match  {
-      case Some(prices) => prices(date.at00)
+      case Some(prices) => prices(date)
       case None => Logger.fatal("price for %s at %s not found".format(market, date))
     }
 
@@ -119,9 +120,9 @@ object CoinMarketCapPrice extends Initializable {
 
 class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID: String) extends PriceHistory {
 
-  private def readPrices() : scala.collection.mutable.Map[Date, Price] = {
+  private def readPrices() : scala.collection.mutable.Map[LocalDate, Price] = {
     Logger.trace("Reading CoinMarketPrice from " + fileFullPath + ".")
-    val prices = scala.collection.mutable.Map[Date, Price]()
+    val prices = scala.collection.mutable.Map[LocalDate, Price]()
     val file = new java.io.File(fileFullPath)
     val sc = new java.util.Scanner(file)
     val header = sc.nextLine()
@@ -130,14 +131,14 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
       val line = sc.nextLine()
       lineNumber += 1
       if (!Parse.isComment(line)) {
-        val scLn = new java.util.Scanner(line).useDelimiter("[\t ]+")
+        val scLn = new java.util.Scanner(line).useDelimiter("[\t ,]+")
 
         try {
           val month = scLn.next()
-          val day = scLn.next()
-          val year = scLn.next()
+          val day = scLn.nextInt()
+          val year = scLn.nextInt()
 
-          val date = Date.fromString(month + day + year, "MMMdd,yyyy")
+          val date = LocalDate.apply(year, CoinMarketCapPrice.parseMonth(month), day)
           val open = scLn.nextDouble()
           val high = scLn.nextDouble()
           val low = scLn.nextDouble()
@@ -164,10 +165,10 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
 
   private lazy val prices = readPrices()
 
-  def apply(date : Date) : Price =
-    prices.get(date.at00) match  {
+  def apply(date : LocalDateTime) : Price =
+    prices.get(LocalDate.of(date)) match  {
       case None =>
-        Logger.fatal("price for %s at %s not found".format(market, date))
+        Logger.fatal("price for %s at %s not found\n".format(market, date))
       case Some(price) => price
     }
 

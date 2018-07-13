@@ -55,6 +55,8 @@ The following command line parameters can be written after the command:
 
     * `highLow`, to use average of daily high and low prices of the market.
 
+* `-time-zone=z` to use `z` as your time zone for date/time conversions.
+
 After running the program, output report will be produced in folder `data/usr/yourUser/output`.
 
 ## Configuration

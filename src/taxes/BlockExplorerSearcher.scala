@@ -1,8 +1,9 @@
 package taxes
 
-import taxes.Market.Market
-import taxes.Util.Logger
-import taxes.Util.Parse.Parse
+import taxes.date._
+import taxes.util.Logger
+import taxes.util.parse.Parse
+
 
 object BlockExplorerSearcher {
   def apply(market : Market, txid : String, address : String) =
@@ -10,7 +11,7 @@ object BlockExplorerSearcher {
 
   def fromURL(urlString : String) : String = {
     import java.io.BufferedInputStream
-    import java.net.{URL, HttpURLConnection}
+    import java.net.{HttpURLConnection, URL}
 
     val sb = new StringBuilder
     var conn : HttpURLConnection = null
@@ -57,12 +58,12 @@ object BlockExplorerSearcher {
     return token
   }
 
-  def btcScrap(txid : String, address : String) : (Date, Double, Double) = {
+  def btcScrap(txid : String, address : String) : (LocalDateTime, Double, Double) = {
     val url = "https://blockchain.info/tx/%s".format(txid)
     val str = BlockExplorerSearcher.fromURL(url)
 
-    val dateStr = locateAndSkip(str, "<td>Received Time</td>", '>', 1, "</td>")
-    val date = Date.fromString(dateStr, "yyyy-MM-dd HH:mm:ss")
+    val dateStr = Parse.trimSpaces(locateAndSkip(str, "<td>Received Time</td>", '>', 1, "</td>"))
+    val date = LocalDateTime.parse(dateStr+"+0000", "yyyy-MM-dd HH:mm:ssZ")
 
     val amountStr = locateAndSkip(str, "%s</a>".format(address), '>', 2, " BTC")
     val amount = Parse.asDouble(amountStr)
@@ -73,12 +74,12 @@ object BlockExplorerSearcher {
     return (date, amount, fee)
   }
 
-  def etcScrap(txid : String, address : String) : (Date, Double, Double) = {
+  def etcScrap(txid : String, address : String) : (LocalDateTime, Double, Double) = {
     val url = "https://gastracker.io/tx/%s".format(txid)
     val str = BlockExplorerSearcher.fromURL(url)
 
     val dateStr = locateAndSkip(str, "<dt>Timestamp</dt>", '>', 1, "</dd>")
-    val date = Date.fromString(dateStr, "EE MMM dd hh:mm:ss zzz yyyy")
+    val date = LocalDateTime.parse(dateStr, "EE MMM dd HH:mm:ss zzz yyyy")
 
     val amountStr = locateAndSkip(str, "<dt>Value</dt>", '>', 1, " Ether")
     val amount = Parse.asDouble(amountStr)
@@ -98,9 +99,9 @@ object BlockExplorerSearcher {
     return (date, amount, fee)
   }
 
-  def chainzCryptoidInfoScrap(coin : String, txid : String, address : String) : (Date, Double, Double) = {
-    import scala.util.parsing.json.JSON
+  def chainzCryptoidInfoScrap(coin : String, txid : String, address : String) : (LocalDateTime, Double, Double) = {
     import scala.collection.immutable.Map
+    import scala.util.parsing.json.JSON
 
     val url = "https://chainz.cryptoid.info/%s/api.dws?q=txinfo;t=%s".format(coin,txid)
     val response = BlockExplorerSearcher.fromURL(url)
@@ -111,7 +112,7 @@ object BlockExplorerSearcher {
       case None => Logger.fatal("BlockExplorerScraper.chainzCryptoidInfoScrap: could not parse JSON %s".format(response))
       case Some(m) => {
         val map = m.asInstanceOf[Map[String, Any]]
-        val date = Date.fromUnix(map("timestamp").asInstanceOf[Double].toLong)
+        val date = LocalDateTime.fromUnix(map("timestamp").asInstanceOf[Double].toLong)
         val fee = map("fees").asInstanceOf[Double]
         val outputs = map.asInstanceOf[Map[String, List[Map[String, Any]]]]("outputs")
 
@@ -135,15 +136,15 @@ object BlockExplorerSearcher {
     }
   }
 
-  def ltcScrap(txid : String, address : String) : (Date, Double, Double) =
+  def ltcScrap(txid : String, address : String) : (LocalDateTime, Double, Double) =
     chainzCryptoidInfoScrap("ltc", txid, address)
 
-  def vtcScrap(txid : String, address : String) : (Date, Double, Double) =
+  def vtcScrap(txid : String, address : String) : (LocalDateTime, Double, Double) =
     chainzCryptoidInfoScrap("vtc", txid, address)
 
-  def dogeScrap(txid : String, address : String) : (Date, Double, Double) = {
-    import scala.util.parsing.json.JSON
+  def dogeScrap(txid : String, address : String) : (LocalDateTime, Double, Double) = {
     import scala.collection.immutable.Map
+    import scala.util.parsing.json.JSON
 
     val url = "https://dogechain.info/api/v1/transaction/%s".format(txid)
     val response = BlockExplorerSearcher.fromURL(url)
@@ -160,7 +161,7 @@ object BlockExplorerSearcher {
 
         val map1 = map0("transaction").asInstanceOf[Map[String,Any]]
 
-        val date = Date.fromUnix(map1("time").asInstanceOf[Double].toLong)
+        val date = LocalDateTime.fromUnix(map1("time").asInstanceOf[Double].toLong)
 
         val outputs = map1.asInstanceOf[Map[String, List[Map[String, Any]]]]("outputs")
 
@@ -200,26 +201,26 @@ object BlockExplorerSearcher {
     }
   }
 
-  def dogeScrap2(url : String) : (Date, Double, Double) = {
+  def dogeScrap2(url : String) : (LocalDateTime, Double, Double) = {
     val str = BlockExplorerSearcher.fromURL(url)
 
     val feeStr = locateAndSkip(str, "<td>Fee</td>", '>', 1, "<")
     val fee = Parse.asDouble(feeStr.replace("<small>", "").replace("</small>", ""))
 
     val dateStr = locateAndSkip(str, "Appeared in block", '>', 2, "<")
-    val date = Date.fromString(dateStr.replace(" at ", ""), "yyyy-MM-dd hh:mm:ss z")
+    val date = LocalDateTime.parse(dateStr.replace(" at ", ""), "yyyy-MM-dd hh:mm:ss z")
     return (date, 0, fee)
   }
 
 
-  def vtcScrap2(url : String) : (Date, Double, Double) = {
+  def vtcScrap2(url : String) : (LocalDateTime, Double, Double) = {
     val str = BlockExplorerSearcher.fromURL(url)
 
     val feeStr = locateAndSkip(str, "<th>Fees</th>", '>', 1, "V")
     val fee = Parse.asDouble(feeStr.replace("<span class='muteds'>", "").replace("</span>", ""))
 
     val dateStr = locateAndSkip(str, "<th>Time</th>", '>', 1, "<")
-    val date = Date.fromString(dateStr.replace(" at ", ""), "yyyy-MM-dd hh:mm:ss z")
+    val date = LocalDateTime.parse(dateStr.replace(" at ", ""), "yyyy-MM-dd hh:mm:ss z")
     return (date, 0, fee)
   }
 }

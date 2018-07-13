@@ -1,6 +1,5 @@
 package taxes
 
-import taxes.Market.Market
 
 object Paths extends Initializable {
   val data = "data"
@@ -12,7 +11,6 @@ object Paths extends Initializable {
     else
       fullPath
   }
-
 
   val prices = data+"/prices"
 
@@ -60,7 +58,7 @@ object Paths extends Initializable {
   lazy val cacheFolder = usr+"/"+Config.config.user+"/cache"
 
   override def init(): Unit = {
-    for(folderName <- List(userInputFolder, cacheFolder)) {
+    for(folderName <- List(userInputFolder, userOutputFolder, cacheFolder)) {
       val folder = new java.io.File(folderName)
       if (!folder.exists())
         folder.mkdir()

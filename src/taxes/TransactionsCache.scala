@@ -1,29 +1,33 @@
 package taxes
 
 import java.io.{File, PrintStream}
-import taxes.Market.Market
-import taxes.Util.Logger
-import taxes.Util.Parse.{CSVReader, Scanner, SeparatedScanner}
+
+import taxes.date._
+import taxes.util.Logger
+import taxes.util.parse.{CSVReader, Scanner, SeparatedScanner}
+
 
 object TransactionsCache extends Initializable with Finalizable {
 
   case class TxKey(market: Market, txid : String, address : String)
-  case class TxInfo(amount : Double, fee : Double, date : Date)
+  case class TxInfo(amount : Double, fee : Double, localDate : LocalDateTime)
 
   private val map = scala.collection.mutable.Map[TxKey, TxInfo]()
 
   private val fileName = Paths.cacheFolder+"/"+"transactions.csv"
 
-  private val df = "yyyy-MM-dd hh:mm:ss"
-  private val sdf = new java.text.SimpleDateFormat(df)
+  private val sdf = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSVV")
 
   def saveToDisk(): Unit = {
     val f = new File(fileName)
     val ps = new PrintStream(f)
     val header = "market,txid,address,amount,fee,date"
     ps.println(header)
-    for((key,info) <- map)
-      ps.println(List(key.market, key.txid, key.address, info.amount, info.fee, sdf.format(info.date)).mkString(","))
+    for((key,info) <- map) {
+      // we store it as a ZonedDateTime in case zone is changed later so that date is consistent
+      val zonedDateTime = ZonedDateTime.of(info.localDate, Config.config.timeZone)
+      ps.println(List(key.market, key.txid, key.address, info.amount, info.fee, sdf.format(zonedDateTime)).mkString(","))
+    }
     ps.close()
   }
 
@@ -40,8 +44,9 @@ object TransactionsCache extends Initializable with Finalizable {
         val address = scLn.next()
         val amount = scLn.nextDouble()
         val fee = scLn.nextDouble()
-        val date = Date.fromString(scLn.next(), df)
-        return CSVReader.Ok((TxKey(market, txid, address), TxInfo(amount, fee, date)))
+        val zonedDate = ZonedDateTime.parse(scLn.next(), sdf)
+        val localDate = LocalDateTime.fromZonedDateTime(zonedDate)
+        return CSVReader.Ok((TxKey(market, txid, address), TxInfo(amount, fee, localDate)))
       }
     }
     if(new File(fileName).exists())

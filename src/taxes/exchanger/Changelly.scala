@@ -1,8 +1,9 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Market.Market
-import taxes.Util.Parse.{CSVReader, CSVSortedOperationReader, QuotedScanner, Scanner}
 import taxes._
+import taxes.date._
+import taxes.util.parse.{CSVReader, CSVSortedOperationReader, QuotedScanner, Scanner}
+
 
 object Changelly extends Exchanger {
 
@@ -32,8 +33,8 @@ object Changelly extends Exchanger {
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val status = scLn.next("Status")
       if(status=="finished") {
-        val date = Date.fromString(scLn.next("Date")+" +0000", "dd MMM yyyy, HH:mm:ss Z")
-
+        val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "dd MMM yyyy, HH:mm:ss")  // Changelly transactions-history.csv file uses UTC time zone
+                                                                                         // Note that the detailed transactions shown in the GUI use a different time zone
         val (amount, soldMarket) = split(scLn.next("Sold"))
         val (totalFee, feeMarket) = split(scLn.next("Fee"))
 

@@ -1,15 +1,16 @@
 package taxes
 
-import taxes.Exchanger.Exchanger
-import taxes.Market.Market
+import taxes.date._
+import taxes.exchanger.Exchanger
+
 
 trait Operation {
-  def date : Date
+  def date : LocalDateTime
   def id : String
   def exchanger : Exchanger
 
-  protected val dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", java.util.Locale.ENGLISH)
-  protected def dateToString(date : Date) : String = dateFormat.format(date)
+  def dateFormatted =
+    java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(date)
 }
 
 
@@ -37,61 +38,62 @@ object Operation {
   otherwise, feeAmount is not part of the exchange hence
       we exchanged ((fromAmount)) for ((toAmount))
   ************************************************************************/
-case class Exchange(date : Date
+case class Exchange(date : LocalDateTime
                     , id : String
                     , fromAmount : Double, fromMarket : Market
                     , toAmount : Double, toMarket : Market
                     , feeAmount : Double, feeMarket : Market
+                    , detachedFee : Option[(Double, Market)] = None
                     , isSettlement : Boolean = false
-                    , isDetachedFee : Boolean = false
                     , exchanger: Exchanger
                     , description : String
                     ) extends Operation {
 
   override def toString : String =
-    "Exchange(%s %18.8f %-5s -> %18.8f %-5s  %18.8f %-5s  %s)" format (dateToString(date), fromAmount, fromMarket, toAmount, toMarket, feeAmount, feeMarket, description)
+    "Exchange(%s %18.8f %-5s -> %18.8f %-5s  %18.8f %-5s  %s)" format (dateFormatted, fromAmount, fromMarket, toAmount, toMarket, feeAmount, feeMarket, description)
 }
 
 
 /*************************************************************************
-  NOTE THE LACK OF SYMMETRY:
+  * Contrary to exchange, fee is not part of the exchange rate.
+  *
   * Only toAmount (without fee, even if feeMarket == toMarket)
     will be added to your stock of coins
-  * fromAmount (plus fee, if feeMarket == fromMarket)
-    will be deducted from your stocks.
+  * fromAmount (without fee, if feeMarket == fromMarket)
+    will be deducted from your stock.
  ************************************************************************/
-case class Margin( date : Date
+case class Margin( date : LocalDateTime
                   , id : String
                   , fromAmount : Double, fromMarket : Market
                   , toAmount : Double, toMarket : Market
                   , fee : Double, feeMarket : Market
                   , orderType : Operation.OrderType.Value
-                  , pair : (Market,Market)
+                  , pair : (Market, Market)
                   , exchanger : Exchanger
                   , description : String
                   ) extends Operation {
 
   override def toString : String =
-    "Margin(%s %18.8f %-5s -> %18.8f %-5s  %18.8f %-5s  %s)" format (dateToString(date), fromAmount, fromMarket, toAmount, toMarket, fee, feeMarket, description)
+    "Margin(%s %18.8f %-5s -> %18.8f %-5s  %18.8f %-5s  %s)" format (dateFormatted, fromAmount, fromMarket, toAmount, toMarket, fee, feeMarket, description)
 }
 
 
-case class Fee(date : Date, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String, alt : Option[(Double, Market)] = None) extends Operation {
+case class Fee(date : LocalDateTime, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String, alt : Option[(Double, Market)] = None) extends Operation {
   override def toString : String =
-    "Fee(%s %18.8f %-5s  %s)" format (dateToString(date), amount, market, description)
+    "Fee(%s %18.8f %-5s  %s)" format (dateFormatted, amount, market, description)
 }
 
 
-case class Loss(date : Date, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String) extends Operation {
+case class Loss(date : LocalDateTime, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String) extends Operation {
   override def toString : String =
-    "Lost(%s %18.8f %-5s  %s)" format (dateToString(date), amount, market, description)
+    "Lost(%s %18.8f %-5s  %s)" format (dateFormatted, amount, market, description)
 }
 
 
 // amount is the real gain (fee has already been deducted)
-case class Gain(date : Date, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String) extends Operation {
+case class Gain(date : LocalDateTime, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String) extends Operation {
   override def toString : String =
-    "Gain(%s %18.8f %-5s   %s)" format (dateToString(date), amount, market, description)
+    "Gain(%s %18.8f %-5s   %s)" format (dateFormatted, amount, market, description)
 }
 
 

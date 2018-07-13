@@ -1,14 +1,13 @@
 package taxes
 
 import java.math.RoundingMode
-import java.text.{DecimalFormat, SimpleDateFormat}
+import java.text.DecimalFormat
 
-import taxes.Market.Market
 
 object Format {
-  val df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+  val df = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-  val shortDf = new SimpleDateFormat("yyyy-MM-dd")
+  val shortDf = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
   val decimalSep : Char =
     java.text.NumberFormat.getInstance().asInstanceOf[DecimalFormat].getDecimalFormatSymbols.getDecimalSeparator

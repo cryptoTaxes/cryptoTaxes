@@ -2,14 +2,12 @@ package taxes
 
 import java.text.SimpleDateFormat
 
-import taxes.Exchanger.Exchanger
-import taxes.HTMLDoc.HTML
-import taxes.Market.Market
-
+import taxes.date._
+import taxes.exchanger.Exchanger
 
 
 // basis is expressed in base unit. exchanger is where it was bought
-case class Stock(var amount : Double, costBasis : Price, exchanger : Exchanger, date : Date, exchangeRate : Price, exchangeMarket : Market) {
+case class Stock(var amount : Double, costBasis : Price, exchanger : Exchanger, date : LocalDateTime, exchangeRate : Price, exchangeMarket : Market) {
   override def toString : String =
     "Stock(%.4f, %.8f, %s, %.8f, %s, ".format(amount, costBasis, exchanger, exchangeRate, exchangeMarket) +
     new SimpleDateFormat("yyyy-MM-dd").format(date) +
@@ -77,7 +75,7 @@ trait StockContainer extends Container[Stock] with ToHTML {
       <span>
       <span class='noLineBreak'>
         <span>
-          {Format.shortDf.format(stock.date)}
+          {stock.date.format(Format.shortDf)}
         </span>
         <span class='exchanger'>
           {stock.exchanger}
@@ -130,20 +128,18 @@ case class StockStack(id : String, market : Market, baseMarket : Market) extends
 
 
 trait StockPool extends Iterable[StockContainer] with ToHTML{
-  val baseMarket : Market
-
-  protected def newContainer(id : String, market: Market) : StockContainer
+  protected def newContainer(id : String, market : Market, baseMarket : Market) : StockContainer
 
   protected val containers = scala.collection.mutable.Map[Market, StockContainer]()
 
-  def apply(id : String): StockContainer =
-    containers.getOrElse(id, newContainer(id, id))
+  def apply(id : String)(baseMarket : Market): StockContainer =
+    containers.getOrElse(id, newContainer(id, id, baseMarket))
 
   def iterator: Iterator[StockContainer] =
     containers.iterator.map(_._2)
 
-  def add(id : String, boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : Date, exchangeRate : Price, exchangeMarket : Market): Unit = {
-    val container = containers.getOrElse(id, newContainer(id, boughtMarket))
+  def add(id : String, boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : LocalDateTime, exchangeRate : Price, exchangeMarket : Market)(baseMarket : Market): Unit = {
+    val container = containers.getOrElse(id, newContainer(id, boughtMarket, baseMarket))
 
     container.insert(
       Stock(boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeMarket)
@@ -156,12 +152,12 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
   }
 
   // Assumes id = boughtMarket. Useful for non-margin markets where ids are markets themselves
-  def add(boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : Date, exchangeRate : Price, exchangeMarket : Market): Unit = {
-    add(boughtMarket, boughtMarket, boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeMarket)
+  def add(boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : LocalDateTime, exchangeRate : Price, exchangeMarket : Market)(baseMarket : Market): Unit = {
+    add(boughtMarket, boughtMarket, boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeMarket)(baseMarket)
   }
 
-  def remove(id : String, soldAmount : Double) : (Price, Price, StockContainer) = {
-    val container = apply(id)
+  def remove(id : String, soldAmount : Double)(baseMarket : Market) : (Price, Price, StockContainer) = {
+    val container = apply(id)(baseMarket)
     return container.removeAndGetBasis(soldAmount)
   }
 
@@ -181,44 +177,48 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
       {if(caption.nonEmpty)
         <caption>{caption}</caption>
       }
-      {toList.sortBy(_.market).map{ queue =>
+      {toList.sortBy(_.market).map{ stockContainer =>
         var amount = 0.0
         var cost = 0.0
-        for (stock : Stock <- queue) {
+        for (stock : Stock <- stockContainer) {
           amount += stock.amount
           cost += stock.amount * stock.costBasis
         }
         totalCost += cost
         if (cost > 0.001) {
           <tr>
-            <td ><span class='market'>{queue.market}</span></td>
-            <td>{HTMLDoc.asMarket(amount, queue.market, decimals = 4)}</td>
-            <td>{HTMLDoc.asMarket(cost, baseMarket)}</td>
-            <td class='noLineBreak'>{HTMLDoc.asMarket(cost / amount, baseMarket)} / <span class='market'>{queue.market}</span></td>
-            <td class='small2'>{queue.toHTML(showTotal = false, showExchangeRates = true)}</td>
+            <td ><span class='market'>{stockContainer.market}</span></td>
+            <td>{HTMLDoc.asMarket(amount, stockContainer.market, decimals = 4)}</td>
+            <td>{HTMLDoc.asMarket(cost, stockContainer.baseMarket)}</td>
+            <td class='noLineBreak'>{HTMLDoc.asMarket(cost / amount, stockContainer.baseMarket)} / <span class='market'>{stockContainer.market}</span></td>
+            <td class='small2'>{stockContainer.toHTML(showTotal = false, showExchangeRates = true)}</td>
           </tr>
         }
        }
     }
-    <tr>
-      <td class='embold'>Total:</td>
-      <td></td>
-      <td>{HTMLDoc.asMarket(totalCost, baseMarket)}</td>
-      <td></td>
-      <td></td>
-    </tr>
+    {val baseMarkets = this.map(_.baseMarket)
+     val sameBaseMarkets = baseMarkets.nonEmpty && baseMarkets.tail.forall(_ == baseMarkets.head)
+     if(sameBaseMarkets)
+        <tr>
+          <td class='embold'>Total:</td>
+          <td></td>
+          <td>{HTMLDoc.asMarket(totalCost, baseMarkets.head)}</td>
+          <td></td>
+          <td></td>
+        </tr>
+    }
     </table>
   }
 }
 
 
-case class QueueStockPool(baseMarket : Market) extends StockPool {
-  def newContainer(id : String, market: Market) =
+case class QueueStockPool() extends StockPool {
+  def newContainer(id : String, market: Market, baseMarket : Market) =
     StockQueue(id, market, baseMarket)
 }
 
 
-case class StackStockPool(baseMarket : Market) extends StockPool {
-  def newContainer(id : String, market: Market) =
+case class StackStockPool() extends StockPool {
+  def newContainer(id : String, market: Market, baseMarket : Market) =
     StockStack(id, market, baseMarket)
 }

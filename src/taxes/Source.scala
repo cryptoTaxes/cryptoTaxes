@@ -1,8 +1,9 @@
 package taxes
 
-import taxes.Util.Logger
+import taxes.util.Logger
 
 import scala.collection.mutable.ListBuffer
+
 
 trait Source[+A] {
   def read() : Seq[A]

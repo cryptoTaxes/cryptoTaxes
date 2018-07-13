@@ -1,7 +1,9 @@
-package taxes.Exchanger
+package taxes.exchanger
 
-import taxes.Util.Parse._
 import taxes._
+import taxes.date._
+import taxes.util.parse._
+
 
 object HitBTC extends Exchanger {
   override val id: String = "HitBTC"
@@ -18,10 +20,11 @@ object HitBTC extends Exchanger {
     override def lineScanner(line: String): Scanner =
       QuotedScanner(line, '\"', ',')
 
-    // toDO parse header for extracting time zone
+    // HitBTC shows time offset used for dates in csv header line. We take it from there
+    private lazy val offset = skippedLines(0).dropWhile(_ != '(').tail.takeWhile(_ != ')')
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = Date.fromString(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss")
+      val date = LocalDateTime.parse(scLn.next("Date")+offset, "yyyy-MM-dd HH:mm:ssX")
       val instrument = scLn.next("Instrument")
       val tradeID = scLn.next("Trade ID")
       val orderID = scLn.next("Order ID")
@@ -35,17 +38,17 @@ object HitBTC extends Exchanger {
 
       val desc = "Order: " + tradeID + "/" + orderID
 
-      val (market1,market2) = Parse.split(instrument,"/")
+      val (baseMarket,quoteMarket) = Parse.split(instrument,"/")
       val isSell = side == "sell"
 
-      // market2 is usually BTC
+      // quoteMarket is usually BTC
       if(isSell) {
         val exchange = Exchange(
           date = date
           , id = tradeID + "/" + orderID
-          , fromAmount = quantity, fromMarket = Market.normalize(market1)
-          , toAmount = volume - fee + rebate, toMarket = Market.normalize(market2)
-          , feeAmount = fee, feeMarket = Market.normalize(market2)
+          , fromAmount = quantity, fromMarket = Market.normalize(baseMarket)
+          , toAmount = volume - fee + rebate, toMarket = Market.normalize(quoteMarket)
+          , feeAmount = fee, feeMarket = Market.normalize(quoteMarket)
           , exchanger = HitBTC
           , description = desc
         )
