@@ -2,7 +2,8 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
-import taxes.util.parse.{CSVReader, CSVSortedOperationReader, QuotedScanner, Scanner}
+import taxes.util.Logger
+import taxes.util.parse._
 
 
 object Changelly extends Exchanger {
@@ -11,7 +12,7 @@ object Changelly extends Exchanger {
 
   private def split(str : String) : (Double, Market) = {
     val token = str.filter(_ != ',')
-    val sc = new java.util.Scanner(token).useDelimiter("[ ]")
+    val sc = SeparatedScanner(token, "[ ]")
     val amount = sc.nextDouble()
     val market = sc.next()
     sc.close()
@@ -38,12 +39,16 @@ object Changelly extends Exchanger {
         val (amount, soldMarket) = split(scLn.next("Sold"))
         val (totalFee, feeMarket) = split(scLn.next("Fee"))
 
-        val token1 = scLn.next("Exchange Rate")
-        val (token2, token3) = token1.span(_ != '=')
-        val (exchangeRate, _) = split(token3.drop(2))
-        val receiverWallet = scLn.next("Receiver Wallet")
+        val (token1, token2) = Parse.split(scLn.next("Exchange Rate"), " = ")
+        val (rateSold, soldMarket1) = split(token1)
+        val (rateReceived, receivedMarket1) = split(token2)
+        val exchangeRate = rateReceived / rateSold
 
+        val receiverWallet = scLn.next("Receiver Wallet")
         val (amountReceived, receivedMarket) = split(scLn.next("Received"))
+
+        if(soldMarket1 != soldMarket || receivedMarket1 != receivedMarket)
+          CSVReader.Warning("%s. Read file %s: cannot parse this line: %s as rate is not expressed as receivedMarket/soldMarket.".format(id, Paths.pathFromData(fileName), line))
 
         val realFee = amount * exchangeRate - amountReceived
         val feePercent = realFee * 100 / (amount * exchangeRate)

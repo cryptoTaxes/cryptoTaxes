@@ -38,7 +38,7 @@ object Yobit extends Exchanger {
 
       val desc = ""
 
-      val (m1,m2) = Parse.split(pair,"/")
+      val (m1,m2) = Parse.split(pair, "/")
       val isSell = orderType == "SELL"
 
       val baseMarket = Market.normalize(m1)

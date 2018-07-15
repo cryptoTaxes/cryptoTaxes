@@ -317,9 +317,9 @@ object Report {
 
 
       if(totalSoldAmount==0)
-        Logger.warning("Warning: no sold coins in this exchange %s.".format(exchange))
+        Logger.warning("No sold coins in this exchange %s.".format(exchange))
       if(totalBoughtAmount==0)
-        Logger.warning("Warning: no bought coins in this exchange %s.".format(exchange))
+        Logger.warning("No bought coins in this exchange %s.".format(exchange))
 
 
       // Compute exchange rates (fee is included)

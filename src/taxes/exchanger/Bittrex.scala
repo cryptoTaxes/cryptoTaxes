@@ -28,8 +28,7 @@ object Bittrex extends Exchanger {
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val orderId = scLn.next("Order ID")
-      val (m1, aux) = scLn.next("Pair").span(_ != '-')
-      val m2 = aux.tail
+      val (m1, m2) = Parse.split(scLn.next("Pair"), "-")
 
       val quoteMarket = Market.normalize(m1)
       val baseMarket = Market.normalize(m2)

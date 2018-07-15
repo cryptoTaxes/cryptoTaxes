@@ -23,9 +23,24 @@ object General extends Exchanger {
       }
   )
 
-  // we assume all dates are in ourm time zone
+  // we assume all dates are in our time zone
+  private val format = {
+    val dateFormat = "yyyy-[MM][M]-[dd][d]"
+    val timeFormat = " HH:mm[:ss]"
+    val zoneFormat = "VV"
+    val pattern1 = "[%s%s%s]".format(dateFormat,timeFormat,zoneFormat)
+    val pattern2 = "[%s%s]".format(dateFormat,zoneFormat)
+    val pattern = "%s%s".format(pattern1, pattern2)
+    new java.time.format.DateTimeFormatterBuilder()
+      .appendPattern(pattern)
+      .parseDefaulting(java.time.temporal.ChronoField.HOUR_OF_DAY, 0)
+      .parseDefaulting(java.time.temporal.ChronoField.MINUTE_OF_HOUR, 0)
+      .parseDefaulting(java.time.temporal.ChronoField.SECOND_OF_MINUTE, 0)
+      .toFormatter()
+  }
+
   private def parseDate(str : String) : LocalDateTime =
-    LocalDateTime.parseAsMyZoneId(str+" 00:00:00", "yyyy-[MM][M]-[dd][d] HH:mm:ss")
+    LocalDateTime.parse(str+LocalDateTime.myZoneId, format)
 
   private def exchangesReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
@@ -35,10 +50,10 @@ object General extends Exchanger {
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = parseDate(scLn.next())
-      val fromAmount = scLn.nextDouble("Amount1")
-      val fromMarket = scLn.next("Market1")
-      val toAmount = scLn.nextDouble("Amount2")
-      val toMarket = scLn.next("Market2")
+      val fromAmount = scLn.nextDouble("Sold Amount")
+      val fromMarket = scLn.next("Sold Market")
+      val toAmount = scLn.nextDouble("Bought Amount")
+      val toMarket = scLn.next("Bought Market")
       val fee = scLn.nextDouble("Fee")
       val feeMarket = scLn.next("Fee Market")
       val exchangerName = scLn.next("Exchanger")
@@ -67,8 +82,8 @@ object General extends Exchanger {
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = parseDate(scLn.next())
-      val amount = scLn.nextDouble("Amount1")
-      val market = scLn.next("Market1")
+      val amount = scLn.nextDouble("Amount")
+      val market = scLn.next("Market")
       val fee = scLn.nextDouble("Fee")
       val feeMarket = scLn.next("Fee Market")
       val exchangerName = scLn.next("Exchanger")

@@ -142,9 +142,9 @@ object Bitfinex extends Exchanger {
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val reference = scLn.next("Reference")
 
-      val (aux1, aux2) = scLn.next("Pair").splitAt(3)
-      val market1 = Market.normalize(aux1)
-      val market2 = Market.normalize(aux2)
+      val (m1, m2) = scLn.next("Pair").splitAt(3)
+      val market1 = Market.normalize(m1)
+      val market2 = Market.normalize(m2)
 
       val orderType = scLn.next("Order Type")
       val hidden = scLn.next("Hidden")

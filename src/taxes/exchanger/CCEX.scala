@@ -27,10 +27,10 @@ object CCEX extends Exchanger {
 
       if(orderType=="Transaction") {
         val date = LocalDateTime.parseAsUTC(token1+" "+token2, "yyyy-MM-dd HH:mm:ss") // C-CEX uses UTC
-        val toAmount = scLn.nextDouble("Amount1")
-        val toMarket = Market.normalize(scLn.next("Market1"))
-        val fromAmount = scLn.nextDouble("Amount2")
-        val fromMarket = Market.normalize(scLn.next("Market2"))
+        val toAmount = scLn.nextDouble("To Amount")
+        val toMarket = Market.normalize(scLn.next("To Market"))
+        val fromAmount = scLn.nextDouble("From Amount")
+        val fromMarket = Market.normalize(scLn.next("From Market"))
         scLn.close()
 
         val feePercent = 0.2
