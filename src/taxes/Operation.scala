@@ -22,8 +22,6 @@ object Operation {
 
 
 /*************************************************************************
-  if isDetachedFee is false and fee is expressed
-  in same currency as fromMarket or toMarket:
 
       if(feeMarket == fromMarket)
          we exchanged ((fromAmount + feeAmount))  for  ((toAmount))
@@ -31,26 +29,40 @@ object Operation {
          we exchanged ((fromAmount))  for  ((toAmount + feeAmount))
 
       The fee is part of the exchange, i.e. it's not paid with other funds.
-      So if feeMarket == toMarket you're only disposing fromAmount but
-      part of these funds will be used to pay for the fee.
-      If feeMarket == fromMarket you're really disposing (fromAmount + feeAmount)
 
-  otherwise, feeAmount is not part of the exchange hence
+      So if feeMarket == fromMarket you're really disposing (fromAmount + feeAmount)
+      from your balance of fromMarket. Note that, in this case, fromAmount is what
+      you pay but without including the fee. toAmount is what you end up adding to
+      your balance of toMarket.
+
+      If feeMarket == toMarket you're only disposing fromAmount from your fromMarket balance
+      but part of these funds, after being exchanged, will be used to pay for the fee.
+      Note that, in this case, toAmount is not all you get after the exchange, but
+      what you really end up maintaining in your toMarket balance after paying the fee.
+
+
+  For the case of a detached fee, the corresponding fee amount is not part of the exchange hence
       we exchanged ((fromAmount)) for ((toAmount))
+      and independently pay the fee from other funds
   ************************************************************************/
+
+case class FeePair(amount : Double, market: Market)
+
+
 case class Exchange(date : LocalDateTime
                     , id : String
                     , fromAmount : Double, fromMarket : Market
                     , toAmount : Double, toMarket : Market
-                    , feeAmount : Double, feeMarket : Market
-                    , detachedFee : Option[(Double, Market)] = None
+                    , fees : Seq[FeePair]
                     , isSettlement : Boolean = false
                     , exchanger: Exchanger
                     , description : String
                     ) extends Operation {
 
-  override def toString : String =
-    "Exchange(%s %18.8f %-5s -> %18.8f %-5s  %18.8f %-5s  %s)" format (dateFormatted, fromAmount, fromMarket, toAmount, toMarket, feeAmount, feeMarket, description)
+  override def toString : String = {
+    val feesStr = fees.map(fee => "%.8f %s".format(fee.amount, fee.market)).mkString("(", ", ", ")")
+    "Exchange(%s %18.8f %-5s -> %18.8f %-5s  %s  %s)" format(dateFormatted, fromAmount, fromMarket, toAmount, toMarket, feesStr, description)
+  }
 }
 
 
@@ -62,11 +74,11 @@ case class Exchange(date : LocalDateTime
   * fromAmount (without fee, if feeMarket == fromMarket)
     will be deducted from your stock.
  ************************************************************************/
-case class Margin( date : LocalDateTime
+case class Margin(date : LocalDateTime
                   , id : String
                   , fromAmount : Double, fromMarket : Market
                   , toAmount : Double, toMarket : Market
-                  , fee : Double, feeMarket : Market
+                  , feeAmount : Double, feeMarket : Market
                   , orderType : Operation.OrderType.Value
                   , pair : (Market, Market)
                   , exchanger : Exchanger
@@ -74,7 +86,7 @@ case class Margin( date : LocalDateTime
                   ) extends Operation {
 
   override def toString : String =
-    "Margin(%s %18.8f %-5s -> %18.8f %-5s  %18.8f %-5s  %s)" format (dateFormatted, fromAmount, fromMarket, toAmount, toMarket, fee, feeMarket, description)
+    "Margin(%s %18.8f %-5s -> %18.8f %-5s  %18.8f %-5s  %s)" format (dateFormatted, fromAmount, fromMarket, toAmount, toMarket, feeAmount, feeMarket, description)
 }
 
 

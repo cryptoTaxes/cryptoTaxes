@@ -97,10 +97,10 @@ object Kraken extends Exchanger {
       val feeLedgers =
         ledgersTxids.flatMap(ledgersCache.get).filter(ledger => deductibleFees.contains(ledger.txType) && ledger.fee > 0)
 
-      val (fee, feeMarket, fee2, fee2Market) = feeLedgers match {
+      val (fee1, fee1Market, fee2, fee2Market) = feeLedgers match {
         case List() =>
           (0.0, baseMarket, 0.0, quoteMarket)   // no fees for this operation
-        case List(feeLedger) =>                 // a single fee
+        case List(feeLedger) =>                 // a single fee1
           if(feeLedger.market == baseMarket)
             (feeLedger.fee, baseMarket, 0.0, quoteMarket)
           else if(feeLedger.market == quoteMarket)
@@ -108,46 +108,50 @@ object Kraken extends Exchanger {
           else
             (0.0, baseMarket, feeLedger.fee, feeLedger.market)
         case List(feeLedger1, feeLedger2) =>  // two fees for this operation
-          // We try to set as fee the one whose market is baseMarket.
-          // Otherwise we set as fee the one expressed in quoteMarket
-          if(feeLedger1.market == baseMarket)
+          // We assume feeLedger1.market != feeLedger2.market
+          if(feeLedger1.market == feeLedger2.market)
+            Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as fee1 market is the same as fee2 market: %s.\n%s\n%s".format(Kraken.id, Paths.pathFromData(fileName), line, feeLedger1, feeLedger2))
+
+          // We try to set as fee1 the one whose market is baseMarket.
+          // Otherwise we set as fee1 the one expressed in quoteMarket
+          if (feeLedger1.market == baseMarket)
             (feeLedger1.fee, feeLedger1.market, feeLedger2.fee, feeLedger2.market)
-          else if(feeLedger2.market == baseMarket)
+          else if (feeLedger2.market == baseMarket)
             (feeLedger2.fee, feeLedger2.market, feeLedger1.fee, feeLedger1.market)
-          else if(feeLedger1.market == quoteMarket)
+          else if (feeLedger1.market == quoteMarket)
             (feeLedger1.fee, feeLedger1.market, feeLedger2.fee, feeLedger2.market)
-          else if(feeLedger2.market == quoteMarket)
+          else if (feeLedger2.market == quoteMarket)
             (feeLedger2.fee, feeLedger2.market, feeLedger1.fee, feeLedger1.market)
           else
-            Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as market fee is neither fromMarket nor toMarket: %s.\n%s\n%s".format(Kraken.id, Paths.pathFromData(fileName), line, feeLedger1, feeLedger2))
+            Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as fee1 market is neither fromMarket nor toMarket: %s.\n%s\n%s".format(Kraken.id, Paths.pathFromData(fileName), line, feeLedger1, feeLedger2))
 
 /*
           if(isBuy) {
-            // We try to set as fee the one whose market is baseMarket.
-            // Otherwise we set as fee the one expressed in quoteMarket
+            // We try to set as fee1 the one whose market is baseMarket.
+            // Otherwise we set as fee1 the one expressed in quoteMarket
             if(feeLedger1.market == baseMarket)
-              (feeLedger1.fee, feeLedger1.market, feeLedger2.fee, feeLedger2.market)
+              (feeLedger1.fee1, feeLedger1.market, feeLedger2.fee1, feeLedger2.market)
             else if(feeLedger2.market == baseMarket)
-              (feeLedger2.fee, feeLedger2.market, feeLedger1.fee, feeLedger1.market)
+              (feeLedger2.fee1, feeLedger2.market, feeLedger1.fee1, feeLedger1.market)
             else if(feeLedger1.market == quoteMarket)
-              (feeLedger1.fee, feeLedger1.market, feeLedger2.fee, feeLedger2.market)
+              (feeLedger1.fee1, feeLedger1.market, feeLedger2.fee1, feeLedger2.market)
             else if(feeLedger2.market == quoteMarket)
-              (feeLedger2.fee, feeLedger2.market, feeLedger1.fee, feeLedger1.market)
+              (feeLedger2.fee1, feeLedger2.market, feeLedger1.fee1, feeLedger1.market)
             else
-              Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as market fee is neither fromMarket nor toMarket: %s.\n%s\n%s".format(Kraken.id, Paths.pathFromData(fileName), line, feeLedger1, feeLedger2))
+              Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as market fee1 is neither fromMarket nor toMarket: %s.\n%s\n%s".format(Kraken.id, Paths.pathFromData(fileName), line, feeLedger1, feeLedger2))
           } else { // isBuy
-            // We try to set as fee the one whose market is quoteMarket.
-            // Otherwise we set as fee the one expressed in baseMarket
+            // We try to set as fee1 the one whose market is quoteMarket.
+            // Otherwise we set as fee1 the one expressed in baseMarket
             if(feeLedger1.market == quoteMarket)
-              (feeLedger1.fee, feeLedger1.market, feeLedger2.fee, feeLedger2.market)
+              (feeLedger1.fee1, feeLedger1.market, feeLedger2.fee1, feeLedger2.market)
             else if(feeLedger2.market == quoteMarket)
-              (feeLedger2.fee, feeLedger2.market, feeLedger1.fee, feeLedger1.market)
+              (feeLedger2.fee1, feeLedger2.market, feeLedger1.fee1, feeLedger1.market)
             else if(feeLedger1.market == baseMarket)
-              (feeLedger1.fee, feeLedger1.market, feeLedger2.fee, feeLedger2.market)
+              (feeLedger1.fee1, feeLedger1.market, feeLedger2.fee1, feeLedger2.market)
             else if(feeLedger2.market == baseMarket)
-              (feeLedger2.fee, feeLedger2.market, feeLedger1.fee, feeLedger1.market)
+              (feeLedger2.fee1, feeLedger2.market, feeLedger1.fee1, feeLedger1.market)
             else
-              Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as market fee is neither fromMarket nor toMarket: %s.\n%s\n%s".format(Kraken.id, Paths.pathFromData(fileName), line, feeLedger1, feeLedger2))
+              Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as market fee1 is neither fromMarket nor toMarket: %s.\n%s\n%s".format(Kraken.id, Paths.pathFromData(fileName), line, feeLedger1, feeLedger2))
           }
 */
         case ls =>
@@ -159,7 +163,7 @@ object Kraken extends Exchanger {
         if(feeLedgers.length > 1)
           Logger.fatal("Several fees for a margin order are not currently supported:\n%s\n%s".format(feeLedgers,line))
 
-        // Logger.trace("%s\n%f %s   %f\n\n".format(line,fee,feeMarket,if(feeMarket==quoteMarket) fee else -fee*price))
+        // Logger.trace("%s\n%f %s   %f\n\n".format(line,fee1,fee1Market,if(fee1Market==quoteMarket) fee1 else -fee1*price))
 
         if(isSell) {
           val margin =
@@ -167,9 +171,9 @@ object Kraken extends Exchanger {
               date = date
               , id = id
               , fromAmount = vol, fromMarket = baseMarket
-              , toAmount = cost /* + (if(feeMarket==quoteMarket) fee else -fee * price) */, toMarket = quoteMarket
-              , fee = fee
-              , feeMarket = feeMarket
+              , toAmount = cost /* + (if(fee1Market==quoteMarket) fee1 else -fee1 * price) */, toMarket = quoteMarket
+              , feeAmount = fee1
+              , feeMarket = fee1Market
               , orderType = Operation.OrderType.Sell
               , pair = (baseMarket, quoteMarket)
               , exchanger = Kraken
@@ -181,10 +185,10 @@ object Kraken extends Exchanger {
             Margin(
               date = date
               , id = id
-              , fromAmount = cost /* + (if(feeMarket==quoteMarket) fee else -fee * price) */, fromMarket = quoteMarket
+              , fromAmount = cost /* + (if(fee1Market==quoteMarket) fee1 else -fee1 * price) */, fromMarket = quoteMarket
               , toAmount = vol, toMarket = baseMarket
-              , fee = fee
-              , feeMarket = feeMarket
+              , feeAmount = fee1
+              , feeMarket = fee1Market
               , orderType = Operation.OrderType.Buy
               , pair = (baseMarket, quoteMarket)
               , exchanger = Kraken
@@ -195,53 +199,75 @@ object Kraken extends Exchanger {
           return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
     } else { // spot exchange
         if(isSell) {
-            // If feeMarket==fromMarket, vol is just what we are exchanging
+            // If fee1Market==fromMarket, vol is just what we are exchanging
             // (hence it corresponds to fromAmount). As vol does not include
-            // fee, we don't have to subtract fee to define fromAmount.
-            // cost doesn't include fee and stands directly for toAmount.
+            // fee1, we don't have to subtract fee1 to define fromAmount.
+            // cost doesn't include fee1 and stands directly for toAmount.
 
-            // If feeMarket==toMarket, cost is what we are exchanging plus the fee
-            // hence cost - fee is what we are exchanging, so we have to compute the
+            // If fee1Market==toMarket, cost is what we are exchanging plus the fee1
+            // hence cost - fee1 is what we are exchanging, so we have to compute the
             // subtraction to define toAmount.
-            // vol doesn't include fee and stands directly for fromAmount.
+            // vol doesn't include fee1 and stands directly for fromAmount.
+
+            val toAmount =
+              if(Config.config.deprecatedExchange)
+                cost - (if (fee1Market == quoteMarket) fee1 else 0)
+              else
+                cost - {
+                  if (fee2Market == quoteMarket)
+                    fee2 // we end up getting cost - fee2
+                  else if(fee1Market ==quoteMarket)
+                    fee1 // we end up getting cost - fee1
+                  else 0
+                }
+
             val exchange =
               Exchange(
                 date = date
                 , id = id
                 , fromAmount = vol
                 , fromMarket = baseMarket
-                , toAmount = cost - (if (feeMarket == quoteMarket) fee else 0)
+                , toAmount = toAmount
                 , toMarket = quoteMarket
-                , feeAmount = fee, feeMarket = feeMarket
+                , fees = List(FeePair(fee1, fee1Market)) ++ (if(fee2>0) List(FeePair(fee2, fee2Market)) else List())
                 , exchanger = Kraken
                 , description = desc
-                // if we have a second fee
-                , detachedFee = if(fee2>0) Some((fee2, fee2Market)) else None
               )
             return CSVReader.Ok(exchange)
         } else if(isBuy) {
-            // If feeMarket==fromMarket, cost is just what we are exchanging
+            // If fee1Market==fromMarket, cost is just what we are exchanging
             // (hence it corresponds to fromAmount). As cost does not include
-            // fee, we don't have to subtract fee to define fromAmount.
+            // fee1, we don't have to subtract fee1 to define fromAmount.
             // Same goes for vol, which corresponds directly to toAmount.
 
-            // If feeMarket== toMarket, vol is what we are exchanging plus the fee
-            // hence vol - fee is what we are exchanging, so we have to compute the
+            // If fee1Market== toMarket, vol is what we are exchanging plus the fee1
+            // hence vol - fee1 is what we are exchanging, so we have to compute the
             // subtraction to define toAmount.
             // cost stands directly for fromAmount.
-            val exchange =
+
+          val toAmount =
+            if(Config.config.deprecatedExchange)
+              vol - (if (fee1Market == quoteMarket) fee1 else 0)
+            else
+              vol - {
+                if (fee1Market == baseMarket)
+                  fee1 // we end up getting cost - fee1
+                else if(fee2Market == baseMarket)
+                  fee2 // we end up getting cost - fee2
+                else 0
+              }
+
+          val exchange =
               Exchange(
                 date = date
                 , id = id
                 , fromAmount = cost
                 , fromMarket = quoteMarket
-                , toAmount = vol - (if (feeMarket == baseMarket) fee else 0)
+                , toAmount = toAmount
                 , toMarket = baseMarket
-                , feeAmount = fee, feeMarket = feeMarket
+                , fees = List(FeePair(fee1, fee1Market)) ++ (if(fee2>0) List(FeePair(fee2, fee2Market)) else List())
                 , exchanger = Kraken
                 , description = desc
-                // if we have a second fee
-                , detachedFee = if(fee2>0) Some((fee2, fee2Market)) else None
               )
             return CSVReader.Ok(exchange)
         } else

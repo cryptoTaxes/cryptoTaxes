@@ -53,7 +53,7 @@ object Yobit extends Exchanger {
               , id = ""
               , fromAmount = completed, fromMarket = baseMarket
               , toAmount = completed * price, toMarket = quoteMarket
-              , feeAmount = 0, feeMarket = quoteMarket
+              , fees = List()
               , exchanger = Yobit
               , description = desc
             )
@@ -63,7 +63,7 @@ object Yobit extends Exchanger {
               , id = ""
               , fromAmount = completed * price, fromMarket = quoteMarket
               , toAmount = completed, toMarket = baseMarket
-              , feeAmount = 0, feeMarket = quoteMarket
+              , fees = List()
               , exchanger = Yobit
               , description = desc
             )

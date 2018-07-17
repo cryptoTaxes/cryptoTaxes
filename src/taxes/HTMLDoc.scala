@@ -180,6 +180,7 @@ case class HTMLDoc(fileName : String, title : String) {
       | .boxPadding, .boxBody, .boxHeader, table#tableStyle1 caption, table#tableStyle1 td, th { padding-top: 0.2em; padding-bottom: 0.2em; padding-left: 0.2em; padding-right: 0.2em; }
       |
       | .header { font-size: 130%; margin-bottom: 20px; font-weight: bold; }
+      | .subheader { font-size: 110%; margin-bottom: 20px; font-weight: bold; }
       | .boxed { width: 98%; background-color: White;  border: 1px solid black; border-collapse: collapse; margin-bottom: 1em; page-break-inside:avoid; page-break-after:auto; }
       | .boxHeader {  border-bottom: 1px solid black; border-collapse: collapse; }
       | .header0 { width: 7%; display: inline-block; }
@@ -197,7 +198,10 @@ case class HTMLDoc(fileName : String, title : String) {
       | .marginBottom5, .desc, .rates { margin-bottom: 0.25em; }
       | .marginTopBottom20, .footnote { margin-top: 0.5em; margin-bottom: 0.5em; }
       | .paddingR10 { padding-right: 0.2em; }
+      | .alignL { text-align: left; }
       | .alignR { text-align: right; }
+      | .darkBlue { color: #0000b0; }
+      | .darkRed { color: #b00000; }
       |
       | table#tableStyle1 { border: 1px solid black; border-collapse: collapse; margin-bottom: 20px; page-break-inside:avoid; }
       | table#tableStyle1 caption { border: 1px solid black; border-bottom: 0px solid black; font-weight: bold; text-align: left; }
@@ -205,6 +209,8 @@ case class HTMLDoc(fileName : String, title : String) {
       | table#tableStyle1 tr:hover { background-color: #c5c5c5; }
       | table#tableStyle1 td, th { text-align: right; vertical-align: top; }
       | table#tableStyle1 td:first-child, th:first-child { text-align: left; }
+      | table#tableStyle1 td.alignL  { text-align: left; }
+      | table#tableStyle1 td.paddingL  { padding-left: 15px }
       |
       | @media print {
       |  body{

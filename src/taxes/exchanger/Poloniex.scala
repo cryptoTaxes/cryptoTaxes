@@ -86,7 +86,7 @@ object Poloniex extends Exchanger {
               , id = orderNumber
               , fromAmount = amount, fromMarket = baseMarket
               , toAmount = total - fee, toMarket = quoteMarket
-              , feeAmount = fee, feeMarket = quoteMarket
+              , fees = List(FeePair(fee, quoteMarket))
               , exchanger = Poloniex
               , description = desc
             )
@@ -97,7 +97,7 @@ object Poloniex extends Exchanger {
               , id = orderNumber
               , fromAmount = total, fromMarket = quoteMarket
               , toAmount = amount - fee, toMarket = baseMarket
-              , feeAmount = fee, feeMarket = baseMarket
+              , fees = List(FeePair(fee, baseMarket))
               // Usually, quoteMarket is BTC so we set fee in BTC
               // fee = amount*feePercent/100*price, feeMarket = quoteMarket
               , exchanger = Poloniex
@@ -112,7 +112,7 @@ object Poloniex extends Exchanger {
           , id = orderNumber
           , fromAmount = total, fromMarket = quoteMarket
           , toAmount = amount*(100-feePercent)/100, toMarket = baseMarket
-          , feeAmount = amount*feePercent/100, feeMarket = baseMarket
+          , fees = List(FeePair(amount*feePercent/100, baseMarket))
           , isSettlement = true
           // Usually, quoteMarket is BTC so we can set fee in BTC
           //, fee = amount*feePercent/100*price, feeMarket = quoteMarket
@@ -129,7 +129,7 @@ object Poloniex extends Exchanger {
               , id = orderNumber
               , fromAmount = amount, fromMarket = baseMarket // we short the whole amount but only pay with provided total minus fee
               , toAmount = total - fee /*this total*/ /* baseTotalLessFee */, toMarket = quoteMarket
-              , fee = fee, feeMarket = quoteMarket // quoteMarket is usually BTC
+              , feeAmount = fee, feeMarket = quoteMarket // quoteMarket is usually BTC
               , orderType = Operation.OrderType.Sell
               , pair = (baseMarket, quoteMarket)
               , exchanger = Poloniex
@@ -142,7 +142,7 @@ object Poloniex extends Exchanger {
               , id = orderNumber
               , fromAmount = total /*this * (100 - feePercent)/100 */, fromMarket = quoteMarket
               , toAmount = quoteTotalLessFee, toMarket = baseMarket
-              , fee = fee, feeMarket = baseMarket
+              , feeAmount = fee, feeMarket = baseMarket
               // Usually, quoteMarket is BTC so we can set fee in BTC
               //, fee = amount*feePercent/100*price, feeMarket = quoteMarket
               , orderType = Operation.OrderType.Buy
@@ -166,7 +166,7 @@ object Poloniex extends Exchanger {
         val op = exchange1.copy(
             fromAmount = exchange1.fromAmount + exchange2.fromAmount
           , toAmount = exchange1.toAmount + exchange2.toAmount
-          , feeAmount = exchange1.feeAmount + exchange2.feeAmount
+          , fees = exchange1.fees ++ exchange2.fees
         )
         group(op :: ops)
       }
@@ -174,7 +174,7 @@ object Poloniex extends Exchanger {
         val op = margin1.copy(
             fromAmount = margin1.fromAmount + margin2.fromAmount
           , toAmount = margin1.toAmount + margin2.toAmount
-          , fee = margin1.fee + margin2.fee
+          , feeAmount = margin1.feeAmount + margin2.feeAmount
         )
         group(op :: ops)
       }

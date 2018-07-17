@@ -53,7 +53,7 @@ object GDAX extends Exchanger {
             , id = tradeID
             , fromAmount = size, fromMarket = baseMarket
             , toAmount = total, toMarket = quoteMarket
-            , feeAmount = fee, feeMarket = priceFeeTotalMarket
+            , fees = List(FeePair(fee, priceFeeTotalMarket))
             , exchanger = GDAX
             , description = desc
           )
@@ -65,7 +65,7 @@ object GDAX extends Exchanger {
             , id = tradeID
             , fromAmount = total.abs, fromMarket = quoteMarket
             , toAmount = size, toMarket = baseMarket
-            , feeAmount = fee, feeMarket = priceFeeTotalMarket
+            , fees = List(FeePair(fee, priceFeeTotalMarket))
             , exchanger = GDAX
             , description = desc
           )

@@ -63,7 +63,7 @@ object RippleTrade extends Exchanger {
                     , id = hash
                     , fromAmount = entryXRP.amount.abs, fromMarket = Market.ripple
                     , toAmount = entryBTC.amount.abs, toMarket = Market.bitcoin
-                    , feeAmount = 0.012, feeMarket = Market.ripple
+                    , fees = List(FeePair(0.012, Market.ripple))
                     , exchanger = RippleTrade
                     , description = desc
                   )
@@ -73,7 +73,7 @@ object RippleTrade extends Exchanger {
                     , id = hash
                     , fromAmount = entryBTC.amount.abs, fromMarket = Market.bitcoin
                     , toAmount = entryXRP.amount.abs, toMarket = Market.ripple
-                    , feeAmount = 0.012, feeMarket = Market.ripple
+                    , fees = List(FeePair(0.012, Market.ripple))
                     , exchanger = RippleTrade
                     , description = desc
                   )

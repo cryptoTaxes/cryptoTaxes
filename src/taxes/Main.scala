@@ -117,7 +117,10 @@ object ParseCommandLine {
               config = config.copy(epsilon = eps)
             } else if(flag == "time-zone") {
               config = config.copy(timeZone = java.time.ZoneId.of(value))
-            } else
+            } else if(flag == "deprecated-exchange") {
+              val old = List("true", "yes", "on").contains(value.toLowerCase)
+              config = config.copy(deprecatedExchange = old)
+            }else
               failParse
           } else
             failParse

@@ -38,7 +38,9 @@ object HitBTC extends Exchanger {
 
       val desc = "Order: " + tradeID + "/" + orderID
 
-      val (baseMarket,quoteMarket) = Parse.split(instrument,"/")
+      val (m1,m2) = Parse.split(instrument,"/")
+      val baseMarket = Market.normalize(m1)
+      val quoteMarket = Market.normalize(m2)
       val isSell = side == "sell"
 
       // quoteMarket is usually BTC
@@ -46,9 +48,9 @@ object HitBTC extends Exchanger {
         val exchange = Exchange(
           date = date
           , id = tradeID + "/" + orderID
-          , fromAmount = quantity, fromMarket = Market.normalize(baseMarket)
-          , toAmount = volume - fee + rebate, toMarket = Market.normalize(quoteMarket)
-          , feeAmount = fee, feeMarket = Market.normalize(quoteMarket)
+          , fromAmount = quantity, fromMarket = baseMarket
+          , toAmount = volume - fee + rebate, toMarket = quoteMarket
+          , fees = List(FeePair(fee, quoteMarket))
           , exchanger = HitBTC
           , description = desc
         )

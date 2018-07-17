@@ -57,8 +57,7 @@ object Bitfinex extends Exchanger {
               , id = reference
               , fromAmount = amount.abs - (if (feeMarket==baseMarket) fee.abs else 0), fromMarket = baseMarket
               , toAmount = price * amount.abs - (if (feeMarket==quoteMarket) fee.abs else 0), toMarket = quoteMarket
-              , feeAmount = fee.abs
-              , feeMarket = feeMarket
+              , fees = List(FeePair(fee.abs, feeMarket))
               , exchanger = Bitfinex
               , description = desc
             )
@@ -68,8 +67,7 @@ object Bitfinex extends Exchanger {
               , id = reference
               , fromAmount = price * amount.abs - (if (feeMarket==quoteMarket) fee.abs else 0), fromMarket = quoteMarket
               , toAmount = amount.abs - (if (feeMarket==baseMarket) fee.abs else 0), toMarket = baseMarket
-              , feeAmount = fee.abs
-              , feeMarket = feeMarket
+              , fees = List(FeePair(fee.abs, feeMarket))
               , exchanger = Bitfinex
               , description = desc
             )
@@ -92,7 +90,7 @@ object Bitfinex extends Exchanger {
               , id = reference
               , fromAmount = amount.abs, fromMarket = baseMarket
               , toAmount = price * amount.abs /* + (if(feeMarket==quoteMarket) fee.abs else if(feeMarket==baseMarket) -fee.abs * price else 0) */, toMarket = quoteMarket
-              , fee = attachedFeeValue
+              , feeAmount = attachedFeeValue
               , feeMarket = attachedFeeMarket
               , orderType = Operation.OrderType.Sell
               , pair = (baseMarket, quoteMarket)
@@ -105,7 +103,7 @@ object Bitfinex extends Exchanger {
               , id = reference
               , fromAmount = amount.abs * price /* + (if (feeMarket==quoteMarket) fee.abs else if(feeMarket==baseMarket) -fee.abs * price else 0) */, fromMarket = quoteMarket
               , toAmount = amount.abs, toMarket = baseMarket
-              , fee = attachedFeeValue
+              , feeAmount = attachedFeeValue
               , feeMarket = attachedFeeMarket
               , orderType = Operation.OrderType.Buy
               , pair = (baseMarket, quoteMarket)
@@ -171,7 +169,7 @@ object Bitfinex extends Exchanger {
                 , id = reference
                 , fromAmount = amountExecuted.abs, fromMarket = Market.normalize(market1)
                 , toAmount = averageExecutionPrice * amountExecuted.abs, toMarket = Market.normalize(market2)
-                , feeAmount = 0, feeMarket = Market.normalize(market1)
+                , fees = List()
                 , exchanger = Bitfinex
                 , description = desc
               )
@@ -181,7 +179,7 @@ object Bitfinex extends Exchanger {
                 , id = reference
                 , fromAmount = averageExecutionPrice * amountExecuted.abs, fromMarket = Market.normalize(market2)
                 , toAmount = amountExecuted.abs, toMarket = Market.normalize(market1)
-                , feeAmount = 0, feeMarket = Market.normalize(market1)
+                , fees = List()
                 , exchanger = Bitfinex
                 , description = desc
               )
@@ -194,7 +192,7 @@ object Bitfinex extends Exchanger {
                   , id = reference
                   , fromAmount = amountExecuted.abs, fromMarket = Market.normalize(market1)
                   , toAmount = amountExecuted.abs*averageExecutionPrice - 0.abs , toMarket = Market.normalize(market2) // Assumes feeCurrency == market2
-                  , fee = 0.abs, feeMarket = Market.normalize(market1)
+                  , feeAmount = 0.abs, feeMarket = Market.normalize(market1)
                   , orderType = Operation.OrderType.Sell
                   , pair = (market1, market2)
                   , exchanger = Bitfinex
@@ -206,7 +204,7 @@ object Bitfinex extends Exchanger {
                   , id = reference
                   , fromAmount = amountExecuted.abs * averageExecutionPrice, fromMarket = Market.normalize(market2)
                   , toAmount = amountExecuted.abs, toMarket = Market.normalize(market1)
-                  , fee = 0.abs, feeMarket = Market.normalize(market1)
+                  , feeAmount = 0.abs, feeMarket = Market.normalize(market1)
                   , orderType = Operation.OrderType.Buy
                   , pair = (market1, market2)
                   , exchanger = Bitfinex
@@ -252,7 +250,7 @@ object Bitfinex extends Exchanger {
             , id = description
             , fromAmount = amount.abs, fromMarket = currency
             , toAmount = total - fee, toMarket = Market.usd
-            , feeAmount = fee, feeMarket = Market.usd
+            , fees = List(FeePair(fee, Market.usd))
             , isSettlement = true
             , exchanger = Bitfinex
             , description = desc

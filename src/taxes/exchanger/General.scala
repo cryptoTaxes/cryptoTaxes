@@ -65,8 +65,7 @@ object General extends Exchanger {
           , id = ""
           , fromAmount = fromAmount, fromMarket = Market.normalize(fromMarket)
           , toAmount = toAmount, toMarket = Market.normalize(toMarket)
-          , feeAmount = fee
-          , feeMarket = Market.normalize(feeMarket)
+          , fees = List(FeePair(fee, Market.normalize(feeMarket)))
           , exchanger = General(exchangerName)
           , description = desc
         )

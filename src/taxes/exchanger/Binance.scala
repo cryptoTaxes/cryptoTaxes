@@ -60,8 +60,7 @@ object Binance extends Exchanger {
                 , id = ""
                 , fromAmount = total, fromMarket = quoteMarket
                 , toAmount = amount, toMarket = baseMarket
-                , feeAmount = 0, feeMarket = feeCoin
-                , detachedFee = Some(feeAmount, feeCoin)
+                , fees = List(FeePair(feeAmount, feeCoin)) //todo detached
                 , exchanger = Binance
                 , description = desc
               )
@@ -72,7 +71,7 @@ object Binance extends Exchanger {
                 , id = ""
                 , fromAmount = total, fromMarket = quoteMarket
                 , toAmount = amount - feeAmount, toMarket = baseMarket // this has been confirmed
-                , feeAmount = feeAmount, feeMarket = feeCoin
+                , fees = List(FeePair(feeAmount, feeCoin))
                 , exchanger = Binance
                 , description = desc
               )
@@ -87,8 +86,7 @@ object Binance extends Exchanger {
                 , id = ""
                 , fromAmount = amount, fromMarket = baseMarket
                 , toAmount = total, toMarket = quoteMarket
-                , feeAmount = 0, feeMarket = feeCoin
-                , detachedFee = Some(feeAmount, feeCoin)
+                , fees = List(FeePair(feeAmount, feeCoin)) //todo detached
                 , exchanger = Binance
                 , description = desc
               )
@@ -100,7 +98,7 @@ object Binance extends Exchanger {
                 , id = ""
                 , fromAmount = amount, fromMarket = baseMarket
                 , toAmount = total - feeAmount, toMarket = quoteMarket // toDo the fact that we don't get total but total - feeAmount whe selling needs to be confirmed
-                , feeAmount = feeAmount, feeMarket = feeCoin
+                , fees = List(FeePair(feeAmount, feeCoin))
                 , exchanger = Binance
                 , description = desc
               )

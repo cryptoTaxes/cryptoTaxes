@@ -39,7 +39,7 @@ object Accounting extends Enumeration {
 }
 
 
-case class Config( user : String
+case class Config(user : String
                   , verbosityLevel : Verbosity.Level
                   , baseCoin : BaseCoin
                   , downloadPrices : Boolean
@@ -48,6 +48,8 @@ case class Config( user : String
                   , decimalPlaces : Int
                   , epsilon : Double
                   , timeZone : java.time.ZoneId
+                  // internal flags, not for users
+                  , deprecatedExchange : Boolean
                   )
 
 
@@ -68,5 +70,6 @@ object DefaultConfig extends Config( user = "demo"
                                      , decimalPlaces = 2
                                      , epsilon = 0.00000001
                                      , timeZone = java.time.ZoneId.systemDefault()
+                                     , deprecatedExchange = false
                                      )
 

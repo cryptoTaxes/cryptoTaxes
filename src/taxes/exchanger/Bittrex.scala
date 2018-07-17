@@ -46,11 +46,18 @@ object Bittrex extends Exchanger {
 
       val desc = "Order: " + orderId
 
-      // quoteMarket is normally BTC, USDT or ETH.
-      // fees are denominated in quoteMarket.
-      // Rate is computed as Price / Quantity (here Price stands really for what you're buying or selling)
-      // In a sell you release Quantity coins. You get Price minus comissionPaid coins
-      // A buy gets you Quantity coins. You pay Price but Price doesn't include comissionPaid
+      // quoteMarket is one of BTC, USDT or ETH.
+      // quantity stands for the amount of baseMarket coins you're either selling or buying.
+      // fees are ALWAYS denominated in quoteMarket.
+      // price stands for:
+      //  * In a sell: the amount of quoteMarket coins you get from this operation,
+      //               but then you'll have to pay comissionPaid from these.
+      //  * In a buy: the amount of quoteMarket coins you're paying in this exchange,
+      //               but you'll have to additionally pay comissionPaid
+      // In this way:
+      // * In a sell: you release quantity coins. You get price coins, but then you'll pay
+      //              the comission from these, so really you end up getting (price - comissionPaid) coins
+      // * In a buy:  you release (price + comissionPaid) coins and you get quantity coins.
 
       val exchange =
         if (isSell)
@@ -59,7 +66,7 @@ object Bittrex extends Exchanger {
             , id = orderId
             , fromAmount = quantity, fromMarket = baseMarket
             , toAmount = price - comissionPaid, toMarket = quoteMarket
-            , feeAmount = comissionPaid, feeMarket = quoteMarket
+            , fees = List(FeePair(comissionPaid, quoteMarket))
             , exchanger = Bittrex
             , description = desc
           )
@@ -69,7 +76,7 @@ object Bittrex extends Exchanger {
             , id = orderId
             , fromAmount = price, fromMarket = quoteMarket
             , toAmount = quantity, toMarket = baseMarket
-            , feeAmount = comissionPaid, feeMarket = quoteMarket
+            , fees = List(FeePair(comissionPaid, quoteMarket))
             , exchanger = Bittrex
             , description = desc
           )
@@ -146,7 +153,7 @@ object Bittrex extends Exchanger {
           } catch {
             case e => Logger.fatal("Something went wrong reading csv file %s. %s".format(fileName, e))
           } finally
-            scLn.map(_.close())
+            scLn.foreach(_.close())
         }
       }
       sc.close()

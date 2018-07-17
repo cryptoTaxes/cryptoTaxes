@@ -5,6 +5,8 @@ import java.text.SimpleDateFormat
 import taxes.date._
 import taxes.exchanger.Exchanger
 
+import scala.collection.mutable.ListBuffer
+
 
 // basis is expressed in base unit. exchanger is where it was bought
 case class Stock(var amount : Double, costBasis : Price, exchanger : Exchanger, date : LocalDateTime, exchangeRate : Price, exchangeMarket : Market) {
@@ -30,7 +32,22 @@ trait StockContainer extends Container[Stock] with ToHTML {
     else
       Config.config.epsilon
 
-  def removeAndGetBasis(amount : Double) : (Price, Double, StockContainer) = {
+
+  case class Ledger(date : LocalDateTime, amount : Double, exchanger: Exchanger, description : String)
+
+  val ledger = ListBuffer[Ledger]()
+
+  def insert(x : Stock, desc : String): Unit = {
+    ledger += Ledger(x.date, x.amount, x.exchanger, desc)
+    insert(x)
+  }
+
+  def insert(x : Stock, eq : (Stock,Stock) => Boolean, combine : (Stock,Stock) => Stock, desc : String): Unit = {
+    ledger += Ledger(x.date, x.amount, x.exchanger, desc)
+    insert(x, eq, combine)
+  }
+
+  def removeAndGetBasis(amount : Double)(date: LocalDateTime, exchanger: Exchanger, desc : String) : (Price, Double, StockContainer) = {
     var toRemove = amount
     var basis = 0.0
     var done = false
@@ -41,6 +58,7 @@ trait StockContainer extends Container[Stock] with ToHTML {
         basis += toRemove * stock.costBasis
         stock.amount -= toRemove
         usedStocks.insert(stock.copy(amount = toRemove))
+        toRemove = 0
         if(stock.amount < eps)
           this.removeFirst()
         done = true
@@ -51,6 +69,8 @@ trait StockContainer extends Container[Stock] with ToHTML {
         usedStocks.insert(stock.copy())
       }
     }
+    val removed = amount - toRemove
+    ledger += Ledger(date, -removed, exchanger, desc)
     return if(done) (basis, 0, usedStocks) else (basis, toRemove, usedStocks)
   }
 
@@ -59,6 +79,54 @@ trait StockContainer extends Container[Stock] with ToHTML {
 
   def totalCost : Double =
     this.iterator.map(p => p.amount * p.costBasis).sum
+
+  def ledgerToHTML(year : Int) : Option[HTML] =
+     {var rows = 0
+      var balance = 0.0
+      val fmt = "%.8f"
+
+       val table =
+        <table id='tableStyle1'>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Balance</th>
+            <th>Exchanger</th>
+            <th class='alignL'>Description</th>
+          </tr>
+          <caption>{this.market}</caption>
+            {ledger.map{ l => {
+                balance += l.amount
+                if(l.date.getYear == year) {
+                  rows += 1
+                  <tr>
+                    <td>{Format.df.format(l.date)}</td>
+                    <td class={"paddingL" + (if (l.amount<0) " darkRed" else " darkBlue")}>
+                      {fmt.format(l.amount)}
+                    </td>
+                    <td class='paddingL'>{fmt.format(balance)}</td>
+                    <td class='exchanger'>{l.exchanger}</td>
+                    <td class='alignL'>{l.description}</td>
+                  </tr>
+                }
+             }}
+            }
+            {if(rows>0)
+                <tr>
+                  <th>Final balance:</th>
+                  <th></th>
+                  <th>{fmt.format(balance)}</th>
+                  <th></th>
+                  <th></th>
+                </tr>
+
+            }
+          </table>
+         if(rows>0)
+           Some{table}
+         else
+           None
+        }
 
   override def toHTML : HTML = toHTML()
 
@@ -111,7 +179,7 @@ case class StockQueue(id : String, market : Market, baseMarket : Market) extends
   override def copy: StockQueue = {
     val clone = StockQueue(id, market, baseMarket)
     for(x <- this)
-      clone.insert(x.copy())
+      clone.insert(x.copy(), "")
     return clone
   }
 }
@@ -121,7 +189,7 @@ case class StockStack(id : String, market : Market, baseMarket : Market) extends
   override def copy: StockStack = {
     val clone = StockStack(id, market, baseMarket)
     for(x <- this.reversed)
-      clone.insert(x.copy())
+      clone.insert(x.copy(), "")
     return clone
   }
 }
@@ -138,7 +206,7 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
   def iterator: Iterator[StockContainer] =
     containers.iterator.map(_._2)
 
-  def add(id : String, boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : LocalDateTime, exchangeRate : Price, exchangeMarket : Market)(baseMarket : Market): Unit = {
+  def add(id : String, boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : LocalDateTime, exchangeRate : Price, exchangeMarket : Market, desc : String)(baseMarket : Market): Unit = {
     val container = containers.getOrElse(id, newContainer(id, boughtMarket, baseMarket))
 
     container.insert(
@@ -147,18 +215,19 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
           && x.date.sameDayAs(y.date)
           && x.exchangeMarket == y.exchangeMarket && (x.exchangeRate - y.exchangeRate).abs < container.eps
       , (x: Stock, y: Stock) => x.copy(amount = x.amount + y.amount)
+      , desc
     )
     containers(id) = container
   }
 
   // Assumes id = boughtMarket. Useful for non-margin markets where ids are markets themselves
-  def add(boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : LocalDateTime, exchangeRate : Price, exchangeMarket : Market)(baseMarket : Market): Unit = {
-    add(boughtMarket, boughtMarket, boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeMarket)(baseMarket)
+  def add(boughtMarket : Market, boughtAmount : Double, costBasis : Price, exchanger : Exchanger, date : LocalDateTime, exchangeRate : Price, exchangeMarket : Market, desc : String)(baseMarket : Market): Unit = {
+    add(boughtMarket, boughtMarket, boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeMarket, desc)(baseMarket)
   }
 
-  def remove(id : String, soldAmount : Double)(baseMarket : Market) : (Price, Price, StockContainer) = {
+  def remove(id : String, soldAmount : Double)(baseMarket : Market)(date: LocalDateTime, exchanger: Exchanger, desc : String) : (Price, Price, StockContainer) = {
     val container = apply(id)(baseMarket)
-    return container.removeAndGetBasis(soldAmount)
+    return container.removeAndGetBasis(soldAmount)(date: LocalDateTime, exchanger: Exchanger, desc)
   }
 
   override def toHTML: HTML =
@@ -200,11 +269,11 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
      val sameBaseMarkets = baseMarkets.nonEmpty && baseMarkets.tail.forall(_ == baseMarkets.head)
      if(sameBaseMarkets)
         <tr>
-          <td class='embold'>Total:</td>
-          <td></td>
-          <td>{HTMLDoc.asMarket(totalCost, baseMarkets.head)}</td>
-          <td></td>
-          <td></td>
+          <th>Total:</th>
+          <th></th>
+          <th>{HTMLDoc.asMarket(totalCost, baseMarkets.head)}</th>
+          <th></th>
+          <th></th>
         </tr>
     }
     </table>

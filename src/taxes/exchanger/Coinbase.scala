@@ -54,8 +54,7 @@ object Coinbase extends Exchanger {
             , id = id
             , fromAmount = amount, fromMarket = baseMarket
             , toAmount = subtotal.abs, toMarket = quoteMarket
-            , detachedFee = Some(feeAmount, quoteMarket) // Coinbase doesn't use fee to compute exchange rate so we add fee apart
-            , feeAmount = 0, feeMarket = quoteMarket
+            , fees = List(FeePair(feeAmount, quoteMarket)) // todo detached Coinbase doesn't use fee to compute exchange rate so we add fee apart
             , exchanger = Coinbase
             , description = desc
           )
@@ -67,8 +66,7 @@ object Coinbase extends Exchanger {
             , id = id
             , fromAmount = subtotal.abs, fromMarket = quoteMarket
             , toAmount = amount, toMarket = baseMarket
-            , detachedFee = Some(feeAmount, quoteMarket) // Coinbase doesn't use fee to compute exchange rate so we add fee apart
-            , feeAmount = 0, feeMarket = quoteMarket
+            , fees = List(FeePair(feeAmount, quoteMarket)) // todo detached Coinbase doesn't use fee to compute exchange rate so we add fee apart
             , exchanger = Coinbase
             , description = desc
           )

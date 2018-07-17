@@ -43,8 +43,7 @@ object CCEX extends Exchanger {
             , id = ""
             , fromAmount = fromAmount, fromMarket = fromMarket
             , toAmount = toAmount, toMarket = toMarket  // toAmount in csv doesn't include fee
-            , feeAmount = fee
-            , feeMarket = toMarket
+            , fees = List(FeePair(fee, toMarket))
             , exchanger = CCEX
             , description = ""
           )
