@@ -57,6 +57,8 @@ The following command line parameters can be written after the command:
 
 * `-time-zone=z` to use `z` as your time zone for date/time conversions.
 
+* `-year=y` to only process operations for year `y`. Assumes previous years have been processed before.
+
 After running the program, output report will be produced in folder `data/usr/yourUser/output`.
 
 ## Configuration

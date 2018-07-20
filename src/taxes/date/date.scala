@@ -20,5 +20,7 @@ package object date  {
       localDateTime.truncatedTo(ChronoUnit.DAYS).equals(that.truncatedTo(ChronoUnit.DAYS))
   }
 
+  implicit val localDateTimeJson = LocalDateTime.localDateTimeJson
+
   type ZonedDateTime = java.time.ZonedDateTime
 }

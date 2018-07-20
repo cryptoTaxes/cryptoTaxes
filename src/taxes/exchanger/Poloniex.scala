@@ -72,7 +72,7 @@ object Poloniex extends Exchanger {
           ""
 
       if(amount==0 && total==0) // Must be a Poloniex error but I got an entry with no amount nor total
-        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
 
       if (category == "Exchange") {
         // Rate is computed as Total / Amount
@@ -153,7 +153,7 @@ object Poloniex extends Exchanger {
           }
         return CSVReader.Ok(margin)
       } else
-        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
     }
 
     // override def read(): List[Operation] =
@@ -249,10 +249,10 @@ object Poloniex extends Exchanger {
           )
           return CSVReader.Ok(fee)
         } else
-          CSVReader.Warning("%s. Read withdrawal %s: This withdrawal was ignored: %s.".format(id, Paths.pathFromData(fileName), line))
+          CSVReader.Warning("%s. Read withdrawal %s: This withdrawal was ignored: %s.".format(id, FileSystem.pathFromData(fileName), line))
 
       } else
-        CSVReader.Warning("%s. Read withdrawal %s: This withdrawal was not completed: %s.".format(id, Paths.pathFromData(fileName), line))
+        CSVReader.Warning("%s. Read withdrawal %s: This withdrawal was not completed: %s.".format(id, FileSystem.pathFromData(fileName), line))
     }
   }
 }

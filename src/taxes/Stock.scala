@@ -1,21 +1,77 @@
 package taxes
 
-import java.text.SimpleDateFormat
-
 import taxes.date._
-import taxes.exchanger.Exchanger
+import taxes.exchanger.{Exchanger, UserFolderSource}
+import taxes.util.Logger
+import spray.json._
+import DefaultJsonProtocol._
 
-import scala.collection.mutable.ListBuffer
+object Stock {
+  implicit val stockJson = jsonFormat6(Stock.apply)
+}
 
 
 // basis is expressed in base unit. exchanger is where it was bought
 case class Stock(var amount : Double, costBasis : Price, exchanger : Exchanger, date : LocalDateTime, exchangeRate : Price, exchangeMarket : Market) {
   override def toString : String =
     "Stock(%.4f, %.8f, %s, %.8f, %s, ".format(amount, costBasis, exchanger, exchangeRate, exchangeMarket) +
-    new SimpleDateFormat("yyyy-MM-dd").format(date) +
+    Format.df.format(date) +
     ")"
 }
 
+object StockContainer {
+  implicit object stockContainerJson extends RootJsonFormat[StockContainer] {
+    def write(container: StockContainer) = {
+      val containerType = container match {
+        case _ : StockStack =>
+          "stack"
+        case _ : StockQueue =>
+          "queue"
+        case _ =>
+          Logger.fatal("StockContainer.toFile: expecting a stack or a queue.")
+      }
+      JsObject(
+        "containerType" -> JsString(containerType),
+        "id" -> JsString(container.id),
+        "market" -> JsString(container.market),
+        "baseMarket" -> JsString(container.baseMarket),
+        "finalBalance" -> JsNumber(container.ledger.finalBalance),
+        "stocks" -> {
+          val builder = new scala.collection.immutable.VectorBuilder[JsValue]()
+          for(stock <- container.doubleEndedContainer)
+            builder += stock.toJson
+          JsArray(builder.result())
+        }
+      )
+    }
+
+    def read(value: JsValue) = {
+      value.asJsObject.getFields("containerType", "id", "market", "baseMarket", "finalBalance", "stocks") match {
+        case Seq(JsString(containerType), JsString(id), JsString(market), JsString(baseMarket), JsNumber(finalBalance), JsArray(stocks)) =>
+          var isStack = false
+          val container : StockContainer = containerType match {
+            case "stack" =>
+              isStack = true
+              StockStack(id, market, baseMarket)
+            case "queue" =>
+              StockQueue(id, market, baseMarket)
+            case _ =>
+              Logger.fatal("StockContainer.read: expecting a stack or a queue %s.".format(containerType))
+          }
+          container.ledger.initialBalance = finalBalance.doubleValue
+          val vector = if(isStack) stocks.reverseIterator else stocks
+          vector.foreach(x => container.insert(x.convertTo[Stock]))
+          container
+        case _ => throw new DeserializationException("StockContainer expected")
+      }
+    }
+  }
+
+  def fromFile(path : String) : StockContainer =
+    FileSystem.withSource(path){ src =>
+      JsonParser(src.mkString).convertTo[StockContainer]
+  }
+}
 
 trait StockContainer extends Container[Stock] with ToHTML {
   val id : String
@@ -32,18 +88,15 @@ trait StockContainer extends Container[Stock] with ToHTML {
     else
       Config.config.epsilon
 
-
-  case class Ledger(date : LocalDateTime, amount : Double, exchanger: Exchanger, description : String)
-
-  val ledger = ListBuffer[Ledger]()
+  val ledger = Ledger(market)
 
   def insert(x : Stock, desc : String): Unit = {
-    ledger += Ledger(x.date, x.amount, x.exchanger, desc)
+    ledger += Ledger.Entry(x.date, x.amount, x.exchanger, desc)
     insert(x)
   }
 
   def insert(x : Stock, eq : (Stock,Stock) => Boolean, combine : (Stock,Stock) => Stock, desc : String): Unit = {
-    ledger += Ledger(x.date, x.amount, x.exchanger, desc)
+    ledger += Ledger.Entry(x.date, x.amount, x.exchanger, desc)
     insert(x, eq, combine)
   }
 
@@ -70,7 +123,7 @@ trait StockContainer extends Container[Stock] with ToHTML {
       }
     }
     val removed = amount - toRemove
-    ledger += Ledger(date, -removed, exchanger, desc)
+    ledger += Ledger.Entry(date, -removed, exchanger, desc)
     return if(done) (basis, 0, usedStocks) else (basis, toRemove, usedStocks)
   }
 
@@ -79,54 +132,6 @@ trait StockContainer extends Container[Stock] with ToHTML {
 
   def totalCost : Double =
     this.iterator.map(p => p.amount * p.costBasis).sum
-
-  def ledgerToHTML(year : Int) : Option[HTML] =
-     {var rows = 0
-      var balance = 0.0
-      val fmt = "%.8f"
-
-       val table =
-        <table id='tableStyle1'>
-          <tr>
-            <th>Date</th>
-            <th>Amount</th>
-            <th>Balance</th>
-            <th>Exchanger</th>
-            <th class='alignL'>Description</th>
-          </tr>
-          <caption>{this.market}</caption>
-            {ledger.map{ l => {
-                balance += l.amount
-                if(l.date.getYear == year) {
-                  rows += 1
-                  <tr>
-                    <td>{Format.df.format(l.date)}</td>
-                    <td class={"paddingL" + (if (l.amount<0) " darkRed" else " darkBlue")}>
-                      {fmt.format(l.amount)}
-                    </td>
-                    <td class='paddingL'>{fmt.format(balance)}</td>
-                    <td class='exchanger'>{l.exchanger}</td>
-                    <td class='alignL'>{l.description}</td>
-                  </tr>
-                }
-             }}
-            }
-            {if(rows>0)
-                <tr>
-                  <th>Final balance:</th>
-                  <th></th>
-                  <th>{fmt.format(balance)}</th>
-                  <th></th>
-                  <th></th>
-                </tr>
-
-            }
-          </table>
-         if(rows>0)
-           Some{table}
-         else
-           None
-        }
 
   override def toHTML : HTML = toHTML()
 
@@ -172,14 +177,24 @@ trait StockContainer extends Container[Stock] with ToHTML {
       </span>
     }}
   </span>
-}
 
+  def toFile(path : String): Unit = {
+    FileSystem.withPrintStream(path) {
+      _.println(this.toJson.prettyPrint)
+    }
+    val (folder, name, ext) = FileSystem.decompose(path)
+    val path2 = FileSystem.compose(Seq(folder,"ledger"), name, ext)
+    FileSystem.withPrintStream(path2) {
+      _.println(this.ledger.toJson.prettyPrint)
+    }
+  }
+}
 
 case class StockQueue(id : String, market : Market, baseMarket : Market) extends Queue[Stock] with StockContainer {
   override def copy: StockQueue = {
     val clone = StockQueue(id, market, baseMarket)
     for(x <- this)
-      clone.insert(x.copy(), "")
+      clone.insert(x.copy())
     return clone
   }
 }
@@ -189,7 +204,7 @@ case class StockStack(id : String, market : Market, baseMarket : Market) extends
   override def copy: StockStack = {
     val clone = StockStack(id, market, baseMarket)
     for(x <- this.reversed)
-      clone.insert(x.copy(), "")
+      clone.insert(x.copy())
     return clone
   }
 }
@@ -277,6 +292,29 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
         </tr>
     }
     </table>
+  }
+
+
+  def loadFromDisk(path : String): Unit = {
+    val src = new FolderSource[StockContainer](path, FileSystem.stockExtension) {
+      override def fileSource(fileName: String): FileSource[StockContainer] =
+        new FileSource[StockContainer](fileName) {
+          override def read(): Seq[StockContainer] =
+            Seq(StockContainer.fromFile(fileName))
+        }
+    }
+
+    for(stockContainer <- src.read())
+      if(stockContainer.ledger.initialBalance > 1.0E-7 || stockContainer.nonEmpty) {
+        containers(stockContainer.id) = stockContainer
+      }
+  }
+
+  def saveToDisk(path : String): Unit = {
+    for(stockContainer <- containers.values) {
+      val filePath = FileSystem.compose(Seq(path), stockContainer.id, FileSystem.stockExtension)
+      stockContainer.toFile(filePath)
+    }
   }
 }
 

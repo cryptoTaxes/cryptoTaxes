@@ -1,6 +1,5 @@
 package taxes
 
-import java.io.PrintStream
 import java.text.SimpleDateFormat
 
 import taxes.date._
@@ -47,7 +46,7 @@ case class CSV() {
   }
 
   def setOutputTo(fileName : String): Unit = {
-    val newState = State(fileName, new PrintStream(fileName))
+    val newState = State(fileName, FileSystem.PrintStream(fileName))
 
     optState match {
       case None     => ;

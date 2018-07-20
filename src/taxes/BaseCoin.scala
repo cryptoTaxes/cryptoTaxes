@@ -45,9 +45,9 @@ trait BaseCoin {
 
 
 object BTCBaseCoin extends BaseCoin {
-  val market = Market.bitcoin
+  lazy val market = Market.bitcoin
 
-  val format = new DecimalFormat("0.########")
+  lazy val format = new DecimalFormat("0.########")
 
   private def USD2BTC(price : Price, date : LocalDateTime) : Price =
     price / CryptoUSDParity(Market.bitcoin, date)
@@ -63,18 +63,18 @@ object BTCBaseCoin extends BaseCoin {
 
 
 object EuroBaseCoin extends BaseCoin {
-  val market = Market.euro
+  lazy val market = Market.euro
 
-  val format = new DecimalFormat("0.#####")
+  lazy val format = new DecimalFormat("0.#####")
 
   def toBaseCoin(price : Price, priceUnit: Market, date : LocalDateTime) : Price =
     PriceUtils.priceToEuros(price, priceUnit, date)
 }
 
 object USDBaseCoin extends BaseCoin {
-  val market = Market.usd
+  lazy val market = Market.usd
 
-  val format = new DecimalFormat("0.#####")
+  lazy val format = new DecimalFormat("0.#####")
 
   def toBaseCoin(price : Price, priceUnit: Market, date : LocalDateTime) : Price =
     PriceUtils.priceToUSDs(price, priceUnit, date)

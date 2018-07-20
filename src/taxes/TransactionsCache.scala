@@ -1,57 +1,39 @@
 package taxes
 
-import java.io.{File, PrintStream}
+import java.io.File
 
 import taxes.date._
 import taxes.util.Logger
-import taxes.util.parse.{CSVReader, Scanner, SeparatedScanner}
-
+import spray.json._
+import DefaultJsonProtocol._
 
 object TransactionsCache extends Initializable with Finalizable {
-
   case class TxKey(market: Market, txid : String, address : String)
+  implicit val txKeyJson = jsonFormat3(TxKey)
+
   case class TxInfo(amount : Double, fee : Double, localDate : LocalDateTime)
+  implicit val txInfoJson = jsonFormat3(TxInfo)
 
   private val map = scala.collection.mutable.Map[TxKey, TxInfo]()
 
-  private val fileName = Paths.cacheFolder+"/"+"transactions.csv"
-
-  private val sdf = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSVV")
+  private val file = new File(FileSystem.transactionsCacheFile)
 
   def saveToDisk(): Unit = {
-    val f = new File(fileName)
-    val ps = new PrintStream(f)
-    val header = "market,txid,address,amount,fee,date"
-    ps.println(header)
-    for((key,info) <- map) {
-      // we store it as a ZonedDateTime in case zone is changed later so that date is consistent
-      val zonedDateTime = ZonedDateTime.of(info.localDate, Config.config.timeZone)
-      ps.println(List(key.market, key.txid, key.address, info.amount, info.fee, sdf.format(zonedDateTime)).mkString(","))
+    FileSystem.withPrintStream(file){
+      _.println(map.toList.toJson.prettyPrint)
     }
-    ps.close()
   }
 
   def loadFromDisk(): Unit = {
-    def cacheReader(fileName : String) = new CSVReader[(TxKey, TxInfo)](fileName) {
-      override val linesToSkip = 1
+    if(!file.exists())
+      return
 
-      override def lineScanner(line: String) =
-        SeparatedScanner(line, "[,]")
-
-      override def readLine(line: String, scLn: Scanner) : CSVReader.Result[(TxKey, TxInfo)] = {
-        val market = scLn.next()
-        val txid = scLn.next()
-        val address = scLn.next()
-        val amount = scLn.nextDouble()
-        val fee = scLn.nextDouble()
-        val zonedDate = ZonedDateTime.parse(scLn.next(), sdf)
-        val localDate = LocalDateTime.fromZonedDateTime(zonedDate)
-        return CSVReader.Ok((TxKey(market, txid, address), TxInfo(amount, fee, localDate)))
-      }
+    val pairs = FileSystem.withSource(file){ src =>
+      JsonParser(src.mkString).convertTo[List[(TxKey, TxInfo)]]
     }
-    if(new File(fileName).exists())
-      for((key, info) <- cacheReader(fileName).read())
-        map += (key -> info)
+
+    for(pair <- pairs)
+      map += pair
   }
 
   def lookup(market: Market, txid : String, address : String) : TxInfo = {

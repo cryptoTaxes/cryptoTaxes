@@ -18,6 +18,20 @@ object Parse {
     return int
   }
 
+  def asLong(str : String) : Long = {
+    val sc = new java.util.Scanner(str)
+    val long = sc.nextLong()
+    sc.close()
+    return long
+  }
+
+  def asBigDecimal(str : String) : BigDecimal = {
+    val sc = new java.util.Scanner(str)
+    val big = sc.nextBigDecimal()
+    sc.close()
+    return big
+  }
+
   def isComment(line : String) : Boolean =
     line.isEmpty || line.startsWith("//")
 

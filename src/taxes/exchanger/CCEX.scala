@@ -26,7 +26,12 @@ object CCEX extends Exchanger {
       val orderType = scLn.next("Order Type")
 
       if(orderType=="Transaction") {
-        val date = LocalDateTime.parseAsUTC(token1+" "+token2, "yyyy-MM-dd HH:mm:ss") // C-CEX uses UTC
+        val date =
+          if(Config.config.deprecatedUp2017Version)
+            LocalDateTime.parseAsMyZoneId(token1+" "+token2, "yyyy-MM-dd HH:mm:ss")
+          else
+            LocalDateTime.parseAsUTC(token1+" "+token2, "yyyy-MM-dd HH:mm:ss") // C-CEX uses UTC
+
         val toAmount = scLn.nextDouble("To Amount")
         val toMarket = Market.normalize(scLn.next("To Market"))
         val fromAmount = scLn.nextDouble("From Amount")
@@ -50,7 +55,7 @@ object CCEX extends Exchanger {
 
         return CSVReader.Ok(exchange)
       } else
-        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
     }
   }
 }

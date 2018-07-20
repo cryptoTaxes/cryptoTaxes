@@ -48,7 +48,7 @@ object Changelly extends Exchanger {
         val (amountReceived, receivedMarket) = split(scLn.next("Received"))
 
         if(soldMarket1 != soldMarket || receivedMarket1 != receivedMarket)
-          CSVReader.Warning("%s. Read file %s: cannot parse this line: %s as rate is not expressed as receivedMarket/soldMarket.".format(id, Paths.pathFromData(fileName), line))
+          CSVReader.Warning("%s. Read file %s: cannot parse this line: %s as rate is not expressed as receivedMarket/soldMarket.".format(id, FileSystem.pathFromData(fileName), line))
 
         val realFee = amount * exchangeRate - amountReceived
         val feePercent = realFee * 100 / (amount * exchangeRate)
@@ -67,7 +67,7 @@ object Changelly extends Exchanger {
           )
         return CSVReader.Ok(exchange)
       } else
-        return CSVReader.Warning("%s. Read file %s: cannot parse this line: %s.".format(id, Paths.pathFromData(fileName), line))
+        return CSVReader.Warning("%s. Read file %s: cannot parse this line: %s.".format(id, FileSystem.pathFromData(fileName), line))
     }
   }
 }

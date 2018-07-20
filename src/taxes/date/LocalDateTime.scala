@@ -44,6 +44,26 @@ object LocalDateTime {
 
   def parseAsMyZoneId(str : String, format: String) : LocalDateTime =
     parse(str+myZoneId, format+"VV")
+
+  import spray.json.{JsonFormat, JsString, JsValue, deserializationError}
+
+  object localDateTimeJson extends JsonFormat[LocalDateTime] {
+    def write(ldt: LocalDateTime) = {
+      val zonedDateTime = ZonedDateTime.of(ldt, Config.config.timeZone)
+      JsString(formatter.format(zonedDateTime))
+    }
+
+    def read(value: JsValue) = value match {
+      case JsString(str) =>
+        try {
+          LocalDateTime.parse(str, formatter)
+        } catch {
+          case _ => deserializationError("LocalDateTime expected")
+        }
+      case _ =>
+        deserializationError("LocalDateTime expected")
+    }
+  }
 }
 
 

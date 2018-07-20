@@ -3,7 +3,7 @@ package taxes.exchanger
 import taxes._
 import taxes.date._
 import taxes.util._
-import taxes.util.parse.{AdvancedJSONParser, Parse}
+import taxes.util.parse.{JsObjectAST, Parse}
 
 
 object Shapeshift extends Exchanger {
@@ -36,32 +36,32 @@ object Shapeshift extends Exchanger {
       val ln0 = nextLine()
       if(ln0.nonEmpty) {
         if(!ln0.startsWith(prefix0))
-          Logger.warning("%s. %s Line %d: \"%s\" should start with %s.".format(id, Paths.pathFromData(fileName), lnNumber, ln0, prefix0))
+          Logger.warning("%s. %s Line %d: \"%s\" should start with %s.".format(id, FileSystem.pathFromData(fileName), lnNumber, ln0, prefix0))
         else {
           val orderId = ln0.drop(prefix0.length)
           val desc = "Order: " + orderId
 
           val ln1 = nextLine()
           if (!ln1.startsWith(prefix1))
-            Logger.warning("%s. %s Line %d: \"%s\" should start with %s.".format(id, Paths.pathFromData(fileName), lnNumber, ln1, prefix1))
+            Logger.warning("%s. %s Line %d: \"%s\" should start with %s.".format(id, FileSystem.pathFromData(fileName), lnNumber, ln1, prefix1))
           else {
             val inAddress = ln1.drop(prefix1.length)
 
             val ln2 = nextLine()
-            val json = AdvancedJSONParser(ln2)
+            val json = JsObjectAST.fromString(ln2)
 
-            val addr = json[String]("address")
+            val addr = json.getString("address")
             if (addr != inAddress)
-              Logger.warning("%s. %s Line %d: Input address %s should be %s.".format(id, Paths.pathFromData(fileName), lnNumber, addr, inAddress))
-            else if(json[String]("status") != "complete")
-              Logger.warning("%s. %s Line %d: Status should be complete.".format(id, Paths.pathFromData(fileName), lnNumber))
+              Logger.warning("%s. %s Line %d: Input address %s should be %s.".format(id, FileSystem.pathFromData(fileName), lnNumber, addr, inAddress))
+            else if(json.getString("status") != "complete")
+              Logger.warning("%s. %s Line %d: Status should be complete.".format(id, FileSystem.pathFromData(fileName), lnNumber))
             else {
               val fromAmount = json.getDouble("incomingCoin")
-              val fromMarket = Market.normalize(json[String]("incomingType"))
-              val address1 = json[String]("address")
+              val fromMarket = Market.normalize(json.getString("incomingType"))
+              val address1 = json.getString("address")
 
               val toAmount = json.getDouble("outgoingCoin")
-              val toMarket = Market.normalize(json[String]("outgoingType"))
+              val toMarket = Market.normalize(json.getString("outgoingType"))
 
               val ln3 = nextLine()
               val txid = ln3

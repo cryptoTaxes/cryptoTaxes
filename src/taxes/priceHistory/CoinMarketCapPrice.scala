@@ -34,14 +34,14 @@ object CoinMarketCapPrice extends Initializable {
   }
 
   private val allPairs = Parse.readAssociations (
-    Paths.configFile("coinmarketcapMarkets.txt")
+    FileSystem.configFile("coinmarketcapMarkets.txt")
     , "Reading coinmarketcap markets"
     ).map(parsePair)
 
 
   private val markets2CoinMarketPrices = {
     for((market, id) <- allPairs)
-      yield (market, CoinMarketCapPrice(market, Paths.coinMarketCap+"/"+market.toLowerCase+".txt", id))
+      yield (market, CoinMarketCapPrice(market, FileSystem.coinMarketCap+"/"+market.toLowerCase+".txt", id))
   }
 
   // returns price in USD for a market at a given date
@@ -72,7 +72,7 @@ object CoinMarketCapPrice extends Initializable {
     /*
     val src = Source.fromFile(coinMarketCapID)
     Thread.sleep(5000)
-    val ps = new PrintStream(coinMarketCapID)
+    val ps = FileSystem.PrintStream(coinMarketCapID)
     ps.println(src.mkString)
     ps.close()
     */
@@ -176,8 +176,8 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
     val header = "Date\tOpen\tHigh\tLow\tClose"
     Logger.trace("Downloading prices for "+market+" from coinmarketcap.com.")
     val lines = CoinMarketCapPrice.scrapPrices(coinMarketCapID)
-    Paths.backup(fileFullPath)
-    val ps = new java.io.PrintStream(fileFullPath)
+    FileSystem.backup(fileFullPath)
+    val ps = FileSystem.PrintStream(fileFullPath)
     ps.println(header)
     for(ln <- lines)
       ps.println(ln)

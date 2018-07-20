@@ -29,7 +29,7 @@ object EuroUSDParity extends Initializable {
     }
 
   private def readPrices() : scala.collection.mutable.Map[LocalDate, Price] = {
-    val file = new java.io.File(Paths.euroUSDFile)
+    val file = new java.io.File(FileSystem.euroUSDFile)
     Logger.trace("Reading Euro prices from " + file.getAbsoluteFile + ".")
 
     val prices = scala.collection.mutable.Map[LocalDate, Price]()
@@ -107,9 +107,9 @@ object EuroUSDParity extends Initializable {
 
     val url = "https://www.bde.es/webbde/es/estadis/infoest/series/tc_1_1.csv"
     val source = Source.fromURL(url)(scala.io.Codec.ISO8859)
-    val fileName = Paths.euroUSDFile
-    Paths.backup(fileName)
-    val ps = new java.io.PrintStream(fileName)
+    val fileName = FileSystem.euroUSDFile
+    FileSystem.backup(fileName)
+    val ps = FileSystem.PrintStream(fileName)
     ps.print(source.mkString)
     ps.close()
   }

@@ -44,7 +44,7 @@ object GDAX extends Exchanger {
       val priceFeeTotalMarket = Market.normalize(priceFeeTotalUnit)
 
       if(sizeMarket != baseMarket)
-        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s\nas sizeMarket(%s) and quoteMarket(%s) are different.".format(id, Paths.pathFromData(fileName), line, sizeMarket, quoteMarket))
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s\nas sizeMarket(%s) and quoteMarket(%s) are different.".format(id, FileSystem.pathFromData(fileName), line, sizeMarket, quoteMarket))
 
       if (side == "SELL") {
         val exchange =
@@ -71,7 +71,7 @@ object GDAX extends Exchanger {
           )
         return CSVReader.Ok(exchange)
       } else
-        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
     }
   }
 }

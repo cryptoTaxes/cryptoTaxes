@@ -43,7 +43,11 @@ object Bitfinex extends Exchanger {
       val feeCurrency = scLn.next("feeCurrency")
       val feeMarket = Market.normalize(feeCurrency)
 
-      val date = LocalDateTime.parse(scLn.next("Date Created")+"+0000", "yyyy-MM-dd HH:mm:ssZ")
+      val date =
+        if(Config.config.deprecatedUp2017Version)
+          LocalDateTime.parseAsMyZoneId(scLn.next("Date Created"), "yyyy-MM-dd HH:mm:ss")
+        else
+          LocalDateTime.parseAsUTC(scLn.next("Date Created"), "yyyy-MM-dd HH:mm:ss")
 
       val margin = scLn.next("Margin")
 
@@ -127,7 +131,7 @@ object Bitfinex extends Exchanger {
             return CSVReader.Ok(margin)
       }
       else
-        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s. Margin should be true or false but it is %s".format(id, Paths.pathFromData(fileName), line, margin))
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s. Margin should be true or false but it is %s".format(id, FileSystem.pathFromData(fileName), line, margin))
     }
   }
 
@@ -228,7 +232,12 @@ object Bitfinex extends Exchanger {
       val description = scLn.next("Description")
       val amount = scLn.nextDouble("Amount")
       val balance = scLn.next("Balance")
-      val date = LocalDateTime.parse(scLn.next("Date")+"+0000", "yyyy-MM-dd HH:mm:ssZ")
+
+      val date =
+        if(Config.config.deprecatedUp2017Version)
+          LocalDateTime.parseAsMyZoneId(scLn.next("Date Created"), "yyyy-MM-dd HH:mm:ss")
+        else
+          LocalDateTime.parseAsUTC(scLn.next("Date Created"), "yyyy-MM-dd HH:mm:ss")
 
       val desc = description
 
@@ -271,7 +280,7 @@ object Bitfinex extends Exchanger {
           )
         return CSVReader.Ok(fee)
       } */ else
-        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
     }
   }
 }

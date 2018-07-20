@@ -1,6 +1,6 @@
 package taxes
 
-import taxes.exchanger.{Exchanger, Exchangers}
+import taxes.exchanger.Exchanger
 import taxes.priceHistory.{CoinMarketCapPrice, EuroUSDParity}
 import taxes.util.Logger
 import taxes.util.parse.Parse
@@ -9,11 +9,12 @@ import taxes.util.parse.Parse
 object Main extends App {
   // Use English formats for floating point numbers
   java.util.Locale.setDefault(java.util.Locale.ENGLISH)
-  Logger.trace("cryptoTaxes (https://github.com/cryptoTaxes/cryptoTaxes)\n")
 
   val cmdLine = args.mkString(" ")
   //val cmdLine = "-user=user1 -verbosity=3 -currency=euro -download-prices=no"
   Config.config = ParseCommandLine(cmdLine)
+
+  Logger.trace("cryptoTaxes (https://github.com/cryptoTaxes/cryptoTaxes)\n")
 
   if(Config.config.downloadPrices) {
     CoinMarketCapPrice.downloadPrices()
@@ -22,11 +23,11 @@ object Main extends App {
 
   // Exchange operation readers
   private val exchangers : List[Exchanger] =
-    Exchangers.allExchangers
+    Exchanger.allExchangers
 
   // Modules that should be initalized
   private val initializables : List[Initializable] =
-    List(Paths, Market, CoinMarketCapPrice, EuroUSDParity, Logger, TransactionsCache) ++ exchangers
+    List(FileSystem, Market, CoinMarketCapPrice, EuroUSDParity, Logger, TransactionsCache) ++ exchangers
 
   // Do initialization of modules firstly
   for(initializable <- initializables)
@@ -65,7 +66,7 @@ object ParseCommandLine {
             else if (flag == "verbosity") {
               val level =
                 try {
-                  value.toInt
+                  Parse.asInt(value)
                 } catch {
                   case e: Exception => Logger.fatal("Non valid verbosity level: "+value)
                 }
@@ -102,7 +103,7 @@ object ParseCommandLine {
             } else if(flag == "decimal-places") {
               val d =
                 try {
-                  value.toInt
+                  Parse.asInt(value)
                 } catch {
                   case e: Exception => Logger.fatal("Non valid decimal places: "+value)
                 }
@@ -110,17 +111,20 @@ object ParseCommandLine {
             } else if(flag == "epsilon") {
               val eps =
                 try {
-                  value.toDouble
+                  Parse.asDouble(value)
                 } catch {
                   case e: Exception => Logger.fatal("Non valid epsilon: "+value)
                 }
               config = config.copy(epsilon = eps)
             } else if(flag == "time-zone") {
               config = config.copy(timeZone = java.time.ZoneId.of(value))
-            } else if(flag == "deprecated-exchange") {
+            } else if(flag == "deprecated-version") {
               val old = List("true", "yes", "on").contains(value.toLowerCase)
-              config = config.copy(deprecatedExchange = old)
-            }else
+              config = config.copy(deprecatedUp2017Version = old)
+            } else if(flag == "year") {
+              val year = Parse.asInt(value)
+              config = config.copy(filterYear = Some(year))
+            } else
               failParse
           } else
             failParse

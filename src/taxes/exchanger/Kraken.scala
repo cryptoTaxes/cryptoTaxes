@@ -9,7 +9,7 @@ import taxes.util.parse._
 object Kraken extends Exchanger {
   override val id: String = "Kraken"
 
-  private val configFileName = Paths.configFile("krakenMarkets.txt")
+  private val configFileName = FileSystem.configFile("krakenMarkets.txt")
 
   private val conversions: Map[Market, Market] =
     Parse.readAssociations(configFileName, "Reading Kraken markets")
@@ -110,7 +110,7 @@ object Kraken extends Exchanger {
         case List(feeLedger1, feeLedger2) =>  // two fees for this operation
           // We assume feeLedger1.market != feeLedger2.market
           if(feeLedger1.market == feeLedger2.market)
-            Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as fee1 market is the same as fee2 market: %s.\n%s\n%s".format(Kraken.id, Paths.pathFromData(fileName), line, feeLedger1, feeLedger2))
+            Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as fee1 market is the same as fee2 market: %s.\n%s\n%s".format(Kraken.id, FileSystem.pathFromData(fileName), line, feeLedger1, feeLedger2))
 
           // We try to set as fee1 the one whose market is baseMarket.
           // Otherwise we set as fee1 the one expressed in quoteMarket
@@ -123,7 +123,7 @@ object Kraken extends Exchanger {
           else if (feeLedger2.market == quoteMarket)
             (feeLedger2.fee, feeLedger2.market, feeLedger1.fee, feeLedger1.market)
           else
-            Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as fee1 market is neither fromMarket nor toMarket: %s.\n%s\n%s".format(Kraken.id, Paths.pathFromData(fileName), line, feeLedger1, feeLedger2))
+            Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as fee1 market is neither fromMarket nor toMarket: %s.\n%s\n%s".format(Kraken.id, FileSystem.pathFromData(fileName), line, feeLedger1, feeLedger2))
 
 /*
           if(isBuy) {
@@ -155,7 +155,7 @@ object Kraken extends Exchanger {
           }
 */
         case ls =>
-          Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as it has more than two fees: %s.\n%s".format(Kraken.id, Paths.pathFromData(fileName), line, ls))
+          Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as it has more than two fees: %s.\n%s".format(Kraken.id, FileSystem.pathFromData(fileName), line, ls))
       }
 
 
@@ -196,7 +196,7 @@ object Kraken extends Exchanger {
             )
           return CSVReader.Ok(margin)
         } else
-          return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
+          return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
     } else { // spot exchange
         if(isSell) {
             // If fee1Market==fromMarket, vol is just what we are exchanging
@@ -210,7 +210,7 @@ object Kraken extends Exchanger {
             // vol doesn't include fee1 and stands directly for fromAmount.
 
             val toAmount =
-              if(Config.config.deprecatedExchange)
+              if(Config.config.deprecatedUp2017Version)
                 cost - (if (fee1Market == quoteMarket) fee1 else 0)
               else
                 cost - {
@@ -246,7 +246,7 @@ object Kraken extends Exchanger {
             // cost stands directly for fromAmount.
 
           val toAmount =
-            if(Config.config.deprecatedExchange)
+            if(Config.config.deprecatedUp2017Version)
               vol - (if (fee1Market == quoteMarket) fee1 else 0)
             else
               vol - {
@@ -271,7 +271,7 @@ object Kraken extends Exchanger {
               )
             return CSVReader.Ok(exchange)
         } else
-          return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
+          return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
       }
     }
   }
@@ -315,7 +315,7 @@ object Kraken extends Exchanger {
         )
         return CSVReader.Ok(fee)
       }  else
-        return CSVReader.Warning("%s. Read file %s; Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
+        return CSVReader.Warning("%s. Read file %s; Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
     }
   }
 }

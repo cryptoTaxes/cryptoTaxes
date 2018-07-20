@@ -56,7 +56,7 @@ object LocalBTC extends Exchanger {
         return CSVReader.Ok(exchange)
       } else
         // toDo support sells at LocalBTC
-        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, Paths.pathFromData(fileName), line))
+        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
       /*
           Exchange(
             date = date

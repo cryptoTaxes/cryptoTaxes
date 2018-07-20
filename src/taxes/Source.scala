@@ -16,10 +16,10 @@ abstract class FolderSource[+A](folderPath : String, extension : String) extends
 
   def read(): Seq[A] = {
     val xs = ListBuffer[A]()
-    val files = Paths.findFilesAt(folderPath, extension)
+    val files = FileSystem.findFilesAt(folderPath, extension)
     if (files != null)
       for (file <- files) {
-        val fileName = file.getAbsolutePath
+        val fileName = file.getPath
         Logger.trace("Reading contents of file %s.".format(fileName))
         xs ++= fileSource(fileName).read()
       }

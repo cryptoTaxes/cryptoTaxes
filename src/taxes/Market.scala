@@ -7,7 +7,7 @@ object Market extends Initializable {
     def parsePair(t : (Market, Market)) = t match {
       case (market1, market2) => (market1.toUpperCase(), market2.toUpperCase())
     }
-    Parse.readAssociations ( Paths.configFile("marketsNormalization.txt")
+    Parse.readAssociations ( FileSystem.configFile("marketsNormalization.txt")
                            , "Reading market normalizations"
                            ).map(parsePair)
   }
@@ -47,7 +47,7 @@ object Market extends Initializable {
     def parsePair(t : (Market, String)) = t match {
       case (market, str) => (normalize(market), str.toInt)
     }
-    Parse.readAssociations( Paths.configFile("parityPriorities.txt")
+    Parse.readAssociations( FileSystem.configFile("parityPriorities.txt")
                           , "Reading market priorities"
                           ).map(parsePair)
   }

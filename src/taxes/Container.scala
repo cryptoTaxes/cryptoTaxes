@@ -91,48 +91,48 @@ class DoubleEndedContainer[T] extends Iterable[T] {
 
 
 trait Container[T] extends Iterable[T] {
-  protected val xs = new DoubleEndedContainer[T]()
+  protected val doubleEndedContainer = new DoubleEndedContainer[T]()
 
   override def isEmpty : Boolean =
-    xs.isEmpty
+    doubleEndedContainer.isEmpty
 
   override def nonEmpty : Boolean =
-    xs.nonEmpty
+    doubleEndedContainer.nonEmpty
 
   def first : T =
-    xs.first
+    doubleEndedContainer.first
 
   def removeFirst(): Unit =
-    xs.removeFirst()
+    doubleEndedContainer.removeFirst()
 
   def insert(x : T)
 
   def insert(x : T, eq : (T,T) => Boolean, combine : (T,T) => T)
 
   def iterator: Iterator[T] =
-    xs.iterator
+    doubleEndedContainer.iterator
 }
 
 
 class Queue[T]() extends Container[T] {
   def insert(x : T): Unit =
-    xs.append(x)
+    doubleEndedContainer.append(x)
 
   def insert(x : T, eq : (T,T) => Boolean, combine : (T,T) => T): Unit =
-    xs.combineLast(x, eq, combine)
+    doubleEndedContainer.combineLast(x, eq, combine)
 
   override def toString =
-    xs.mkString("Queue(", ", ", ")")
+    doubleEndedContainer.mkString("Queue(", ", ", ")")
 }
 
 
 class Stack[T]() extends Container[T] {
   def insert(x : T): Unit =
-    xs.prepend(x)
+    doubleEndedContainer.prepend(x)
 
   def insert(x : T, eq : (T,T) => Boolean, combine : (T,T) => T): Unit =
-    xs.combineFirst(x, eq, combine)
+    doubleEndedContainer.combineFirst(x, eq, combine)
 
   override def toString =
-    xs.mkString("Stack(", ", ", ")")
+    doubleEndedContainer.mkString("Stack(", ", ", ")")
 }

@@ -23,21 +23,21 @@ object RippleTrade extends Exchanger {
   private case class Entry(hash : String, amount : Double, currency : Market, date : LocalDateTime)
 
   private def readFile(fileName : String) : List[Exchange] = {
-    val src = Source.fromFile(fileName)
-    val contents = src.dropWhile(_ != '{').mkString // skip till proper start of json
-    src.close()
+    val contents = FileSystem.withSource(fileName){ src =>
+      src.dropWhile(_ != '{').mkString // skip till proper start of json
+    }
 
-    val json = AdvancedJSONParser(contents)
+    val json = JsObjectAST.fromString(contents)
 
-    val changes = json.getList("balance_changes")
+    val changes = json.getVector("balance_changes")
 
-    val entries = for(change <- changes)
+    val entries = for(change <- changes; changeJson = JsObjectAST.fromJsValue(change))
       yield
         Entry(
-            date = LocalDateTime.parse(change[String]("executed_time"), "yyyy-MM-dd'T'HH:mm:ssX")
-          , hash = change[String]("tx_hash")
-          , amount = Parse.asDouble(change[String]("amount_change"))
-          , currency = change[String]("currency")
+          date = LocalDateTime.parse(changeJson.getString("executed_time"), "yyyy-MM-dd'T'HH:mm:ssX")
+          , hash = changeJson.getString("tx_hash")
+          , amount = Parse.asDouble(changeJson.getString("amount_change"))
+          , currency = changeJson.getString("currency")
         )
 
     var exchanges = List[Exchange]()
@@ -48,12 +48,12 @@ object RippleTrade extends Exchanger {
       val optXRP = entries.find(entry => entry.hash == hash && entry.currency == "XRP")
       optXRP match {
         case None =>
-          Logger.fatal("RippleTrade.readFile %s: could not find XRP value for hash %s".format(Paths.pathFromData(fileName), hash))
+          Logger.fatal("RippleTrade.readFile %s: could not find XRP value for hash %s".format(FileSystem.pathFromData(fileName), hash))
         case Some(entryXRP) => {
           val optBTC = entries.find(entry => entry.hash == hash && entry.currency == "BTC")
           optBTC match {
             case None =>
-              Logger.fatal("RippleTrade.readFile %s: could not find BTC value for hash %s".format(Paths.pathFromData(fileName), hash))
+              Logger.fatal("RippleTrade.readFile %s: could not find BTC value for hash %s".format(FileSystem.pathFromData(fileName), hash))
             case Some(entryBTC) => {
               val desc = "Order: " + hash
               val exchange =

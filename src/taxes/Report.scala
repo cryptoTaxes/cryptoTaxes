@@ -1,7 +1,5 @@
 package taxes
 
-import java.io.PrintStream
-
 import taxes.date._
 import taxes.exchanger._
 import taxes.util.Logger
@@ -61,8 +59,7 @@ case class ValueTracker(baseMarket : Market) extends Iterable[(Market, Double)] 
 
 
 object OperationTracker {
-  case class CSVEntry(
-                       date : LocalDateTime
+  case class CSVEntry(date : LocalDateTime
                        , exchanger : Exchanger
                        , description : String
                        , costBasis : Double
@@ -113,8 +110,8 @@ case class OperationTracker() extends Iterable[(Int,OperationTracker.CSVEntry)] 
     m.clear()
 
   def printToCSVFile(fileName : String, year : Int): Unit = {
-    val csvFileName = Paths.userOutputFolder+"/%s%d.csv".format(fileName,year)
-    val ps = new PrintStream(csvFileName)
+    val csvFileName = FileSystem.userOutputFolder(year)+"/%s%d.csv".format(fileName,year)
+    val ps = FileSystem.PrintStream(csvFileName)
 
     ps.println()
     ps.println("%s %d".format(Accounting.toString(Config.config.accountingMethod), year))
@@ -145,16 +142,36 @@ object Report {
     val proceeds : ValueTracker // value obtained for sold coins
   }
 
+  trait State {
+    val stocks : StockPool
+    val marginBuysMap, marginSellsMap : scala.collection.immutable.Map[Exchanger, StockPool]
+
+    def saveToDisk(year : Int): Unit = {
+      val path = FileSystem.stocksFolder(year)
+      stocks.saveToDisk(path)
+
+      for((map, isBuy) <- List((marginBuysMap, true), (marginSellsMap, false)))
+        for((exchanger, stocks) <- map) {
+          val path = FileSystem.marginFolder(year, exchanger, isBuy)
+          stocks.saveToDisk(path)
+        }
+    }
+
+    def loadFromDisk(year : Int): Unit = {
+      stocks.loadFromDisk(FileSystem.stocksFolder(year))
+
+      for((map, isBuy) <- List((marginBuysMap, true), (marginSellsMap, false)))
+        for((exchanger, stocks) <- map) {
+          val path = FileSystem.marginFolder(year, exchanger, isBuy)
+          stocks.loadFromDisk(path)
+        }
+    }
+  }
+
   def process(): Unit = {
     val config = Config.config
 
-    val operations = Exchangers.readAllOperations().sortBy(_.date)
-
-    if(operations.isEmpty)
-      Logger.fatal("No operation was found in any exchange for user: "+config.user+".")
-
     val processedOperations = ListBuffer[Processed]()
-
 
     // what market is our basis
     val baseCoin = config.baseCoin
@@ -162,25 +179,48 @@ object Report {
 
     // current stock of assets with their cost bases (expressed in base coin)
     val accountingMethod = Config.config.accountingMethod
-    val stocks =
-      if(accountingMethod == Accounting.FIFO)
-        QueueStockPool()
-      else if (accountingMethod == Accounting.LIFO)
-        StackStockPool()
-      else
-        Logger.fatal("Unkown accounting method: %s".format(Accounting.toString(accountingMethod)))
 
-    // current in longs/shorts assets for margin trading operations
-    val marginBuysMap = scala.collection.immutable.Map[Exchanger, StockPool](
-      Bitfinex -> StackStockPool() // note that Bitfinex processes margin in a LIFO way
-      , Kraken -> QueueStockPool()
-      , Poloniex -> QueueStockPool()
-    )
-    val marginSellsMap = scala.collection.immutable.Map[Exchanger, StockPool](
-      Bitfinex -> StackStockPool()
-      , Kraken -> QueueStockPool()
-      , Poloniex -> QueueStockPool()
-    )
+    object state extends State {
+      val stocks =
+        if(accountingMethod == Accounting.FIFO)
+          QueueStockPool()
+        else if (accountingMethod == Accounting.LIFO)
+          StackStockPool()
+        else
+          Logger.fatal("Unkown accounting method: %s".format(Accounting.toString(accountingMethod)))
+
+      // current in longs/shorts assets for margin trading operations
+      val marginBuysMap = scala.collection.immutable.Map[Exchanger, StockPool](
+        Bitfinex -> StackStockPool() // note that Bitfinex processes margin in a LIFO way
+        , Kraken -> QueueStockPool()
+        , Poloniex -> QueueStockPool()
+      )
+      val marginSellsMap = scala.collection.immutable.Map[Exchanger, StockPool](
+        Bitfinex -> StackStockPool()
+        , Kraken -> QueueStockPool()
+        , Poloniex -> QueueStockPool()
+      )
+    }
+
+    config.filterYear match {
+      case None =>
+        ;
+      case Some(year) =>
+        // Load previous year final state if we are to process a single year
+        state.loadFromDisk(year-1)
+    }
+
+    def relevant(operation: Operation) : Boolean = config.filterYear match {
+      case None =>
+        true
+      case Some(year) =>
+        operation.date.getYear == year
+    }
+
+    val operations = Exchanger.readAllOperations().filter(relevant).sortBy(_.date)
+
+    if(operations.isEmpty)
+      Logger.fatal("No operation was found in any exchange for user: "+config.user+".")
 
     // Sold stocks without corresponding buys
     val partiallyFrees = ListBuffer[String]()
@@ -226,7 +266,7 @@ object Report {
     def reportYear(year : Int): Unit = {
       val method = Accounting.toString(Config.config.accountingMethod)
 
-      val htmlReportFile = Paths.userOutputFolder+"/%s%d.html".format(method, year)
+      val htmlReportFile = FileSystem.userOutputFolder(year)+"/%s%d.html".format(method, year)
       val htmlReportTitle = "%d %s Report".format(year, method)
       val htmlReport = HTMLDoc(htmlReportFile, htmlReportTitle)
 
@@ -239,15 +279,15 @@ object Report {
       htmlReport.close()
 
 
-      val htmlPortfolioFile = Paths.userOutputFolder+"/Portfolio%d.html".format(year)
+      val htmlPortfolioFile = FileSystem.userOutputFolder(year)+"/Portfolio%d.html".format(year)
       val htmlPortfolioTitle = "%d End of year portfolio".format(year)
       val htmlPortfolio = HTMLDoc(htmlPortfolioFile, htmlPortfolioTitle)
 
-      htmlPortfolio += stocks.toHTML(htmlPortfolioTitle)
+      htmlPortfolio += state.stocks.toHTML(htmlPortfolioTitle)
       htmlPortfolio.close()
 
 
-      val htmlExtraFile = Paths.userOutputFolder+"/Extra%d.html".format(year)
+      val htmlExtraFile = FileSystem.userOutputFolder(year)+"/Extra%d.html".format(year)
       val htmlExtraTitle = "%d Statistics".format(year)
       val htmlExtra = HTMLDoc(htmlExtraFile, htmlExtraTitle)
 
@@ -271,7 +311,7 @@ object Report {
 
         {htmlExtra += <div>Opened margin longs:</div>}
         <div>
-          {for(marginBuy <- marginBuysMap.values)
+          {for(marginBuy <- state.marginBuysMap.values)
           for (cont <- marginBuy)
             if(cont.totalAmount>0)
               htmlExtra += <div>{cont.toHTML(showTotal = true)}</div>
@@ -280,7 +320,7 @@ object Report {
 
         {htmlExtra += <div>Opened margin shorts:</div>}
         <div>
-          {for(marginSell <- marginSellsMap.values)
+          {for(marginSell <- state.marginSellsMap.values)
           for (cont <- marginSell)
             if(cont.totalAmount>0)
               htmlExtra += <div>{cont.toHTML(showTotal = true)}</div>
@@ -289,24 +329,25 @@ object Report {
       }
       htmlExtra.close()
 
+
       operationTracker.printToCSVFile("FIFO", year)
 
-      val htmlLedgersFile = Paths.userOutputFolder+"/Ledgers%d.html".format(year)
+      val htmlLedgersFile = FileSystem.userOutputFolder(year)+"/Ledgers%d.html".format(year)
       val htmlLedgersTitle = "Ledgers %d".format(year)
       val htmlLedgers = HTMLDoc(htmlLedgersFile, htmlLedgersTitle)
 
       htmlLedgers += <div class='header'>{htmlLedgersTitle}</div>
 
       htmlLedgers += <div class='header'>Spot markets</div>
-      for(stock <- stocks.toList.sortBy(_.market))
-        stock.ledgerToHTML(year) match {
+      for(stock <- state.stocks.toList.sortBy(_.market))
+        stock.ledger.toHTML(year) match {
           case None => ;
           case Some(html) => htmlLedgers += html
         }
 
-      for((marginMap, title) <- List((marginBuysMap, "Margin Longs"), (marginSellsMap, "Margin Shorts")))
+      for((marginMap, title) <- List((state.marginBuysMap, "Margin Longs"), (state.marginSellsMap, "Margin Shorts")))
         for((exchanger, stocks) <- marginMap) {
-          val htmls : List[HTML] = stocks.toList.sortBy(_.market).flatMap(_.ledgerToHTML(year))
+          val htmls : List[HTML] = stocks.toList.sortBy(_.market).flatMap(_.ledger.toHTML(year))
 
           if(htmls.nonEmpty) {
             htmlLedgers += <div class='header'>{exchanger + "  " + title}</div>
@@ -316,14 +357,16 @@ object Report {
         }
 
       htmlLedgers.close()
+
+      state.saveToDisk(year)
     }
 
     def marginPairKey(market1 : Market, market2: Market) : String
-    = market1 ++ "/" ++ market2
+      = market1 ++ "-" ++ market2
 
 
     def preprocessExchange(exchange: Exchange) : Processed.Composed =
-      if(Config.config.deprecatedExchange)
+      if(Config.config.deprecatedUp2017Version)
         _deprecated_preprocessExchange(exchange)
       else
         _preprocessExchange(exchange)
@@ -387,13 +430,13 @@ object Report {
       // Add all bought coins with their cost basis to our stock of assets.
       // Note that fee in `boughtMarket' are included as they will be deducted right after as a fee
       if (!boughtBasisPriceInBaseCoin.isNaN && totalBoughtAmount > 0) {
-        stocks.add(boughtMarket, totalBoughtAmount, boughtBasisPriceInBaseCoin, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldMarket, "%d Exchange".format(operationNumber))(baseMarket)
+        state.stocks.add(boughtMarket, totalBoughtAmount, boughtBasisPriceInBaseCoin, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldMarket, "%d Exchange".format(operationNumber))(baseMarket)
       }
 
       // Get cost basis for sold coins from current stock
       // fees expressed in `soldMarket' are not included
       val (soldBasisInBaseCoin, noBasis, usedStocks) = {
-        val t3 = stocks.remove(soldMarket, soldAmount)(baseMarket)(exchange.date, exchange.exchanger, "%d Exchange".format(operationNumber))
+        val t3 = state.stocks.remove(soldMarket, soldAmount)(baseMarket)(exchange.date, exchange.exchanger, "%d Exchange".format(operationNumber))
         if(soldMarket != baseMarket)
           t3
         else
@@ -486,8 +529,8 @@ object Report {
           , boughtSoldExchangeRate = boughtSoldExchangeRate
           , soldBoughtExchangeRate = soldBoughtExchangeRate
           , usedStocks = usedStocks
-          , buys = stocks(boughtMarket)(baseMarket).copy
-          , sells = stocks(soldMarket)(baseMarket).copy
+          , buys = state.stocks(boughtMarket)(baseMarket).copy
+          , sells = state.stocks(soldMarket)(baseMarket).copy
         )
 
 
@@ -496,7 +539,7 @@ object Report {
       if(exchange.isSettlement && exchange.exchanger == Poloniex) {
         val marketKey = marginPairKey(exchange.toMarket, exchange.fromMarket)
 
-        val stockContainer = marginSellsMap(Poloniex).apply(marketKey)(baseMarket)
+        val stockContainer = state.marginSellsMap(Poloniex).apply(marketKey)(baseMarket)
         if (stockContainer.nonEmpty) {
           stockContainer.removeAndGetBasis(totalBoughtAmount)(exchange.date, exchange.exchanger, exchange.description)
           // We bought these to pay for fees and looses of a short that went against us.
@@ -520,7 +563,7 @@ object Report {
 
 
     def preprocessFee(fee : Fee) : Processed.Fee = {
-      val (feeInBaseCoin0, _, usedStocks) = stocks.remove(fee.market, fee.amount)(baseMarket)(fee.date, fee.exchanger, "%d Fee".format(operationNumber))
+      val (feeInBaseCoin0, _, usedStocks) = state.stocks.remove(fee.market, fee.amount)(baseMarket)(fee.date, fee.exchanger, "%d Fee".format(operationNumber))
 
       val feeInBaseCoin = if(fee.market == baseMarket) fee.amount else feeInBaseCoin0
 
@@ -534,13 +577,13 @@ object Report {
         , fee = fee
         , feeInBaseCoin = feeInBaseCoin
         , usedStocks = usedStocks
-        , stocks = stocks(fee.market)(baseMarket).copy
+        , stocks = state.stocks(fee.market)(baseMarket).copy
       )
     }
 
 
     def preprocessLoss(loss : Loss) : Processed.Loss = {
-      val (lossBasisInBaseCoin0, _, usedStocks) = stocks.remove(loss.market, loss.amount)(baseMarket)(loss.date, loss.exchanger, "%d Loss".format(operationNumber))
+      val (lossBasisInBaseCoin0, _, usedStocks) = state.stocks.remove(loss.market, loss.amount)(baseMarket)(loss.date, loss.exchanger, "%d Loss".format(operationNumber))
 
       val lossBasisInBaseCoin = if(loss.market == baseMarket) loss.amount else lossBasisInBaseCoin0
 
@@ -557,7 +600,7 @@ object Report {
         , loss = loss
         , lossInBaseCoin = lossBasisInBaseCoin
         , usedStocks = usedStocks
-        , stocks = stocks(loss.market)(baseMarket).copy
+        , stocks = state.stocks(loss.market)(baseMarket).copy
       )
     }
 
@@ -565,7 +608,7 @@ object Report {
     def preprocessGain(gain : Gain) : Processed.Gain = {
       // Record cost basis of gained coins at price corresponding to gain date
       val basePrice = baseCoin.priceInBaseCoin(gain.market, gain.date)
-      stocks.add(gain.market, gain.amount, basePrice, gain.exchanger, gain.date, basePrice, baseMarket, "%d Gain".format(operationNumber))(baseMarket)
+      state.stocks.add(gain.market, gain.amount, basePrice, gain.exchanger, gain.date, basePrice, baseMarket, "%d Gain".format(operationNumber))(baseMarket)
 
       val gainInBaseCoin = gain.amount * basePrice
 
@@ -582,7 +625,7 @@ object Report {
         , gain = gain
         , gainInBaseCoin = gainInBaseCoin
         , basePrice = basePrice
-        , stocks = stocks(gain.market)(baseMarket).copy
+        , stocks = state.stocks(gain.market)(baseMarket).copy
       )
     }
 
@@ -599,8 +642,8 @@ object Report {
 
       val marketKey = marginPairKey(tradedMarket, marginBaseMarket)
 
-      val marginBuys = marginBuysMap(margin.exchanger)
-      val marginSells = marginSellsMap(margin.exchanger)
+      val marginBuys = state.marginBuysMap(margin.exchanger)
+      val marginSells = state.marginSellsMap(margin.exchanger)
 
       // Check that markets involved in margin operation are those in traded pair
       if(margin.orderType == Operation.OrderType.Sell) {
@@ -930,16 +973,16 @@ object Report {
 
       // Add bought coins (without paid fee) with their cost basis to our stock of assets
       if (!boughtBasisPriceInBaseCoin.isNaN && boughtAmount > 0) {
-        stocks.add(boughtMarket, boughtAmount, boughtBasisPriceInBaseCoin, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldMarket, "%d Exchange".format(operationNumber))(baseMarket)
+        state.stocks.add(boughtMarket, boughtAmount, boughtBasisPriceInBaseCoin, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldMarket, "%d Exchange".format(operationNumber))(baseMarket)
       }
 
       // Get cost basis for total sold coins from current stock
       val (totalSoldBasisInBaseCoin, noBasis, usedStocks) =
         if (soldMarket != baseMarket)
-          stocks.remove(soldMarket, totalSoldAmount)(baseMarket)(exchange.date, exchange.exchanger, "%d Exchange".format(operationNumber))
+          state.stocks.remove(soldMarket, totalSoldAmount)(baseMarket)(exchange.date, exchange.exchanger, "%d Exchange".format(operationNumber))
         else {
           // If our base coin is Euro, cost basis is the amount of Euros involved
-          val (_,_,usedStocks) = stocks.remove(soldMarket, totalSoldAmount)(baseMarket)(exchange.date, exchange.exchanger, "%d Exchange".format(operationNumber))
+          val (_,_,usedStocks) = state.stocks.remove(soldMarket, totalSoldAmount)(baseMarket)(exchange.date, exchange.exchanger, "%d Exchange".format(operationNumber))
           (totalSoldAmount, 0.0, usedStocks)
         }
 
@@ -1015,8 +1058,8 @@ object Report {
           , boughtSoldExchangeRate = boughtSoldExchangeRate
           , soldBoughtExchangeRate = soldBoughtExchangeRate
           , usedStocks = usedStocks
-          , buys = stocks(boughtMarket)(baseMarket).copy
-          , sells = stocks(soldMarket)(baseMarket).copy
+          , buys = state.stocks(boughtMarket)(baseMarket).copy
+          , sells = state.stocks(soldMarket)(baseMarket).copy
         )
 
       var processed = List[Processed]()
@@ -1026,7 +1069,7 @@ object Report {
       if(exchange.isSettlement && exchange.exchanger == Poloniex) {
         val marketKey = marginPairKey(exchange.toMarket, exchange.fromMarket)
 
-        val stockContainer = marginSellsMap(Poloniex).apply(marketKey)(baseMarket)
+        val stockContainer = state.marginSellsMap(Poloniex).apply(marketKey)(baseMarket)
         if (stockContainer.nonEmpty) {
           stockContainer.removeAndGetBasis(totalBoughtAmount)(exchange.date, exchange.exchanger, exchange.description)
           // We bought these to pay for fees and looses of a short that went against us.
@@ -1064,15 +1107,13 @@ object Report {
       return Processed.Composed(operationNumber, processed)
     }
 
-    val startDate = LocalDateTime(2000,1,1)
-    val endDate = LocalDateTime(2500,12,31)
     var currentYear : Int = operations.head.date.getYear
     initializeYear(currentYear)
 
     var minBTC = Double.MaxValue
     var dateMinBTC = LocalDateTime()
 
-    for (operation <- operations if operation.date >= startDate && operation.date <= endDate) {
+    for (operation <- operations) {
       val newYear = operation.date.getYear
       if(newYear > currentYear) {
         reportYear(currentYear)
@@ -1084,7 +1125,7 @@ object Report {
 
       dispatch(operation)
 
-      val m = stocks.apply(Market.bitcoin)(baseMarket).totalAmount
+      val m = state.stocks.apply(Market.bitcoin)(baseMarket).totalAmount
       if(m < minBTC) {
         minBTC = m
         dateMinBTC = operation.date
@@ -1093,7 +1134,7 @@ object Report {
     }
     reportYear(currentYear)
 
-    Logger.trace("Output generated in %s folder.".format(Paths.userOutputFolder))
+    Logger.trace("Output generated in %s folder.".format(FileSystem.userOutputFolder))
 
     println(minBTC, dateMinBTC)
   }

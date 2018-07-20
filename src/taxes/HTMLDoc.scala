@@ -1,6 +1,5 @@
 package taxes
 
-import java.io.PrintStream
 
 import taxes.util.Logger
 
@@ -144,10 +143,10 @@ case class HTMLDoc(fileName : String, title : String) {
 
   private case class State(fileName : String, ps : java.io.PrintStream, title : String)
 
-  private var optState : Option[State] = Some(State(fileName, new PrintStream(fileName), title))
+  private var optState : Option[State] = Some(State(fileName, FileSystem.PrintStream(fileName), title))
 
   def setOutputTo(fileName : String): Unit = {
-    val newState = State(fileName, new PrintStream(fileName), title)
+    val newState = State(fileName, FileSystem.PrintStream(fileName), title)
 
     optState match {
       case None     => ;
@@ -209,8 +208,9 @@ case class HTMLDoc(fileName : String, title : String) {
       | table#tableStyle1 tr:hover { background-color: #c5c5c5; }
       | table#tableStyle1 td, th { text-align: right; vertical-align: top; }
       | table#tableStyle1 td:first-child, th:first-child { text-align: left; }
-      | table#tableStyle1 td.alignL  { text-align: left; }
-      | table#tableStyle1 td.paddingL  { padding-left: 15px }
+      | table#tableStyle1 td.alignL, th.alignL { text-align: left; }
+      | table#tableStyle1 td.alignR, th.alignR { text-align: right; }
+      | table#tableStyle1 td.paddingL, th.paddingL { padding-left: 15px }
       |
       | @media print {
       |  body{

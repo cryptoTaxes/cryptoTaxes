@@ -48,8 +48,9 @@ case class Config(user : String
                   , decimalPlaces : Int
                   , epsilon : Double
                   , timeZone : java.time.ZoneId
+                  , filterYear : Option[Int]
                   // internal flags, not for users
-                  , deprecatedExchange : Boolean
+                  , deprecatedUp2017Version : Boolean
                   )
 
 
@@ -70,6 +71,7 @@ object DefaultConfig extends Config( user = "demo"
                                      , decimalPlaces = 2
                                      , epsilon = 0.00000001
                                      , timeZone = java.time.ZoneId.systemDefault()
-                                     , deprecatedExchange = false
+                                     , filterYear = None
+                                     , deprecatedUp2017Version = false
                                      )
 

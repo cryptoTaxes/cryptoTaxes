@@ -1,16 +1,19 @@
 package taxes.util
 
-import taxes.{Finalizable, Initializable, Paths}
+import taxes.{Finalizable, Initializable, FileSystem}
 
 
 object Logger extends Initializable with Finalizable {
-  private lazy val warningStream = new java.io.PrintStream(Paths.userOutputFolder+"/warnings.txt")
+  private lazy val warningStream = FileSystem.PrintStream(FileSystem.userOutputFolder+"/warnings.txt")
+  private lazy val traceStream = FileSystem.PrintStream(FileSystem.userOutputFolder+"/trace.txt")
 
   def trace(what : String): Unit = {
+    traceStream.println(what)
     println(what)
   }
 
   def fatal(what : String): Nothing = {
+    traceStream.println("FATAL ERROR: "+what)
     sys.error(what)
   }
 
@@ -20,5 +23,6 @@ object Logger extends Initializable with Finalizable {
 
   override def wrapUp(): Unit = {
     warningStream.close()
+    traceStream.close()
   }
 }

@@ -14,8 +14,7 @@ trait Exchanger extends Initializable {
   val sources : Seq[Source[Operation]]
 }
 
-
-object Exchangers {
+object Exchanger {
   val allExchangers : List[Exchanger] =
     List[Exchanger](
         Binance
@@ -44,7 +43,27 @@ object Exchangers {
     }
     return operations
   }
+
+  private lazy val stringToExchanger = allExchangers.filter(_ != General).map(exch => (exch.toString, exch)).toMap
+
+  def parse(str : String) : Exchanger =
+    stringToExchanger.getOrElse(str, General(str))
+
+  import spray.json.{JsonFormat, JsString, JsValue, deserializationError}
+
+  object exchangerJson extends JsonFormat[Exchanger] {
+    def write(exchanger: Exchanger) = {
+      JsString(exchanger.toString)
+    }
+
+    def read(value: JsValue) = value match {
+      case JsString(str) =>
+        Exchanger.parse(str)
+      case _ =>
+        deserializationError("Exchanger expected")
+    }
+  }
 }
 
 
-abstract case class UserFolderSource[+A](folderPath : String, extension : String) extends FolderSource[A](Paths.userInputFolder+"/"+folderPath, extension)
+abstract case class UserFolderSource[+A](folderPath : String, extension : String) extends FolderSource[A](FileSystem.userInputFolder+"/"+folderPath, extension)
