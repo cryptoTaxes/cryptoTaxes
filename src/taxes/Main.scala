@@ -27,7 +27,7 @@ object Main extends App {
 
   // Modules that should be initalized
   private val initializables : List[Initializable] =
-    List(FileSystem, Market, CoinMarketCapPrice, EuroUSDParity, Logger, TransactionsCache) ++ exchangers
+    List(Market, CoinMarketCapPrice, EuroUSDParity, Logger, TransactionsCache) ++ exchangers
 
   // Do initialization of modules firstly
   for(initializable <- initializables)
@@ -51,6 +51,19 @@ object ParseCommandLine {
 
     var toParse = Parse.trimSpaces(cmdLine)
 
+    val boolTrue = Set("true", "yes", "on")
+    val boolFalse = Set("false", "no", "off")
+
+    def toBool(what : String, value : String) = {
+      val v = value.toLowerCase
+      if(boolFalse.contains(v))
+        false
+      else if(boolTrue.contains(v))
+        true
+      else
+        Logger.fatal(s"Non valid $what: $value")
+    }
+
     def failParse = Logger.fatal(s"Cannot parse command line: $cmdLine \nFrom here: $toParse")
     while (toParse.nonEmpty) {
       if (toParse.head == '-') {
@@ -68,7 +81,7 @@ object ParseCommandLine {
                 try {
                   Parse.asInt(value)
                 } catch {
-                  case e: Exception => Logger.fatal(s"Non valid verbosity level: $value")
+                  case _ => Logger.fatal(s"Non valid verbosity level: $value")
                 }
               config = config.copy(verbosityLevel = level)
             } else if(flag == "currency") {
@@ -80,7 +93,7 @@ object ParseCommandLine {
               }
               config = config.copy(baseCoin = baseCoin)
             } else if(flag == "download-prices") {
-              val download = List("true", "yes", "on").contains(value.toLowerCase)
+              val download = toBool("download prices flag", value)
               config = config.copy(downloadPrices = download)
             } else if(flag == "price-calculation") {
               val method = value match {
@@ -94,10 +107,10 @@ object ParseCommandLine {
               }
               config = config.copy(priceCalculation = method)
             } else if(flag == "accounting-method") {
-              val method = value match {
-                case "fifo" | "FIFO"  => Accounting.FIFO
-                case "lifo" | "LIFO"  => Accounting.LIFO
-                case _                => Logger.fatal(s"Unknown accounting method: $value")
+              val method = value.toLowerCase match {
+                case "fifo"  => Accounting.FIFO
+                case "lifo"  => Accounting.LIFO
+                case _       => Logger.fatal(s"Unknown accounting method: $value")
               }
               config = config.copy(accountingMethod = method)
             } else if(flag == "decimal-places") {
@@ -105,7 +118,7 @@ object ParseCommandLine {
                 try {
                   Parse.asInt(value)
                 } catch {
-                  case e: Exception => Logger.fatal(s"Non valid decimal places: $value")
+                  case _ => Logger.fatal(s"Non valid decimal places: $value")
                 }
               config = config.copy(decimalPlaces = d)
             } else if(flag == "epsilon") {
@@ -113,16 +126,27 @@ object ParseCommandLine {
                 try {
                   Parse.asDouble(value)
                 } catch {
-                  case e: Exception => Logger.fatal(s"Non valid epsilon: $value")
+                  case _ => Logger.fatal(s"Non valid epsilon: $value")
                 }
               config = config.copy(epsilon = eps)
             } else if(flag == "time-zone") {
-              config = config.copy(timeZone = java.time.ZoneId.of(value))
+              val tz =
+                try {
+                  java.time.ZoneId.of(value)
+                } catch {
+                  case _ => Logger.fatal(s"Non valid time zone $value")
+                }
+              config = config.copy(timeZone = tz)
             } else if(flag == "deprecated-version") {
-              val old = List("true", "yes", "on").contains(value.toLowerCase)
-              config = config.copy(deprecatedUp2017Version = old)
+              val deprecated = toBool("deprecated version flag", value)
+              config = config.copy(deprecatedUp2017Version = deprecated)
             } else if(flag == "year") {
-              val year = Parse.asInt(value)
+              val year =
+                try {
+                  Parse.asInt(value)
+                } catch {
+                  case _ => Logger.fatal(s"Non valid year $value")
+                }
               config = config.copy(filterYear = Some(year))
             } else
               failParse

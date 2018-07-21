@@ -1,11 +1,10 @@
 package taxes
 
-import java.io.File
-
 import taxes.date._
 import taxes.util.Logger
 import spray.json._
 import DefaultJsonProtocol._
+import taxes.io.FileSystem
 
 object TransactionsCache extends Initializable with Finalizable {
   case class TxKey(market: Market, txid : String, address : String)
@@ -16,11 +15,11 @@ object TransactionsCache extends Initializable with Finalizable {
 
   private val map = scala.collection.mutable.Map[TxKey, TxInfo]()
 
-  private val file = new File(FileSystem.transactionsCacheFile)
+  private val file = FileSystem.File(FileSystem.transactionsCacheFile)
 
   def saveToDisk(): Unit = {
-    FileSystem.withPrintStream(file){
-      _.println(map.toList.toJson.prettyPrint)
+    FileSystem.withPrintStream(file){ ps =>
+      ps.println(map.toList.toJson.prettyPrint)
     }
   }
 
@@ -39,18 +38,18 @@ object TransactionsCache extends Initializable with Finalizable {
   def lookup(market: Market, txid : String, address : String) : TxInfo = {
     map.get(TxKey(market, txid, address)) match {
       case Some(txInfo) => txInfo
-      case None => {
-        if (List(Market.bitcoin, Market.litecoin, Market.dogecoin, Market.etc, Market.vertcoin).contains(market)) {
-          val sc = BlockExplorerSearcher(market, txid, address)
-          val key = TxKey(market, txid, address)
-          val info = TxInfo(sc.amount, sc.fee, sc.date)
-          map += (key -> info)
-          saveToDisk()
-          return info
-        } else {
-          Logger.fatal(s"TransactionCache not implemented yet for $market. $txid.")
+      case None =>
+        val searcher = BlockExplorerSearcher(market, txid, address)
+        searcher.search match {
+          case Some(_) =>
+            val key = TxKey(market, txid, address)
+            val info = TxInfo(searcher.amount, searcher.fee, searcher.date)
+            map += (key -> info)
+            saveToDisk()
+            return info
+          case None =>
+            Logger.fatal(s"TransactionCache not implemented yet for $market. $txid.")
         }
-      }
     }
   }
 

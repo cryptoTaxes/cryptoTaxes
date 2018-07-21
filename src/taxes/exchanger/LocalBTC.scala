@@ -2,6 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
+import taxes.io.FileSystem
 import taxes.util.parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 
 
@@ -9,7 +10,7 @@ object LocalBTC extends Exchanger {
   override val id: String = "LocalBTC"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("localbitcoins", ".csv") {
+    new UserInputFolderSource[Operation]("localbitcoins", ".csv") {
       def fileSource(fileName : String) = operationsReader(fileName)
     }
   )

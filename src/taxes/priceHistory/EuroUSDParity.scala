@@ -4,9 +4,8 @@ import java.util.InputMismatchException
 
 import taxes._
 import taxes.date._
+import taxes.io.{FileSystem, Network}
 import taxes.util.Logger
-
-import scala.io.Source
 
 
 object EuroUSDParity extends Initializable {
@@ -29,7 +28,7 @@ object EuroUSDParity extends Initializable {
     }
 
   private def readPrices() : scala.collection.mutable.Map[LocalDate, Price] = {
-    val file = new java.io.File(FileSystem.euroUSDFile)
+    val file = FileSystem.File(FileSystem.euroUSDFile)
     Logger.trace(s"Reading Euro prices from ${file.getAbsoluteFile}.")
 
     val prices = scala.collection.mutable.Map[LocalDate, Price]()
@@ -64,11 +63,11 @@ object EuroUSDParity extends Initializable {
                 noPriceDates = List[LocalDate]()
             }
           } catch {
-            case (_: InputMismatchException) =>
+            case _: InputMismatchException =>
               noPriceDates ::= date // if no price was published we will use that of next day
           }
         } catch {
-          case _ => Logger.warning(s"EuroUSDParity. Could not read line $lineNumber '${line}' in file ${file.getName}")
+          case _ => Logger.warning(s"EuroUSDParity. Could not read line $lineNumber '$line' in file ${file.getName}")
         } finally {
           scLn.close()
         }
@@ -106,12 +105,11 @@ object EuroUSDParity extends Initializable {
     Logger.trace("Downloading prices for euros/usd from www.bde.es.")
 
     val url = "https://www.bde.es/webbde/es/estadis/infoest/series/tc_1_1.csv"
-    val source = Source.fromURL(url)(scala.io.Codec.ISO8859)
+    val contents = Network.fromHttpURL(url)
     val fileName = FileSystem.euroUSDFile
-    FileSystem.backup(fileName)
-    val ps = FileSystem.PrintStream(fileName)
-    ps.print(source.mkString)
-    ps.close()
+    FileSystem.withPrintStream(fileName) { ps =>
+      ps.print(contents)
+    }
   }
 }
 

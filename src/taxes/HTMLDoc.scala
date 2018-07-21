@@ -1,6 +1,7 @@
 package taxes
 
 
+import taxes.io.FileSystem
 import taxes.util.Logger
 
 import scala.collection.mutable.ListBuffer
@@ -141,7 +142,7 @@ case class HTMLDoc(fileName : String, title : String) {
     }
   }
 
-  private case class State(fileName : String, ps : java.io.PrintStream, title : String)
+  private case class State(fileName : String, ps : FileSystem.PrintStream, title : String)
 
   private var optState : Option[State] = Some(State(fileName, FileSystem.PrintStream(fileName), title))
 

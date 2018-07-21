@@ -9,7 +9,7 @@ trait Operation {
   def id : String
   def exchanger : Exchanger
 
-  def dateFormatted =
+  protected def dateFormatted =
     java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(date)
 }
 

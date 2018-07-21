@@ -15,10 +15,10 @@ object General extends Exchanger {
   override val id: String = "General"
 
   override val sources = Seq(
-      new UserFolderSource[Operation]("general/exchanges", ".csv") {
+      new UserInputFolderSource[Operation]("general/exchanges", ".csv") {
         def fileSource(fileName : String) = exchangesReader(fileName)
       }
-    , new UserFolderSource[Operation]("general/gainslosses", ".csv") {
+    , new UserInputFolderSource[Operation]("general/gainslosses", ".csv") {
        def fileSource(fileName : String) = gainsLossesReader(fileName)
       }
   )

@@ -1,6 +1,7 @@
 package taxes.util.parse
 
 import taxes.date._
+import taxes.io.FileSystem
 import taxes.util._
 import taxes.{FileSource, Operation}
 
@@ -35,7 +36,7 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
   def readLine(line : String, lineScanner : Scanner) : Result[A]
 
   def read() : List[A] = {
-    val f = new java.io.File(fileName)
+    val f = FileSystem.File(fileName)
     val sc = new java.util.Scanner(f, charSet)
 
     val xs = ListBuffer[A]()

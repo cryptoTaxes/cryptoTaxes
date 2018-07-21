@@ -3,6 +3,8 @@ package taxes
 package object date  {
   type LocalDate = java.time.LocalDate
 
+  implicit val localDateJson = LocalDate.localDateJson
+
   implicit class LocalDateOps(private val localDate: LocalDate) extends AnyVal with Ordered[LocalDate] {
     override def compare(that: LocalDate): Int =
       localDate.compareTo(that)

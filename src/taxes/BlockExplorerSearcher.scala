@@ -1,6 +1,7 @@
 package taxes
 
 import taxes.date._
+import taxes.io.Network
 import taxes.util.Logger
 import taxes.util.parse.Parse
 
@@ -8,34 +9,6 @@ import taxes.util.parse.Parse
 object BlockExplorerSearcher {
   def apply(market : Market, txid : String, address : String) =
     new BlockExplorerSearcher(market, txid, address)
-
-  def fromURL(urlString : String) : String = {
-    import java.io.BufferedInputStream
-    import java.net.{HttpURLConnection, URL}
-
-    val sb = new StringBuilder
-    var conn : HttpURLConnection = null
-    var in : BufferedInputStream = null
-
-    try {
-      val url = new URL(urlString)
-      conn = url.openConnection.asInstanceOf[HttpURLConnection]
-      conn.addRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11")
-      conn.connect()
-      in = new BufferedInputStream(conn.getInputStream())
-      var ch = in.read()
-      while(ch != -1) {
-        sb.append(ch.toChar)
-        ch = in.read()
-      }
-    } finally {
-      if(in != null)
-        in.close()
-      if(conn != null)
-        conn.disconnect()
-    }
-    return sb.toString()
-  }
 
   private def locateAndSkip(str : String, prefix : String, toSkip : Char, numSkip : Int, endToken : String) : String = {
     val before = str.indexOf(prefix)
@@ -60,7 +33,7 @@ object BlockExplorerSearcher {
 
   def etcScrap(txid : String, address : String) : (LocalDateTime, Double, Double) = {
     val url = s"https://gastracker.io/tx/$txid"
-    val str = BlockExplorerSearcher.fromURL(url)
+    val str = Network.fromHttpURL(url)
 
     val dateStr = locateAndSkip(str, "<dt>Timestamp</dt>", '>', 1, "</dd>")
     val date = LocalDateTime.parse(dateStr, "EE MMM dd HH:mm:ss zzz yyyy")
@@ -94,7 +67,7 @@ object BlockExplorerSearcher {
     implicit val responseJson = jsonFormat3(Response)
 
     val url = s"https://chainz.cryptoid.info/$coin/api.dws?q=txinfo;t=$txid"
-    val resp = BlockExplorerSearcher.fromURL(url)
+    val resp = Network.fromHttpURL(url)
 
     val json = spray.json.JsonParser(resp)
     val response = json.convertTo[Response]
@@ -145,7 +118,7 @@ object BlockExplorerSearcher {
     implicit val responseJson = jsonFormat2(Response)
 
     val url = s"https://dogechain.info/api/v1/transaction/$txid"
-    val resp = BlockExplorerSearcher.fromURL(url)
+    val resp = Network.fromHttpURL(url)
 
     val json = spray.json.JsonParser(resp)
     val response = json.convertTo[Response]
@@ -190,7 +163,7 @@ object BlockExplorerSearcher {
 
   def btcScrap2(txid : String, address : String) : (LocalDateTime, Double, Double) = {
     val url = s"https://blockchain.info/tx/$txid"
-    val str = BlockExplorerSearcher.fromURL(url)
+    val str = Network.fromHttpURL(url)
 
     val dateStr = Parse.trimSpaces(locateAndSkip(str, "<td>Received Time</td>", '>', 1, "</td>"))
     val date = LocalDateTime.parseAsUTC(dateStr, "yyyy-MM-dd HH:mm:ss")
@@ -205,7 +178,7 @@ object BlockExplorerSearcher {
   }
 
   def dogeScrap2(url : String) : (LocalDateTime, Double, Double) = {
-    val str = BlockExplorerSearcher.fromURL(url)
+    val str = Network.fromHttpURL(url)
 
     val feeStr = locateAndSkip(str, "<td>Fee</td>", '>', 1, "<")
     val fee = Parse.asDouble(feeStr.replace("<small>", "").replace("</small>", ""))
@@ -217,7 +190,7 @@ object BlockExplorerSearcher {
 
 
   def vtcScrap2(url : String) : (LocalDateTime, Double, Double) = {
-    val str = BlockExplorerSearcher.fromURL(url)
+    val str = Network.fromHttpURL(url)
 
     val feeStr = locateAndSkip(str, "<th>Fees</th>", '>', 1, "V")
     val fee = Parse.asDouble(feeStr.replace("<span class='muteds'>", "").replace("</span>", ""))
@@ -229,12 +202,17 @@ object BlockExplorerSearcher {
 }
 
 class BlockExplorerSearcher(market : Market, txid : String, address : String) {
-  val (date, amount, fee) = market match {
-    case Market.bitcoin  => BlockExplorerSearcher.btcScrap(txid, address)
-    case Market.etc      => BlockExplorerSearcher.etcScrap(txid, address)
-    case Market.dogecoin => BlockExplorerSearcher.dogeScrap(txid, address)
-    case Market.litecoin => BlockExplorerSearcher.ltcScrap(txid, address)
-    case Market.vertcoin => BlockExplorerSearcher.vtcScrap(txid, address)
-    case _               => Logger.fatal(s"BlockExplorerScraper: non-supported market $market")
+  lazy val search = market match {
+    case Market.bitcoin  => Some(BlockExplorerSearcher.btcScrap(txid, address))
+    case Market.dogecoin => Some(BlockExplorerSearcher.dogeScrap(txid, address))
+    case Market.etc      => Some(BlockExplorerSearcher.etcScrap(txid, address))
+    case Market.litecoin => Some(BlockExplorerSearcher.ltcScrap(txid, address))
+    case Market.vertcoin => Some(BlockExplorerSearcher.vtcScrap(txid, address))
+    case _               => None
+  }
+
+  lazy val (date, amount, fee) = search match {
+    case Some(t3) => t3
+    case None => Logger.fatal(s"BlockExplorerScraper: non-supported market $market")
   }
 }

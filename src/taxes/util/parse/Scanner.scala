@@ -37,7 +37,7 @@ trait Scanner {
 
 
 case class QuotedScanner(str : String, delimiter : Char, sep : Char) extends Scanner {
-  var string = str
+  private var string = str
 
   def next() : String = {
     var token = ""

@@ -6,12 +6,13 @@ import taxes.exchanger.Exchanger
 import scala.collection.mutable.ListBuffer
 import spray.json._
 import DefaultJsonProtocol._
+import taxes.io.FileSystem
 
 object Ledger {
   case class Entry(date : LocalDateTime, amount : Double, exchanger: Exchanger, description : String)
   implicit val entryJson = jsonFormat4(Entry)
 
-  implicit object LedgerTimeJson extends RootJsonFormat[Ledger] {
+  implicit object LedgerJson extends RootJsonFormat[Ledger] {
     val _market = "market"
     val _initialBalance = "initialBalance"
     val _entries = "entries"
@@ -103,7 +104,7 @@ case class Ledger(market : Market, var initialBalance : Double = 0) {
       None
   }
 
-  def toFile(path : String): Unit = {
+  def saveToFile(path : String): Unit = {
     FileSystem.withPrintStream(path) {
       _.println(this.toJson.prettyPrint)
     }

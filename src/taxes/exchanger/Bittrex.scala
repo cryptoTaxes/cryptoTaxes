@@ -2,6 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
+import taxes.io.FileSystem
 import taxes.util.Logger
 import taxes.util.parse._
 
@@ -10,10 +11,10 @@ object Bittrex extends Exchanger {
   override val id: String = "Bittrex"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("bittrex", ".csv") {
+    new UserInputFolderSource[Operation]("bittrex", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
     },
-    new UserFolderSource[Operation]("bittrex/withdrawals", ".csv") {
+    new UserInputFolderSource[Operation]("bittrex/withdrawals", ".csv") {
       def fileSource(fileName: String) = withdrawalsReader(fileName)
     }
   )
@@ -99,7 +100,7 @@ object Bittrex extends Exchanger {
     }
 
     def read() : Seq[Operation] = {
-      val f = new java.io.File(fileName)
+      val f = FileSystem.File(fileName)
       val sc = new java.util.Scanner(f)
 
       def getNextLine(): Option[String] = {

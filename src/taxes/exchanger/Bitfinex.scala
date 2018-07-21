@@ -2,6 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
+import taxes.io.FileSystem
 import taxes.util.parse._
 
 
@@ -13,10 +14,10 @@ object Bitfinex extends Exchanger {
     new UserFolderSource[Operation]("bitfinex", ".csv") {
       def fileSource(fileName: String) = reportReader(fileName)
     },*/
-    new UserFolderSource[Operation]("bitfinex/ledger", ".csv") {
+    new UserInputFolderSource[Operation]("bitfinex/ledger", ".csv") {
       def fileSource(fileName: String) = ledgerReader(fileName)
     },
-    new UserFolderSource[Operation]("bitfinex/trades", ".csv") {
+    new UserInputFolderSource[Operation]("bitfinex/trades", ".csv") {
       def fileSource(fileName: String) = tradesReader(fileName)
     }
   )

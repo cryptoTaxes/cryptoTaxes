@@ -2,6 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
+import taxes.io.FileSystem
 import taxes.util._
 import taxes.util.parse.{JsObjectAST, Parse}
 
@@ -10,7 +11,7 @@ object Shapeshift extends Exchanger {
   override val id: String = "Shapeshift"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("shapeshift", ".json") {
+    new UserInputFolderSource[Operation]("shapeshift", ".json") {
       def fileSource(fileName : String) = new FileSource[Operation](fileName) {
         override def read(): Seq[Operation] =
           readFile(fileName)
@@ -23,7 +24,7 @@ object Shapeshift extends Exchanger {
     val prefix1 = "https://shapeshift.io/txStat/"
 
     var lnNumber = 0
-    val f = new java.io.File(fileName)
+    val f = FileSystem.File(fileName)
     val sc = new java.util.Scanner(f)
 
     def nextLine(): String = {
@@ -36,14 +37,14 @@ object Shapeshift extends Exchanger {
       val ln0 = nextLine()
       if(ln0.nonEmpty) {
         if(!ln0.startsWith(prefix0))
-          Logger.warning(s"$id. ${FileSystem.pathFromData(fileName)} Line $lnNumber: '${ln0}' should start with $prefix0.")
+          Logger.warning(s"$id. ${FileSystem.pathFromData(fileName)} Line $lnNumber: '$ln0' should start with $prefix0.")
         else {
           val orderId = ln0.drop(prefix0.length)
           val desc = "Order: " + orderId
 
           val ln1 = nextLine()
           if (!ln1.startsWith(prefix1))
-            Logger.warning(s"$id. ${FileSystem.pathFromData(fileName)} Line $lnNumber: '${ln1}' should start with $prefix1.")
+            Logger.warning(s"$id. ${FileSystem.pathFromData(fileName)} Line $lnNumber: '$ln1' should start with $prefix1.")
           else {
             val inAddress = ln1.drop(prefix1.length)
 

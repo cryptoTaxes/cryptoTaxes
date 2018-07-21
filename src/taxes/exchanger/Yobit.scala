@@ -9,7 +9,7 @@ object Yobit extends Exchanger {
   override val id: String = "Yobit"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("yobit", ".csv") {
+    new UserInputFolderSource[Operation]("yobit", ".csv") {
       def fileSource(fileName : String) = operationsReader(fileName)
     }
   )

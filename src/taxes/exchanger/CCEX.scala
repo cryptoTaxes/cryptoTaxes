@@ -2,6 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
+import taxes.io.FileSystem
 import taxes.util.parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 
 
@@ -9,7 +10,7 @@ object CCEX extends Exchanger {
   override val id: String = "C-CEX"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("c-cex", ".csv") {
+    new UserInputFolderSource[Operation]("c-cex", ".csv") {
       def fileSource(fileName : String) = operationsReader(fileName)
     }
   )

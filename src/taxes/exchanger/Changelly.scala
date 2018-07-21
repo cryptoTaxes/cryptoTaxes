@@ -2,7 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
-import taxes.util.Logger
+import taxes.io.FileSystem
 import taxes.util.parse._
 
 
@@ -20,7 +20,7 @@ object Changelly extends Exchanger {
   }
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("changelly", ".csv") {
+    new UserInputFolderSource[Operation]("changelly", ".csv") {
       def fileSource(fileName : String) = operationsReader(fileName)
     }
   )

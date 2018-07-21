@@ -2,6 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
+import taxes.io.FileSystem
 import taxes.util.Logger
 import taxes.util.parse._
 
@@ -47,10 +48,10 @@ object Kraken extends Exchanger {
   }
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("kraken/ledgers", ".csv") {
+    new UserInputFolderSource[Operation]("kraken/ledgers", ".csv") {
       def fileSource(fileName: String) = ledgerReader(fileName)
     },
-    new UserFolderSource[Operation]("kraken/trades", ".csv") {
+    new UserInputFolderSource[Operation]("kraken/trades", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
     }
   )

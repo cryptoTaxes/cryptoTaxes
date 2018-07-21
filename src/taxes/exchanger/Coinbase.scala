@@ -2,6 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
+import taxes.io.FileSystem
 import taxes.util.parse._
 
 
@@ -9,7 +10,7 @@ object Coinbase extends Exchanger {
   override val id: String = "Coinbase"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("coinbase/transfers", ".csv") {
+    new UserInputFolderSource[Operation]("coinbase/transfers", ".csv") {
       def fileSource(fileName : String) = operationsReader(fileName)
     }
   )

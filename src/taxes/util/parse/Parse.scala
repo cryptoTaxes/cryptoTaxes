@@ -1,5 +1,6 @@
 package taxes.util.parse
 
+import taxes.io.FileSystem
 import taxes.util.Logger
 
 
@@ -69,7 +70,7 @@ object Parse {
   def readAssociations(fileName : String, traceMsg : String) : Map[String, String] = {
     val trace = s"$traceMsg from $fileName."
     Logger.trace(trace)
-    val file = new java.io.File(fileName)
+    val file = FileSystem.File(fileName)
     val sc = new java.util.Scanner(file)
     var associations = Map[String, String]()
     var lineNumber = 0

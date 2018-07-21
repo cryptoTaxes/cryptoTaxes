@@ -2,6 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
+import taxes.io.FileSystem
 import taxes.util._
 import taxes.util.parse._
 
@@ -12,7 +13,7 @@ object RippleTrade extends Exchanger {
   override val id: String = "XRPTrade"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("xrptrade", ".json") {
+    new UserInputFolderSource[Operation]("xrptrade", ".json") {
       def fileSource(fileName: String) = new FileSource[Operation](fileName) {
         override def read(): Seq[Operation] =
           readFile(fileName)

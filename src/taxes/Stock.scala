@@ -5,6 +5,7 @@ import taxes.exchanger.Exchanger
 import taxes.util.Logger
 import spray.json._
 import DefaultJsonProtocol._
+import taxes.io.FileSystem
 
 object Stock {
   implicit val stockJson = jsonFormat6(Stock.apply)
@@ -36,7 +37,7 @@ object StockContainer {
         case _ : StockQueue =>
           _queue
         case _ =>
-          Logger.fatal("StockContainer.toFile: expecting a stack or a queue.")
+          Logger.fatal("stockContainerJson: expecting a stack or a queue.")
       }
       JsObject(
         _containerType -> JsString(containerType),
@@ -70,7 +71,7 @@ object StockContainer {
           val vector = if(isStack) stocks.reverseIterator else stocks
           vector.foreach(x => container.insert(x.convertTo[Stock]))
           container
-        case _ => throw new DeserializationException("StockContainer expected")
+        case _ => throw DeserializationException("StockContainer expected")
       }
     }
   }
@@ -186,14 +187,14 @@ trait StockContainer extends Container[Stock] with ToHTML {
     }}
   </span>
 
-  def toFile(path : String): Unit = {
-    FileSystem.withPrintStream(path) {
-      _.println(this.toJson.prettyPrint)
+  def saveToFile(path : String): Unit = {
+    FileSystem.withPrintStream(path) { ps =>
+      ps.println(this.toJson.prettyPrint)
     }
     val (folder, name, ext) = FileSystem.decompose(path)
     val path2 = FileSystem.compose(Seq(folder,"ledger"), name, ext)
-    FileSystem.withPrintStream(path2) {
-      _.println(this.ledger.toJson.prettyPrint)
+    FileSystem.withPrintStream(path2) { ps =>
+      ps.println(this.ledger.toJson.prettyPrint)
     }
   }
 }
@@ -321,7 +322,7 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
   def saveToDisk(path : String): Unit = {
     for(stockContainer <- containers.values) {
       val filePath = FileSystem.compose(Seq(path), stockContainer.id, FileSystem.stockExtension)
-      stockContainer.toFile(filePath)
+      stockContainer.saveToFile(filePath)
     }
   }
 }

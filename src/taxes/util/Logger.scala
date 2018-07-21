@@ -1,11 +1,12 @@
 package taxes.util
 
-import taxes.{Finalizable, Initializable, FileSystem}
+import taxes.io.FileSystem
+import taxes.{Finalizable, Initializable}
 
 
 object Logger extends Initializable with Finalizable {
-  private lazy val warningStream = FileSystem.PrintStream(s"${FileSystem.userOutputFolder}/warnings.txt")
-  private lazy val traceStream = FileSystem.PrintStream(s"${FileSystem.userOutputFolder}/trace.txt")
+  private lazy val warningStream = FileSystem.PrintStream(FileSystem.File(s"${FileSystem.userOutputFolder}/warnings.txt"), doBackUp = false)
+  private lazy val traceStream = FileSystem.PrintStream(FileSystem.File(s"${FileSystem.userOutputFolder}/trace.txt"), doBackUp = false)
 
   def trace(what : String): Unit = {
     traceStream.println(what)

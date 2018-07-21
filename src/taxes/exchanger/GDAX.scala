@@ -2,14 +2,14 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
-import taxes.util.Logger
+import taxes.io.FileSystem
 import taxes.util.parse._
 
 object GDAX extends Exchanger {
   override val id: String = "GDAX"
 
   override val sources = Seq(
-    new UserFolderSource[Operation]("gdax", ".csv") {
+    new UserInputFolderSource[Operation]("gdax", ".csv") {
       def fileSource(fileName : String) = operationsReader(fileName)
     }
   )

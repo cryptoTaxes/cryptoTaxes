@@ -1,5 +1,6 @@
 package taxes
 
+import taxes.io.FileSystem
 import taxes.util.parse.Parse
 
 object Market extends Initializable {

@@ -1,6 +1,7 @@
 package taxes.exchanger
 
 import taxes._
+import taxes.io.FileSystem
 import taxes.util.Logger
 
 import scala.collection.mutable.ListBuffer
@@ -66,4 +67,4 @@ object Exchanger {
 }
 
 
-abstract case class UserFolderSource[+A](folderPath : String, extension : String) extends FolderSource[A](s"${FileSystem.userInputFolder}/$folderPath", extension)
+abstract case class UserInputFolderSource[+A](folderPath : String, extension : String) extends FolderSource[A](s"${FileSystem.userInputFolder}/$folderPath", extension)

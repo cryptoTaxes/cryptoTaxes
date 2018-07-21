@@ -1,7 +1,8 @@
 package taxes.util.parse
 
-import spray.json.{JsArray, JsNumber, JsObject, JsString, JsValue, JsonFormat}
-import taxes.FileSystem
+
+import spray.json.{JsArray, JsNumber, JsObject, JsString, JsValue}
+import taxes.io.FileSystem
 
 case class JSONException(msg : String) extends RuntimeException(msg)
 
@@ -18,11 +19,12 @@ object JsObjectAST {
   def fromString(str: String): JsObjectAST =
     JsObjectAST(spray.json.JsonParser(str).asJsObject())
 
-  def fromFile(fileName: String): JsObjectAST =
-    FileSystem.withSource(fileName){ src => JsObjectAST.fromString(src.mkString) }
-
-  def fromFile(file: java.io.File): JsObjectAST =
+  def fromFile(file: FileSystem.File): JsObjectAST =
     FileSystem.withSource(file){ src => JsObjectAST.fromString(src.mkString) }
+
+  def fromFile(fileName: String): JsObjectAST =
+    fromFile(FileSystem.File(fileName))
+
 }
 
 class JsObjectAST(override val fields: Map[String, JsValue]) extends JsObject(fields) {

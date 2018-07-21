@@ -1,15 +1,22 @@
-package taxes
-
-import java.io.File
+package taxes.io
 
 import taxes.exchanger.Exchanger
+import taxes.util.Logger
+import taxes.{Config, Market}
 
 
-object FileSystem extends Initializable {
+object FileSystem {
+  type File = java.io.File
+
+  object File {
+    def apply(fileName : String) : java.io.File =
+      new java.io.File(fileName)
+  }
+
   val data = "data"
 
   def pathFromData(fullPath : String) : String = {
-    val i = fullPath.indexOf(data)
+    val i = fullPath.lastIndexOf(data)
     if(i>=0)
       fullPath.drop(i)
     else
@@ -28,40 +35,6 @@ object FileSystem extends Initializable {
   def coinMarketCapHtmlFile(market : Market) =
     s"$coinMarketCap/$market.html"
 
-  def backup(fileName : String): Unit = {
-    val file = new java.io.File(fileName)
-    if(file.exists()) {
-      var i = 0
-      var ok = false
-      var backup : java.io.File = null
-      while(!ok) {
-        i += 1
-        backup = new java.io.File(s"$fileName.bak$i")
-        ok = !backup.exists()
-      }
-      file.renameTo(backup)
-    }
-  }
-
-  val usr = s"$data/usr"
-  lazy val userInputFolder = s"$usr/${Config.config.user}/input"
-  lazy val userOutputFolder = s"$usr/${Config.config.user}/output"
-
-  def userOutputFolder(year : Int): String =
-    s"$userOutputFolder/$year"
-
-  val conf = s"$data/config"
-  def configFile(fileName : String) = s"$conf/$fileName"
-
-  def findFilesAt(path : String, extension : String) : Array[java.io.File] = {
-    val f = new java.io.File(path)
-    val matchingFiles = f.listFiles(new java.io.FilenameFilter() {
-      def accept(dir: java.io.File, name: String): Boolean =
-        !name.startsWith("readme") && name.endsWith(extension)
-    })
-    return matchingFiles
-  }
-
   lazy val userPersistanceFolder = s"$usr/${Config.config.user}/persistance"
 
   lazy val transactionsCacheFile = s"$userPersistanceFolder/transactions.cache.json"
@@ -75,12 +48,55 @@ object FileSystem extends Initializable {
   def stockFile(year : Int, id : String) = s"$id$stockExtension"
   def stockLedgerFile(year : Int, id : String) = s"${stocksLedgerFolder(year)}/$id$stockExtension"
 
+  def marginFolder(year : Int, exchanger : Exchanger, isBuys : Boolean) =
+    s"${userPersistanceFolder(year)}/margin/$exchanger/${if (isBuys) "buys" else "sells"}"
+  def marginLedgerFolder(year : Int, exchanger : Exchanger, isBuys : Boolean) =
+    s"${marginFolder(year, exchanger, isBuys)}/ledger"
+  def marginFile(year : Int, exchanger : Exchanger, isBuys : Boolean, id : String) =
+    s"${marginFolder(year, exchanger, isBuys)}/$id$stockExtension"
+  def marginLedgerFile(year : Int, exchanger : Exchanger, isBuys : Boolean, id : String) =
+    s"${marginLedgerFolder(year, exchanger, isBuys)}/$id$stockExtension"
 
-  def marginFolder(year : Int, exchanger : Exchanger, isBuys : Boolean) = s"${userPersistanceFolder(year)}/margin/$exchanger/${if (isBuys) "buys" else "sells"}"
-  def marginLedgerFolder(year : Int, exchanger : Exchanger, isBuys : Boolean) = s"${marginFolder(year, exchanger, isBuys)}/ledger"
-  def marginFile(year : Int, exchanger : Exchanger, isBuys : Boolean, id : String) = s"${marginFolder(year, exchanger, isBuys)}/$id$stockExtension"
-  def marginLedgerFile(year : Int, exchanger : Exchanger, isBuys : Boolean, id : String) = s"${marginLedgerFolder(year, exchanger, isBuys)}/$id$stockExtension"
+  val usr = s"$data/usr"
+  lazy val userInputFolder = s"$usr/${Config.config.user}/input"
+  lazy val userOutputFolder = s"$usr/${Config.config.user}/output"
 
+  def userOutputFolder(year : Int): String =
+    s"$userOutputFolder/$year"
+
+  val config = s"$data/config"
+  def configFile(fileName : String) = s"$config/$fileName"
+
+  def backup(file : java.io.File): Unit = {
+    val (folder, name, ext) = decompose(file)
+
+    val backupFolder = s"$folder/backup"
+    mkDir(backupFolder)
+
+    val fileName = name+ext
+
+    if(file.exists()) {
+      Logger.trace(s"Backing up file $file")
+      var i = 0
+      var ok = false
+      var backup : java.io.File = null
+      while(!ok) {
+        i += 1
+        backup = new java.io.File(s"$backupFolder/$fileName.bak$i")
+        ok = !backup.exists()
+      }
+      file.renameTo(backup)
+    }
+  }
+
+  def findFilesAt(path : String, extension : String) : Array[java.io.File] = {
+    val f = new java.io.File(path)
+    val matchingFiles = f.listFiles(new java.io.FilenameFilter() {
+      def accept(dir: java.io.File, name: String): Boolean =
+        !name.startsWith("readme") && name.endsWith(extension)
+    })
+    return matchingFiles
+  }
 
   def mkDir(path : String): Unit = {
     val folder = new java.io.File(path)
@@ -97,30 +113,31 @@ object FileSystem extends Initializable {
   def getExtension(path : String) : String =
     decompose(path)._3
 
-  def decompose(path : String) : (String, String, String) = {
-    val file = new File(path)
+  def decompose(file : java.io.File) : (String, String, String) = {
     val name = file.getName
     val idx = name.lastIndexOf(".")
     return(file.getParent, name.substring(0, idx), name.substring(idx))
   }
+
+  def decompose(path : String) : (String, String, String) =
+    decompose(new java.io.File(path))
 
   def compose(paths : Seq[String], name : String, ext : String) : String = {
     val ext1 = if(ext.head=='.') ext else "."+ext
     return s"${paths.mkString("/")}/$name$ext1"
   }
 
-  override def init(): Unit = {
-    // for(folderName <- List(userInputFolder, userOutputFolder, userCacheFolder, userHistoryFolder))
-    //  mkDir(folderName)
-  }
+  type PrintStream = java.io.PrintStream
 
   object PrintStream {
-    def apply(file : File): java.io.PrintStream = {
+    def apply(file : File, doBackUp : Boolean = true): java.io.PrintStream = {
       val path = file.getParentFile
 
       if(!path.exists())
         path.mkdirs()
 
+      if(doBackUp)
+        backup(file)
       new java.io.PrintStream(file)
     }
 
@@ -139,9 +156,9 @@ object FileSystem extends Initializable {
     }
   }
 
-  def withPrintStream(fileName : String)(p : java.io.PrintStream => Unit): Unit = {
+  def withPrintStream(fileName : String)(p : java.io.PrintStream => Unit): Unit =
     withPrintStream(new File(fileName))(p)
-  }
+
 
   def withSource[A](file : java.io.File)(p : scala.io.Source => A) : A = {
     var src : scala.io.Source = null

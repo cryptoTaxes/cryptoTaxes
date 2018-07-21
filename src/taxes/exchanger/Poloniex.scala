@@ -2,6 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
+import taxes.io.FileSystem
 import taxes.util.parse.{Scanner, SeparatedScanner, _}
 
 
@@ -9,13 +10,13 @@ object Poloniex extends Exchanger {
   override val id: String = "Poloniex"
 
   override val sources = Seq(
-      new UserFolderSource[Operation]("poloniex", ".csv") {
+      new UserInputFolderSource[Operation]("poloniex", ".csv") {
         def fileSource(fileName : String) = operationsReader(fileName)
       }
     /* , new UserFolderSource[Operation]("poloniex/borrowing") {
         def fileSource(fileName : String) = borrowingFeesReader(fileName)
       } */
-    , new UserFolderSource[Operation]("poloniex/withdrawals", ".csv") {
+    , new UserInputFolderSource[Operation]("poloniex/withdrawals", ".csv") {
         def fileSource(fileName : String) = withdrawalsReader(fileName)
       }
     )
@@ -162,22 +163,20 @@ object Poloniex extends Exchanger {
 
   def group(operations: List[Operation]) : List[Operation] =
     operations match {
-      case (exchange1 : Exchange)::(exchange2 : Exchange)::ops if exchange1.id.nonEmpty && exchange1.id==exchange2.id => {
+      case (exchange1 : Exchange)::(exchange2 : Exchange)::ops if exchange1.id.nonEmpty && exchange1.id==exchange2.id =>
         val op = exchange1.copy(
             fromAmount = exchange1.fromAmount + exchange2.fromAmount
           , toAmount = exchange1.toAmount + exchange2.toAmount
           , fees = exchange1.fees ++ exchange2.fees
         )
         group(op :: ops)
-      }
-      case (margin1 : Margin)::(margin2 : Margin)::ops if margin1.id.nonEmpty && margin1.id==margin2.id => {
+      case (margin1 : Margin)::(margin2 : Margin)::ops if margin1.id.nonEmpty && margin1.id==margin2.id =>
         val op = margin1.copy(
             fromAmount = margin1.fromAmount + margin2.fromAmount
           , toAmount = margin1.toAmount + margin2.toAmount
           , feeAmount = margin1.feeAmount + margin2.feeAmount
         )
         group(op :: ops)
-      }
       case op1::op2::ops =>
         op1::group(op2::ops)
       case ops =>

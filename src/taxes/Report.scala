@@ -2,6 +2,7 @@ package taxes
 
 import taxes.date._
 import taxes.exchanger._
+import taxes.io.FileSystem
 import taxes.util.Logger
 
 import scala.collection.mutable.ListBuffer

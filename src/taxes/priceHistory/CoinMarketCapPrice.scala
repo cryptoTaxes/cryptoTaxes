@@ -2,6 +2,7 @@ package taxes.priceHistory
 
 import taxes._
 import taxes.date._
+import taxes.io.{FileSystem, Network}
 import taxes.util._
 import taxes.util.parse.Parse
 
@@ -68,18 +69,12 @@ object CoinMarketCapPrice extends Initializable {
 
   private def scrapPrices(coinMarketCapID: String) : Seq[String] = {
     val url = s"https://coinmarketcap.com/currencies/$coinMarketCapID/historical-data/?start=20130101&end=20500101"
-    val src = Source.fromURL(url)
-    /*
-    val src = Source.fromFile(coinMarketCapID)
-    Thread.sleep(5000)
-    val ps = FileSystem.PrintStream(coinMarketCapID)
-    ps.println(src.mkString)
-    ps.close()
-    */
+    val contents = Network.fromHttpURL(url)
+
     val tokenBegin = "<table class=\"table\">"
     val tokenEnd = "</tbody>"
 
-    val inLines = src.getLines().filter(_.nonEmpty).map(_.dropWhile(_.isSpaceChar)).dropWhile( _ != tokenBegin).drop(13)
+    val inLines = contents.split("\n").filter(_.nonEmpty).map(_.dropWhile(_.isSpaceChar)).dropWhile( _ != tokenBegin).drop(13).iterator
     if(inLines.isEmpty)
       Logger.fatal(s"Error reading coinmarketcap prices. Couldn't find $tokenBegin.")
 
@@ -88,7 +83,6 @@ object CoinMarketCapPrice extends Initializable {
     var goOn = true
     while(goOn) {
       val line1 = inLines.next()
-      //println("xx"+line1+"xx")
       if(line1=="<tr class=\"text-right\">") {
         val date = scrapContents(inLines.next())
         val open = scrapContents(inLines.next())
@@ -107,7 +101,6 @@ object CoinMarketCapPrice extends Initializable {
           Logger.fatal(s"Something went wrong scrapping prices for $coinMarketCapID.")
       }
     }
-    src.close()
     return outLines
   }
 
@@ -123,7 +116,7 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
   private def readPrices() : scala.collection.mutable.Map[LocalDate, Price] = {
     Logger.trace(s"Reading CoinMarketPrice from $fileFullPath.")
     val prices = scala.collection.mutable.Map[LocalDate, Price]()
-    val file = new java.io.File(fileFullPath)
+    val file = FileSystem.File(fileFullPath)
     val sc = new java.util.Scanner(file)
     val header = sc.nextLine()
     var lineNumber = 0
@@ -153,7 +146,7 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
             case PriceCalculation.lowHigh   => (high + low) / 2
           }
         } catch {
-          case _ => Logger.warning(s"CoinMarketCapPrice. Could not read line $lineNumber '${line}' in file ${file.getName}")
+          case _ => Logger.warning(s"CoinMarketCapPrice. Could not read line $lineNumber '$line' in file ${file.getName}")
         } finally {
           scLn.close()
         }
@@ -176,11 +169,10 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
     val header = "Date\tOpen\tHigh\tLow\tClose"
     Logger.trace(s"Downloading prices for $market from coinmarketcap.com.")
     val lines = CoinMarketCapPrice.scrapPrices(coinMarketCapID)
-    FileSystem.backup(fileFullPath)
-    val ps = FileSystem.PrintStream(fileFullPath)
-    ps.println(header)
-    for(ln <- lines)
-      ps.println(ln)
-    ps.close()
+    FileSystem.withPrintStream(fileFullPath) { ps =>
+      ps.println(header)
+      for(ln <- lines)
+        ps.println(ln)
+    }
   }
 }

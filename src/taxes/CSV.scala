@@ -4,12 +4,13 @@ import java.text.SimpleDateFormat
 
 import taxes.date._
 import taxes.exchanger.Exchanger
+import taxes.io.FileSystem
 import taxes.util.Logger
 
 
 case class CSV() {
 
-  private case class State(fileName : String, ps : java.io.PrintStream)
+  private case class State(fileName : String, ps : FileSystem.PrintStream)
 
   private var optState : Option[State] = None
 
@@ -70,7 +71,7 @@ case class CSV() {
     }
   }
 
-  def println : Unit = {
+  def println() : Unit = {
     println("")
   }
 
@@ -78,6 +79,6 @@ case class CSV() {
     println(x.toString)
   }
 
-  def printlnHeader =
+  def printlnHeader() =
     println(header.mkString(sep))
 }
