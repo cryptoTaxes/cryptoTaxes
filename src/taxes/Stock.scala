@@ -1,7 +1,7 @@
 package taxes
 
 import taxes.date._
-import taxes.exchanger.{Exchanger, UserFolderSource}
+import taxes.exchanger.Exchanger
 import taxes.util.Logger
 import spray.json._
 import DefaultJsonProtocol._
@@ -19,22 +19,32 @@ case class Stock(var amount : Double, costBasis : Price, exchanger : Exchanger, 
 
 object StockContainer {
   implicit object stockContainerJson extends RootJsonFormat[StockContainer] {
+    val _containerType = "containerType"
+    val _id = "id"
+    val _market = "market"
+    val _baseMarket = "baseMarket"
+    val _finalBalance = "finalBalance"
+    val _stocks = "stocks"
+
+    val _stack = "stack"
+    val _queue = "queue"
+
     def write(container: StockContainer) = {
       val containerType = container match {
         case _ : StockStack =>
-          "stack"
+          _stack
         case _ : StockQueue =>
-          "queue"
+          _queue
         case _ =>
           Logger.fatal("StockContainer.toFile: expecting a stack or a queue.")
       }
       JsObject(
-        "containerType" -> JsString(containerType),
-        "id" -> JsString(container.id),
-        "market" -> JsString(container.market),
-        "baseMarket" -> JsString(container.baseMarket),
-        "finalBalance" -> JsNumber(container.ledger.finalBalance),
-        "stocks" -> {
+        _containerType -> JsString(containerType),
+        _id -> JsString(container.id),
+        _market -> JsString(container.market),
+        _baseMarket -> JsString(container.baseMarket),
+        _finalBalance -> JsNumber(container.ledger.finalBalance),
+        _stocks -> {
           val builder = new scala.collection.immutable.VectorBuilder[JsValue]()
           for(stock <- container.doubleEndedContainer)
             builder += stock.toJson
@@ -44,14 +54,14 @@ object StockContainer {
     }
 
     def read(value: JsValue) = {
-      value.asJsObject.getFields("containerType", "id", "market", "baseMarket", "finalBalance", "stocks") match {
+      value.asJsObject.getFields(_containerType, _id, _market, _baseMarket, _finalBalance, _stocks) match {
         case Seq(JsString(containerType), JsString(id), JsString(market), JsString(baseMarket), JsNumber(finalBalance), JsArray(stocks)) =>
           var isStack = false
           val container : StockContainer = containerType match {
-            case "stack" =>
+            case `_stack` =>
               isStack = true
               StockStack(id, market, baseMarket)
-            case "queue" =>
+            case `_queue` =>
               StockQueue(id, market, baseMarket)
             case _ =>
               Logger.fatal(s"StockContainer.read: expecting a stack or a queue $containerType.")

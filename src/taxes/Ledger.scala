@@ -12,11 +12,14 @@ object Ledger {
   implicit val entryJson = jsonFormat4(Entry)
 
   implicit object LedgerTimeJson extends RootJsonFormat[Ledger] {
+    val _market = "market"
+    val _initialBalance = "initialBalance"
+    val _entries = "entries"
     def write(ledger: Ledger) = {
       JsObject(
-        "market" -> JsString(ledger.market)
-        , "initialBalance" -> JsNumber(ledger.initialBalance)
-        , "entries" -> {
+        _market -> JsString(ledger.market)
+        , _initialBalance -> JsNumber(ledger.initialBalance)
+        , _entries -> {
           val builder = new scala.collection.immutable.VectorBuilder[JsValue]()
           for(entry <- ledger.entries)
             builder += entry.toJson
@@ -25,7 +28,7 @@ object Ledger {
       )
     }
 
-    def read(value: JsValue) = value match {
+    def read(value: JsValue) = value.asJsObject.getFields(_market, _initialBalance, _entries) match {
       case Seq(JsString(market), JsNumber(initialBalance), JsArray(entries)) =>
         val ledger = Ledger(market, initialBalance.doubleValue())
         entries.foreach(x => ledger.entries += x.convertTo[Entry])
