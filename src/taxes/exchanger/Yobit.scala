@@ -26,7 +26,7 @@ object Yobit extends Exchanger {
       val date3 = scLn.next("Date3")
       val date4 = scLn.next("Date4")
 
-      val date = LocalDateTime.parseAsUTC(date3+" "+date4, "yyyy-MM-dd HH:mm:ss")
+      val date = LocalDateTime.parseAsUTC(s"$date3 $date4", "yyyy-MM-dd HH:mm:ss")
 
       val pair = scLn.next("Pair")
       val orderType = scLn.next("Order Type")

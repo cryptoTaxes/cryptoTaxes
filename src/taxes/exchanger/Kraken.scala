@@ -110,9 +110,7 @@ object Kraken extends Exchanger {
         case List(feeLedger1, feeLedger2) =>  // two fees for this operation
           // We assume feeLedger1.market != feeLedger2.market
           if(feeLedger1.market == feeLedger2.market)
-            Logger.fatal(s"""${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as fee1 market is the same as fee2 market: $line.
-$feeLedger1
-$feeLedger2""")
+            Logger.fatal(s"${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as fee1 market is the same as fee2 market: $line.\n$feeLedger1\n$feeLedger2")
 
           // We try to set as fee1 the one whose market is baseMarket.
           // Otherwise we set as fee1 the one expressed in quoteMarket
@@ -125,9 +123,7 @@ $feeLedger2""")
           else if (feeLedger2.market == quoteMarket)
             (feeLedger2.fee, feeLedger2.market, feeLedger1.fee, feeLedger1.market)
           else
-            Logger.fatal(s"""${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as fee1 market is neither fromMarket nor toMarket: $line.
-$feeLedger1
-$feeLedger2""")
+            Logger.fatal(s"${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as fee1 market is neither fromMarket nor toMarket: $line.\n$feeLedger1\n$feeLedger2")
 
 /*
           if(isBuy) {
@@ -159,16 +155,13 @@ $feeLedger2""")
           }
 */
         case ls =>
-          Logger.fatal(s"""${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as it has more than two fees: $line.
-$ls""")
+          Logger.fatal(s"${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as it has more than two fees: $line.\n$ls")
       }
 
 
       if (isMargin) { // margin trade
         if(feeLedgers.length > 1)
-          Logger.fatal(s"""Several fees for a margin order are not currently supported:
-$feeLedgers
-$line""")
+          Logger.fatal(s"Several fees for a margin order are not currently supported:\n$feeLedgers\n$line")
 
         // Logger.trace("%s\n%f %s   %f\n\n".format(line,fee1,fee1Market,if(fee1Market==quoteMarket) fee1 else -fee1*price))
 

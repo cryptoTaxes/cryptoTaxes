@@ -40,10 +40,10 @@ object LocalDateTime {
   private val UTC_Offset = "+0000"
 
   def parseAsUTC(str : String, format : String) : LocalDateTime =
-    parse(str+UTC_Offset, format+"Z")
+    parse(str+UTC_Offset, s"${format}Z")
 
   def parseAsMyZoneId(str : String, format: String) : LocalDateTime =
-    parse(str+myZoneId, format+"VV")
+    parse(str+myZoneId, s"${format}VV")
 
   import spray.json.{JsonFormat, JsString, JsValue, deserializationError}
 

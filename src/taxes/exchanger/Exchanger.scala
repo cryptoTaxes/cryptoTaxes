@@ -66,4 +66,4 @@ object Exchanger {
 }
 
 
-abstract case class UserFolderSource[+A](folderPath : String, extension : String) extends FolderSource[A](FileSystem.userInputFolder+"/"+folderPath, extension)
+abstract case class UserFolderSource[+A](folderPath : String, extension : String) extends FolderSource[A](s"${FileSystem.userInputFolder}/$folderPath", extension)

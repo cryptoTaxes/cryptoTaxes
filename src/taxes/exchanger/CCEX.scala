@@ -28,9 +28,9 @@ object CCEX extends Exchanger {
       if(orderType=="Transaction") {
         val date =
           if(Config.config.deprecatedUp2017Version)
-            LocalDateTime.parseAsMyZoneId(token1+" "+token2, "yyyy-MM-dd HH:mm:ss")
+            LocalDateTime.parseAsMyZoneId(s"$token1 $token2", "yyyy-MM-dd HH:mm:ss")
           else
-            LocalDateTime.parseAsUTC(token1+" "+token2, "yyyy-MM-dd HH:mm:ss") // C-CEX uses UTC
+            LocalDateTime.parseAsUTC(s"$token1 $token2", "yyyy-MM-dd HH:mm:ss") // C-CEX uses UTC
 
         val toAmount = scLn.nextDouble("To Amount")
         val toMarket = Market.normalize(scLn.next("To Market"))

@@ -193,7 +193,7 @@ object BlockExplorerSearcher {
     val str = BlockExplorerSearcher.fromURL(url)
 
     val dateStr = Parse.trimSpaces(locateAndSkip(str, "<td>Received Time</td>", '>', 1, "</td>"))
-    val date = LocalDateTime.parse(dateStr+"+0000", "yyyy-MM-dd HH:mm:ssZ")
+    val date = LocalDateTime.parseAsUTC(dateStr, "yyyy-MM-dd HH:mm:ss")
 
     val amountStr = locateAndSkip(str, s"$address</a>", '>', 2, " BTC")
     val amount = Parse.asDouble(amountStr)

@@ -1121,7 +1121,7 @@ object Report {
       }
 
       operationNumber += 1
-      Logger.trace(operationNumber+" "+operation)
+      Logger.trace(s"$operationNumber $operation")
 
       dispatch(operation)
 

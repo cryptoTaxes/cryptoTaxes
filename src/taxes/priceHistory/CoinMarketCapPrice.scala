@@ -41,7 +41,7 @@ object CoinMarketCapPrice extends Initializable {
 
   private val markets2CoinMarketPrices = {
     for((market, id) <- allPairs)
-      yield (market, CoinMarketCapPrice(market, FileSystem.coinMarketCap+"/"+market.toLowerCase+".txt", id))
+      yield (market, CoinMarketCapPrice(market, s"${FileSystem.coinMarketCap}/${market.toLowerCase}.txt", id))
   }
 
   // returns price in USD for a market at a given date
@@ -55,19 +55,19 @@ object CoinMarketCapPrice extends Initializable {
     val token1 = '>'
     val token2 = '<'
     if(!line.contains(token1)) {
-      Logger.fatal("Error reading coinmarketcap prices: "+line+".")
+      Logger.fatal(s"Error reading coinmarketcap prices: $line.")
     }
     val skipBeginning = line.dropWhile(_ != token1).tail
 
     if(!line.contains(token2)) {
-      Logger.fatal("Error reading coinmarketcap prices: "+line+".")
+      Logger.fatal(s"Error reading coinmarketcap prices: $line.")
     }
     val contents = skipBeginning.takeWhile(_ != token2)
     return contents
   }
 
   private def scrapPrices(coinMarketCapID: String) : Seq[String] = {
-    val url = "https://coinmarketcap.com/currencies/"+coinMarketCapID+"/historical-data/?start=20130101&end=20500101"
+    val url = s"https://coinmarketcap.com/currencies/$coinMarketCapID/historical-data/?start=20130101&end=20500101"
     val src = Source.fromURL(url)
     /*
     val src = Source.fromFile(coinMarketCapID)
