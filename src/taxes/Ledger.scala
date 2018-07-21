@@ -73,7 +73,7 @@ case class Ledger(market : Market, var initialBalance : Double = 0) {
             <tr>
               <td class='alignR'>{numEntries}</td>
               <td class='paddingL'>{Format.df.format(entry.date)}</td>
-              <td class={"paddingL" + (if (entry.amount<0) " darkRed" else " darkBlue")}>
+              <td class={s"paddingL ${if (entry.amount < 0) "darkRed" else "darkBlue"}"}>
                 {fmt.format(entry.amount)}
               </td>
               <td class='paddingL'>{fmt.format(balance)}</td>

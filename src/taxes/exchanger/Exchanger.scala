@@ -37,7 +37,7 @@ object Exchanger {
   def readAllOperations(): Seq[Operation] = {
     val operations = ListBuffer[Operation]()
     for (exchanger <- allExchangers) {
-      Logger.trace("Reading data for %s.".format(exchanger))
+      Logger.trace(s"Reading data for $exchanger.")
       for (src <- exchanger.sources)
         operations ++= src.read()
     }

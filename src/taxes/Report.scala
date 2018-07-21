@@ -110,11 +110,11 @@ case class OperationTracker() extends Iterable[(Int,OperationTracker.CSVEntry)] 
     m.clear()
 
   def printToCSVFile(fileName : String, year : Int): Unit = {
-    val csvFileName = FileSystem.userOutputFolder(year)+"/%s%d.csv".format(fileName,year)
+    val csvFileName = FileSystem.userOutputFolder(year)+s"/$fileName$year.csv"
     val ps = FileSystem.PrintStream(csvFileName)
 
     ps.println()
-    ps.println("%s %d".format(Accounting.toString(Config.config.accountingMethod), year))
+    ps.println(s"${Accounting.toString(Config.config.accountingMethod)} $year")
     ps.println("")
 
     val sep = ";"
@@ -187,7 +187,7 @@ object Report {
         else if (accountingMethod == Accounting.LIFO)
           StackStockPool()
         else
-          Logger.fatal("Unkown accounting method: %s".format(Accounting.toString(accountingMethod)))
+          Logger.fatal(s"Unkown accounting method: ${Accounting.toString(accountingMethod)}")
 
       // current in longs/shorts assets for margin trading operations
       val marginBuysMap = scala.collection.immutable.Map[Exchanger, StockPool](
@@ -220,7 +220,7 @@ object Report {
     val operations = Exchanger.readAllOperations().filter(relevant).sortBy(_.date)
 
     if(operations.isEmpty)
-      Logger.fatal("No operation was found in any exchange for user: "+config.user+".")
+      Logger.fatal(s"No operation was found in any exchange for user: ${config.user}.")
 
     // Sold stocks without corresponding buys
     val partiallyFrees = ListBuffer[String]()
@@ -266,8 +266,8 @@ object Report {
     def reportYear(year : Int): Unit = {
       val method = Accounting.toString(Config.config.accountingMethod)
 
-      val htmlReportFile = FileSystem.userOutputFolder(year)+"/%s%d.html".format(method, year)
-      val htmlReportTitle = "%d %s Report".format(year, method)
+      val htmlReportFile = s"${FileSystem.userOutputFolder(year)}/$method$year.html"
+      val htmlReportTitle = s"$year $method Report"
       val htmlReport = HTMLDoc(htmlReportFile, htmlReportTitle)
 
       htmlReport += <div class='header'>{htmlReportTitle}</div>
@@ -279,16 +279,16 @@ object Report {
       htmlReport.close()
 
 
-      val htmlPortfolioFile = FileSystem.userOutputFolder(year)+"/Portfolio%d.html".format(year)
-      val htmlPortfolioTitle = "%d End of year portfolio".format(year)
+      val htmlPortfolioFile = s"${FileSystem.userOutputFolder(year)}/Portfolio$year.html"
+      val htmlPortfolioTitle = s"$year End of year portfolio"
       val htmlPortfolio = HTMLDoc(htmlPortfolioFile, htmlPortfolioTitle)
 
       htmlPortfolio += state.stocks.toHTML(htmlPortfolioTitle)
       htmlPortfolio.close()
 
 
-      val htmlExtraFile = FileSystem.userOutputFolder(year)+"/Extra%d.html".format(year)
-      val htmlExtraTitle = "%d Statistics".format(year)
+      val htmlExtraFile = s"${FileSystem.userOutputFolder(year)}/Extra$year.html"
+      val htmlExtraTitle = s"$year Statistics"
       val htmlExtra = HTMLDoc(htmlExtraFile, htmlExtraTitle)
 
       htmlExtra += <div class='header'>{htmlExtraTitle}</div>
@@ -332,8 +332,8 @@ object Report {
 
       operationTracker.printToCSVFile("FIFO", year)
 
-      val htmlLedgersFile = FileSystem.userOutputFolder(year)+"/Ledgers%d.html".format(year)
-      val htmlLedgersTitle = "Ledgers %d".format(year)
+      val htmlLedgersFile = s"${FileSystem.userOutputFolder(year)}/Ledgers$year.html"
+      val htmlLedgersTitle = s"Ledgers $year"
       val htmlLedgers = HTMLDoc(htmlLedgersFile, htmlLedgersTitle)
 
       htmlLedgers += <div class='header'>{htmlLedgersTitle}</div>
@@ -393,9 +393,9 @@ object Report {
       }
 
       if(totalSoldAmount==0)
-        Logger.warning("No sold coins in this exchange %s.".format(exchange))
+        Logger.warning(s"No sold coins in this exchange $exchange.")
       if(totalBoughtAmount==0)
-        Logger.warning("No bought coins in this exchange %s.".format(exchange))
+        Logger.warning(s"No bought coins in this exchange $exchange.")
 
       // Fees expressed in `boughtMarket' are considered part of the exchange.
       // Those expressed in `soldMarket' are not.
@@ -430,13 +430,13 @@ object Report {
       // Add all bought coins with their cost basis to our stock of assets.
       // Note that fee in `boughtMarket' are included as they will be deducted right after as a fee
       if (!boughtBasisPriceInBaseCoin.isNaN && totalBoughtAmount > 0) {
-        state.stocks.add(boughtMarket, totalBoughtAmount, boughtBasisPriceInBaseCoin, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldMarket, "%d Exchange".format(operationNumber))(baseMarket)
+        state.stocks.add(boughtMarket, totalBoughtAmount, boughtBasisPriceInBaseCoin, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldMarket, s"$operationNumber Exchange")(baseMarket)
       }
 
       // Get cost basis for sold coins from current stock
       // fees expressed in `soldMarket' are not included
       val (soldBasisInBaseCoin, noBasis, usedStocks) = {
-        val t3 = state.stocks.remove(soldMarket, soldAmount)(baseMarket)(exchange.date, exchange.exchanger, "%d Exchange".format(operationNumber))
+        val t3 = state.stocks.remove(soldMarket, soldAmount)(baseMarket)(exchange.date, exchange.exchanger, s"$operationNumber Exchange")
         if(soldMarket != baseMarket)
           t3
         else
@@ -491,7 +491,7 @@ object Report {
 
       if (soldMarket != baseMarket && noBasis.abs > 0.01)
       // Part of these assets were acquired for free
-        partiallyFrees += "Was SOLD but were partially free %.8f of %.6f %s = %.8f %s  ".format(noBasis, totalSoldAmount, soldMarket, noBasis * proceedsInBaseCoin / soldAmount, baseMarket)
+        partiallyFrees += f"Was SOLD but were partially free $noBasis%.8f of $totalSoldAmount%.6f $soldMarket = ${noBasis * proceedsInBaseCoin / soldAmount}%.8f $baseMarket"
 
 
       // processed operations resulting from this exchange
@@ -563,7 +563,7 @@ object Report {
 
 
     def preprocessFee(fee : Fee) : Processed.Fee = {
-      val (feeInBaseCoin0, _, usedStocks) = state.stocks.remove(fee.market, fee.amount)(baseMarket)(fee.date, fee.exchanger, "%d Fee".format(operationNumber))
+      val (feeInBaseCoin0, _, usedStocks) = state.stocks.remove(fee.market, fee.amount)(baseMarket)(fee.date, fee.exchanger, s"$operationNumber Fee")
 
       val feeInBaseCoin = if(fee.market == baseMarket) fee.amount else feeInBaseCoin0
 
@@ -583,7 +583,7 @@ object Report {
 
 
     def preprocessLoss(loss : Loss) : Processed.Loss = {
-      val (lossBasisInBaseCoin0, _, usedStocks) = state.stocks.remove(loss.market, loss.amount)(baseMarket)(loss.date, loss.exchanger, "%d Loss".format(operationNumber))
+      val (lossBasisInBaseCoin0, _, usedStocks) = state.stocks.remove(loss.market, loss.amount)(baseMarket)(loss.date, loss.exchanger, s"$operationNumber Loss")
 
       val lossBasisInBaseCoin = if(loss.market == baseMarket) loss.amount else lossBasisInBaseCoin0
 
@@ -608,7 +608,7 @@ object Report {
     def preprocessGain(gain : Gain) : Processed.Gain = {
       // Record cost basis of gained coins at price corresponding to gain date
       val basePrice = baseCoin.priceInBaseCoin(gain.market, gain.date)
-      state.stocks.add(gain.market, gain.amount, basePrice, gain.exchanger, gain.date, basePrice, baseMarket, "%d Gain".format(operationNumber))(baseMarket)
+      state.stocks.add(gain.market, gain.amount, basePrice, gain.exchanger, gain.date, basePrice, baseMarket, s"$operationNumber Gain")(baseMarket)
 
       val gainInBaseCoin = gain.amount * basePrice
 
@@ -648,10 +648,10 @@ object Report {
       // Check that markets involved in margin operation are those in traded pair
       if(margin.orderType == Operation.OrderType.Sell) {
         if(soldMarket != tradedMarket || boughtMarket != marginBaseMarket)
-          Logger.fatal("Wrong markets in margin sell: "+margin)
+          Logger.fatal(s"Wrong markets in margin sell: $margin")
       } else if(margin.orderType == Operation.OrderType.Buy) {
         if(soldMarket != marginBaseMarket || boughtMarket != tradedMarket)
-          Logger.fatal("Wrong markets in margin buy: "+margin)
+          Logger.fatal(s"Wrong markets in margin buy: $margin")
       }
 
       // Compute margin exchange rates
@@ -669,7 +669,7 @@ object Report {
         else if (margin.feeMarket == soldMarket && boughtMarket == marginBaseMarket)
           boughtSoldExchangeRate * margin.feeAmount
         else
-          Logger.fatal("Cannot compute fee as fee is not expressed in same unit as from or to units " + margin.toString)
+          Logger.fatal(s"Cannot compute fee as fee is not expressed in same unit as from or to units ${margin.toString}")
 
       var processed = List[Processed]()
       var processedAux = List[Processed]()
@@ -678,7 +678,7 @@ object Report {
 
       def openShort(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market) : List[Processed] = {
         // Opening a short
-        marginSells.add(marketKey, soldMarket, soldAmount, boughtSoldExchangeRate, margin.exchanger, margin.date, boughtSoldExchangeRate, boughtMarket, "%d Open Short".format(operationNumber))(marginBaseMarket)
+        marginSells.add(marketKey, soldMarket, soldAmount, boughtSoldExchangeRate, margin.exchanger, margin.date, boughtSoldExchangeRate, boughtMarket, s"$operationNumber Open Short")(marginBaseMarket)
 
         var processed = List[Processed]()
 
@@ -706,7 +706,7 @@ object Report {
 
       def openLong(soldAmount : Double, boughtAmount : Double, feeAmount: Double, feeMarket : Market, feeInMarginBaseCoin : Double) : List[Processed] = {
         // Opening a long
-        marginBuys.add(marketKey, boughtMarket, boughtAmount, soldBoughtExchangeRate, margin.exchanger, margin.date, soldBoughtExchangeRate, soldMarket, "%d Open Long".format(operationNumber))(marginBaseMarket)
+        marginBuys.add(marketKey, boughtMarket, boughtAmount, soldBoughtExchangeRate, margin.exchanger, margin.date, soldBoughtExchangeRate, soldMarket, s"$operationNumber Open Long")(marginBaseMarket)
 
         var processed = List[Processed]()
 
@@ -747,7 +747,7 @@ object Report {
           val closedSoldAmount = soldAmount min inLongsAmount
           val closedBoughtAmount = closedSoldAmount * boughtSoldExchangeRate
 
-          val (basis, noBasis, usedStocks) = marginBuys.remove(marketKey, soldAmount)(baseMarket)(margin.date, margin.exchanger, "%d Close Long".format(operationNumber))
+          val (basis, noBasis, usedStocks) = marginBuys.remove(marketKey, soldAmount)(baseMarket)(margin.date, margin.exchanger, s"$operationNumber Close Long")
 
           processed ::=
             Processed.Margin(
@@ -797,7 +797,7 @@ object Report {
           val closedBoughtAmount = boughtAmount min inShortsAmount
           val closedSoldAmount = closedBoughtAmount * soldBoughtExchangeRate
 
-          val (basis, noBasis, usedStocks) = marginSells.remove(marketKey, boughtAmount)(baseMarket)(margin.date, margin.exchanger, "%d Close Short".format(operationNumber))
+          val (basis, noBasis, usedStocks) = marginSells.remove(marketKey, boughtAmount)(baseMarket)(margin.date, margin.exchanger, s"$operationNumber Close Short")
 
           processed ::=
             Processed.Margin(
@@ -854,19 +854,19 @@ object Report {
 
       operation match {
         case exchange: Exchange =>
-          operationTracker.setDescription(operationNumber, "Exchange of %s for %s".format(Format.asMarket(exchange.fromAmount, exchange.fromMarket), Format.asMarket(exchange.toAmount, exchange.toMarket)))
+          operationTracker.setDescription(operationNumber, s"Exchange of ${Format.asMarket(exchange.fromAmount, exchange.fromMarket)} for ${Format.asMarket(exchange.toAmount, exchange.toMarket)}")
           processedOperations += preprocessExchange(exchange)
 
         case gain : Gain =>
-          operationTracker.setDescription(operationNumber, "Gain of %s".format(Format.asMarket(gain.amount, gain.market)))
+          operationTracker.setDescription(operationNumber, s"Gain of ${Format.asMarket(gain.amount, gain.market)}")
           processedOperations += preprocessGain(gain)
 
         case loss : Loss =>
-          operationTracker.setDescription(operationNumber, "Loss of %s".format(Format.asMarket(loss.amount, loss.market)))
+          operationTracker.setDescription(operationNumber, s"Loss of ${Format.asMarket(loss.amount, loss.market)}")
           processedOperations += preprocessLoss(loss)
 
         case fee : Fee =>
-          operationTracker.setDescription(operationNumber, "Fee of %s".format(Format.asMarket(fee.amount, fee.market)))
+          operationTracker.setDescription(operationNumber, s"Fee of ${Format.asMarket(fee.amount, fee.market)}")
           processedOperations += preprocessFee(fee)
 
         case margin : Margin =>
@@ -919,13 +919,13 @@ object Report {
         else if(feeMarket == boughtMarket)
           (soldAmount, boughtAmount + feeAmount)
         else
-          Logger.fatal("Cannot process exchange as fee is not expressed in same unit as from or to markets." + exchange.toString)
+          Logger.fatal(s"Cannot process exchange as fee is not expressed in same unit as from or to markets.${exchange.toString}")
 
 
       if(totalSoldAmount==0)
-        Logger.warning("No sold coins in this exchange %s.".format(exchange))
+        Logger.warning(s"No sold coins in this exchange $exchange.")
       if(totalBoughtAmount==0)
-        Logger.warning("No bought coins in this exchange %s.".format(exchange))
+        Logger.warning(s"No bought coins in this exchange $exchange.")
 
 
       // Compute exchange rates (fee is included)
@@ -963,7 +963,7 @@ object Report {
       else if (feeMarket == soldMarket)
         feeAmount * totalInBaseCoin / totalSoldAmount
       else
-        Logger.fatal("Cannot process exchange as fee is not expressed in same unit as from or to markets." + exchange.toString)
+        Logger.fatal(s"Cannot process exchange as fee is not expressed in same unit as from or to markets.${exchange.toString}")
 
       // Price we sold released coins at, expressed in base coin
       val soldPriceInBaseCoin = totalInBaseCoin / totalSoldAmount
@@ -973,16 +973,16 @@ object Report {
 
       // Add bought coins (without paid fee) with their cost basis to our stock of assets
       if (!boughtBasisPriceInBaseCoin.isNaN && boughtAmount > 0) {
-        state.stocks.add(boughtMarket, boughtAmount, boughtBasisPriceInBaseCoin, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldMarket, "%d Exchange".format(operationNumber))(baseMarket)
+        state.stocks.add(boughtMarket, boughtAmount, boughtBasisPriceInBaseCoin, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldMarket, s"$operationNumber Exchange")(baseMarket)
       }
 
       // Get cost basis for total sold coins from current stock
       val (totalSoldBasisInBaseCoin, noBasis, usedStocks) =
         if (soldMarket != baseMarket)
-          state.stocks.remove(soldMarket, totalSoldAmount)(baseMarket)(exchange.date, exchange.exchanger, "%d Exchange".format(operationNumber))
+          state.stocks.remove(soldMarket, totalSoldAmount)(baseMarket)(exchange.date, exchange.exchanger, s"$operationNumber Exchange")
         else {
           // If our base coin is Euro, cost basis is the amount of Euros involved
-          val (_,_,usedStocks) = state.stocks.remove(soldMarket, totalSoldAmount)(baseMarket)(exchange.date, exchange.exchanger, "%d Exchange".format(operationNumber))
+          val (_,_,usedStocks) = state.stocks.remove(soldMarket, totalSoldAmount)(baseMarket)(exchange.date, exchange.exchanger, s"$operationNumber Exchange")
           (totalSoldAmount, 0.0, usedStocks)
         }
 
@@ -1030,7 +1030,7 @@ object Report {
 
       if (noBasis.abs > 0.01 && (soldMarket != baseMarket))
       // Part of these assets were acquired for free
-        partiallyFrees += "Was SOLD but were partially free %.8f of %.6f %s = %.8f %s  ".format(noBasis, totalSoldAmount, soldMarket, noBasis * proceedsInBaseCoin / soldAmount, baseMarket)
+        partiallyFrees += f"Was SOLD but were partially free $noBasis%.8f of $totalSoldAmount%.6f $soldMarket = ${noBasis * proceedsInBaseCoin / soldAmount}%.8f $baseMarket"
 
       operationTracker.recordFee(operationNumber, feeInBaseCoin)
 
@@ -1134,7 +1134,7 @@ object Report {
     }
     reportYear(currentYear)
 
-    Logger.trace("Output generated in %s folder.".format(FileSystem.userOutputFolder))
+    Logger.trace(s"Output generated in ${FileSystem.userOutputFolder} folder.")
 
     println(minBTC, dateMinBTC)
   }

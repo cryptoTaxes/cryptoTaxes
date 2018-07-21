@@ -68,7 +68,7 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
           }
         } catch {
           case e =>
-            Logger.fatal("Something went wrong reading csv file %s.\n%s\nLine %d: \"%s\"".format(fileName, e, lnNumber, ln))
+            Logger.fatal(s"Something went wrong reading csv file $fileName.\nLine $lnNumber: $ln\n$e")
         } finally
           scLn.close()
       }

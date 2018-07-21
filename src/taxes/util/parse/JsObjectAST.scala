@@ -31,9 +31,9 @@ class JsObjectAST(override val fields: Map[String, JsValue]) extends JsObject(fi
       case Seq(JsString(str)) =>
         str
       case Seq(_) =>
-        throw JSONException("JsonAST.getString: key %s is not a string.".format(key))
+        throw JSONException(s"JsonAST.getString: key $key is not a string.")
       case _ =>
-        throw JSONException("JsonAST.getString: key %s not found.".format(key))
+        throw JSONException(s"JsonAST.getString: key $key not found.")
     }
 
   def getInt(key: String): Int =
@@ -44,12 +44,12 @@ class JsObjectAST(override val fields: Map[String, JsValue]) extends JsObject(fi
         try {
           Parse.asInt(str)
         } catch {
-          case _ => throw JSONException("JsonAST.getInt: key %s is not a number.".format(key))
+          case _ => throw JSONException(s"JsonAST.getInt: key $key is not a number.")
         }
       case Seq(_) =>
-        throw JSONException("JsonAST.getInt: key %s is not a number.".format(key))
+        throw JSONException(s"JsonAST.getInt: key $key is not a number.")
       case _ =>
-        throw JSONException("JsonAST.getInt: key %s not found.".format(key))
+        throw JSONException(s"JsonAST.getInt: key $key not found.")
     }
 
   def getLong(key: String): Long =
@@ -60,12 +60,12 @@ class JsObjectAST(override val fields: Map[String, JsValue]) extends JsObject(fi
         try {
           Parse.asLong(str)
         } catch {
-          case _ => throw JSONException("JsonAST.getLong: key %s is not a number.".format(key))
+          case _ => throw JSONException(s"JsonAST.getLong: key $key is not a number.")
         }
       case Seq(_) =>
-        throw JSONException("JsonAST.getLong: key %s is not a number.".format(key))
+        throw JSONException(s"JsonAST.getLong: key $key is not a number.")
       case _ =>
-        throw JSONException("JsonAST.getLong: key %s not found.".format(key))
+        throw JSONException(s"JsonAST.getLong: key $key not found.")
     }
 
   def getDouble(key: String): Double =
@@ -76,12 +76,12 @@ class JsObjectAST(override val fields: Map[String, JsValue]) extends JsObject(fi
         try {
           Parse.asDouble(str)
         } catch {
-          case _ => throw JSONException("JsonAST.getDouble: key %s is not a number.".format(key))
+          case _ => throw JSONException(s"JsonAST.getDouble: key $key is not a number.")
         }
       case Seq(_) =>
-        throw JSONException("JsonAST.getDouble: key %s is not a number.".format(key))
+        throw JSONException(s"JsonAST.getDouble: key $key is not a number.")
       case _ =>
-        throw JSONException("JsonAST.getDouble: key %s not found.".format(key))
+        throw JSONException(s"JsonAST.getDouble: key $key not found.")
     }
 
   def getVector(key: String): Seq[JsValue] =
@@ -89,9 +89,9 @@ class JsObjectAST(override val fields: Map[String, JsValue]) extends JsObject(fi
       case Seq(JsArray(array)) =>
         array
       case Seq(_) =>
-        throw JSONException("JsonAST.getVector: key %s is not a vector.".format(key))
+        throw JSONException(s"JsonAST.getVector: key $key is not a vector.")
       case _ =>
-        throw JSONException("JsonAST.getVector: key %s not found.".format(key))
+        throw JSONException(s"JsonAST.getVector: key $key not found.")
     }
 }
 

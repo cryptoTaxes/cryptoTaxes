@@ -20,7 +20,7 @@ abstract class FolderSource[+A](folderPath : String, extension : String) extends
     if (files != null)
       for (file <- files) {
         val fileName = file.getPath
-        Logger.trace("Reading contents of file %s.".format(fileName))
+        Logger.trace(s"Reading contents of file $fileName.")
         xs ++= fileSource(fileName).read()
       }
     return xs

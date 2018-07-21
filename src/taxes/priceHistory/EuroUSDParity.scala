@@ -30,7 +30,7 @@ object EuroUSDParity extends Initializable {
 
   private def readPrices() : scala.collection.mutable.Map[LocalDate, Price] = {
     val file = new java.io.File(FileSystem.euroUSDFile)
-    Logger.trace("Reading Euro prices from " + file.getAbsoluteFile + ".")
+    Logger.trace(s"Reading Euro prices from ${file.getAbsoluteFile}.")
 
     val prices = scala.collection.mutable.Map[LocalDate, Price]()
     var lineNumber = 0
@@ -68,7 +68,7 @@ object EuroUSDParity extends Initializable {
               noPriceDates ::= date // if no price was published we will use that of next day
           }
         } catch {
-          case _ => Logger.warning("EuroUSDParity. Could not read line %d \"%s\" in file %s" format(lineNumber, line, file.getName))
+          case _ => Logger.warning(s"EuroUSDParity. Could not read line $lineNumber '${line}' in file ${file.getName}")
         } finally {
           scLn.close()
         }
@@ -93,7 +93,7 @@ object EuroUSDParity extends Initializable {
           return price
       }
     }
-    return Logger.fatal("oneEuro2USD. Price for Euro not found for day %s. Last download price is for %s." format(attemptDate, lastDay))
+    return Logger.fatal(s"oneEuro2USD. Price for Euro not found for day $attemptDate. Last download price is for $lastDay.")
   }
 
   def USD2Euro(amount : Double, date : LocalDateTime) : Price =

@@ -59,7 +59,7 @@ object BlockExplorerSearcher {
   }
 
   def etcScrap(txid : String, address : String) : (LocalDateTime, Double, Double) = {
-    val url = "https://gastracker.io/tx/%s".format(txid)
+    val url = s"https://gastracker.io/tx/$txid"
     val str = BlockExplorerSearcher.fromURL(url)
 
     val dateStr = locateAndSkip(str, "<dt>Timestamp</dt>", '>', 1, "</dd>")
@@ -76,7 +76,7 @@ object BlockExplorerSearcher {
 
     val addressStr = locateAndSkip(str, "<dt>To</dt>", '>', 2, "</a>")
     if(address.toUpperCase != addressStr.toUpperCase())
-      Logger.fatal("BlockExplorerScraper.etcScrap: address doesn't match %s %s".format(address, addressStr))
+      Logger.fatal(s"BlockExplorerScraper.etcScrap: address doesn't match $address $addressStr")
 
     val fee = gasPrice * gasUsed * 1E-12
 
@@ -93,7 +93,7 @@ object BlockExplorerSearcher {
     case class Response(timestamp : Long, fees : Double, outputs : Seq[Output])
     implicit val responseJson = jsonFormat3(Response)
 
-    val url = "https://chainz.cryptoid.info/%s/api.dws?q=txinfo;t=%s".format(coin,txid)
+    val url = s"https://chainz.cryptoid.info/$coin/api.dws?q=txinfo;t=$txid"
     val resp = BlockExplorerSearcher.fromURL(url)
 
     val json = spray.json.JsonParser(resp)
@@ -114,7 +114,7 @@ object BlockExplorerSearcher {
     }
 
     if (!found)
-      Logger.fatal("BlockExplorerScraper.chainzCryptoidInfoScrap: output address %s not found in JSON %s".format(address, response))
+      Logger.fatal(s"BlockExplorerScraper.chainzCryptoidInfoScrap: output address $address not found in JSON $response")
 
     return (date, amount, fee)
   }
@@ -144,14 +144,14 @@ object BlockExplorerSearcher {
     case class Response(success : Int, transaction : Transaction)
     implicit val responseJson = jsonFormat2(Response)
 
-    val url = "https://dogechain.info/api/v1/transaction/%s".format(txid)
+    val url = s"https://dogechain.info/api/v1/transaction/$txid"
     val resp = BlockExplorerSearcher.fromURL(url)
 
     val json = spray.json.JsonParser(resp)
     val response = json.convertTo[Response]
 
     if(response.success != 1)
-      Logger.fatal("BlockExplorerScraper.dogeScrap: could not find transaction %s".format(txid))
+      Logger.fatal(s"BlockExplorerScraper.dogeScrap: could not find transaction $txid")
 
     val transaction = response.transaction
 
@@ -173,7 +173,7 @@ object BlockExplorerSearcher {
     }
 
     if(!found)
-      Logger.fatal("BlockExplorerScraper.dogeScrap: output address %s not found in JSON %s".format(address, response))
+      Logger.fatal(s"BlockExplorerScraper.dogeScrap: output address $address not found in JSON $response")
 
     val inputs = transaction.inputs
 
@@ -189,13 +189,13 @@ object BlockExplorerSearcher {
   }
 
   def btcScrap2(txid : String, address : String) : (LocalDateTime, Double, Double) = {
-    val url = "https://blockchain.info/tx/%s".format(txid)
+    val url = s"https://blockchain.info/tx/$txid"
     val str = BlockExplorerSearcher.fromURL(url)
 
     val dateStr = Parse.trimSpaces(locateAndSkip(str, "<td>Received Time</td>", '>', 1, "</td>"))
     val date = LocalDateTime.parse(dateStr+"+0000", "yyyy-MM-dd HH:mm:ssZ")
 
-    val amountStr = locateAndSkip(str, "%s</a>".format(address), '>', 2, " BTC")
+    val amountStr = locateAndSkip(str, s"$address</a>", '>', 2, " BTC")
     val amount = Parse.asDouble(amountStr)
 
     val feeStr = locateAndSkip(str, "<td>Fees</td>", '>', 2, " BTC")
@@ -235,6 +235,6 @@ class BlockExplorerSearcher(market : Market, txid : String, address : String) {
     case Market.dogecoin => BlockExplorerSearcher.dogeScrap(txid, address)
     case Market.litecoin => BlockExplorerSearcher.ltcScrap(txid, address)
     case Market.vertcoin => BlockExplorerSearcher.vtcScrap(txid, address)
-    case _               => Logger.fatal("BlockExplorerScraper: non-supported market %s".format(market))
+    case _               => Logger.fatal(s"BlockExplorerScraper: non-supported market $market")
   }
 }

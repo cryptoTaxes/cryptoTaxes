@@ -41,12 +41,12 @@ object Parse {
   def split(str : String, separator: String) : (String, String) = {
     val idx = str.indexOf(separator)
     if(idx < 0) {
-      Logger.fatal("Separator %s not found in pair \"%s\"" format(separator, str))
+      Logger.fatal(s"Separator $separator not found in pair '$str'")
     } else {
       val token1 = trimSpaces(str.take(idx))
       val token2 = trimSpaces(str.drop(idx+separator.length))
       if(token2.isEmpty)
-        Logger.fatal("Second token not found in pair \"%s\"" format(str))
+        Logger.fatal(s"Second token not found in pair '$str'")
 
       return (token1, token2)
     }
@@ -67,7 +67,7 @@ object Parse {
   }
 
   def readAssociations(fileName : String, traceMsg : String) : Map[String, String] = {
-    val trace = traceMsg + " from " + fileName + "."
+    val trace = s"$traceMsg from $fileName."
     Logger.trace(trace)
     val file = new java.io.File(fileName)
     val sc = new java.util.Scanner(file)
@@ -84,7 +84,7 @@ object Parse {
           for (alt <- alternatives)
             associations += (alt.toUpperCase() -> normalized)
         } catch {
-          case _ => Logger.warning("Could not read associations in line %d \"%s\" from file %s." format(lineNumber, line, fileName))
+          case _ => Logger.warning(s"Could not read associations in line $lineNumber '$line' from file $fileName.")
         }
       }
     }

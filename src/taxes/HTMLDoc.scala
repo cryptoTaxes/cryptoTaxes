@@ -74,9 +74,9 @@ object HTMLDoc {
     val fees = realized.perMarketPaidFees.sum
 
     val net = proceeds - costs - fees
-    val netMsg = "Net " + (if(net>0) "gain" else "loss") + ":"
+    val netMsg = s"Net ${if (net > 0) "gain" else "loss"}:"
     <table id='tableStyle1'>
-      <caption>{"%d Resume".format(year)}</caption>
+      <caption>{s"$year Resume"}</caption>
       <tr>
         <td><span class='embold'>Total proceeds:</span></td>
         <td>{asMarket(proceeds, baseMarket)}</td>

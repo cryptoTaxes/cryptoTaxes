@@ -31,12 +31,12 @@ object Kraken extends Exchanger {
     }
 
     if (!found)
-      Logger.fatal("Could not parse Kraken pair %s. Check file %s." format(pair, configFileName))
+      Logger.fatal(s"Could not parse Kraken pair $pair. Check file $configFileName.")
 
     val quoteMarket0 = pair.drop(baseMarket0.length)
 
     val quoteMarket = conversions.get(quoteMarket0) match {
-      case None => Logger.fatal("Could not parse Kraken market %s. Check file %s." format(quoteMarket0, configFileName))
+      case None => Logger.fatal(s"Could not parse Kraken market $quoteMarket0. Check file $configFileName.")
       case Some(market) => market
     }
 
@@ -110,7 +110,9 @@ object Kraken extends Exchanger {
         case List(feeLedger1, feeLedger2) =>  // two fees for this operation
           // We assume feeLedger1.market != feeLedger2.market
           if(feeLedger1.market == feeLedger2.market)
-            Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as fee1 market is the same as fee2 market: %s.\n%s\n%s".format(Kraken.id, FileSystem.pathFromData(fileName), line, feeLedger1, feeLedger2))
+            Logger.fatal(s"""${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as fee1 market is the same as fee2 market: $line.
+$feeLedger1
+$feeLedger2""")
 
           // We try to set as fee1 the one whose market is baseMarket.
           // Otherwise we set as fee1 the one expressed in quoteMarket
@@ -123,7 +125,9 @@ object Kraken extends Exchanger {
           else if (feeLedger2.market == quoteMarket)
             (feeLedger2.fee, feeLedger2.market, feeLedger1.fee, feeLedger1.market)
           else
-            Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as fee1 market is neither fromMarket nor toMarket: %s.\n%s\n%s".format(Kraken.id, FileSystem.pathFromData(fileName), line, feeLedger1, feeLedger2))
+            Logger.fatal(s"""${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as fee1 market is neither fromMarket nor toMarket: $line.
+$feeLedger1
+$feeLedger2""")
 
 /*
           if(isBuy) {
@@ -155,13 +159,16 @@ object Kraken extends Exchanger {
           }
 */
         case ls =>
-          Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as it has more than two fees: %s.\n%s".format(Kraken.id, FileSystem.pathFromData(fileName), line, ls))
+          Logger.fatal(s"""${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as it has more than two fees: $line.
+$ls""")
       }
 
 
       if (isMargin) { // margin trade
         if(feeLedgers.length > 1)
-          Logger.fatal("Several fees for a margin order are not currently supported:\n%s\n%s".format(feeLedgers,line))
+          Logger.fatal(s"""Several fees for a margin order are not currently supported:
+$feeLedgers
+$line""")
 
         // Logger.trace("%s\n%f %s   %f\n\n".format(line,fee1,fee1Market,if(fee1Market==quoteMarket) fee1 else -fee1*price))
 
@@ -196,7 +203,7 @@ object Kraken extends Exchanger {
             )
           return CSVReader.Ok(margin)
         } else
-          return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
+          return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
     } else { // spot exchange
         if(isSell) {
             // If fee1Market==fromMarket, vol is just what we are exchanging
@@ -271,7 +278,7 @@ object Kraken extends Exchanger {
               )
             return CSVReader.Ok(exchange)
         } else
-          return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
+          return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
       }
     }
   }
@@ -315,7 +322,7 @@ object Kraken extends Exchanger {
         )
         return CSVReader.Ok(fee)
       }  else
-        return CSVReader.Warning("%s. Read file %s; Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
+        return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}; Reading this transaction is not currently supported: $line.")
     }
   }
 }

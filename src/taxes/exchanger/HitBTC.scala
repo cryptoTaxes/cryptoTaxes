@@ -57,7 +57,7 @@ object HitBTC extends Exchanger {
 
         return CSVReader.Ok(exchange)
       } else //toDo add support for buy orders
-        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
+        return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
     }
   }
 }

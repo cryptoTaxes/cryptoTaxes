@@ -51,7 +51,7 @@ object ParseCommandLine {
 
     var toParse = Parse.trimSpaces(cmdLine)
 
-    def failParse = Logger.fatal("Cannot parse command line: "+cmdLine+"\nFrom here: "+toParse)
+    def failParse = Logger.fatal(s"Cannot parse command line: $cmdLine \nFrom here: $toParse")
     while (toParse.nonEmpty) {
       if (toParse.head == '-') {
         toParse = toParse.tail
@@ -68,7 +68,7 @@ object ParseCommandLine {
                 try {
                   Parse.asInt(value)
                 } catch {
-                  case e: Exception => Logger.fatal("Non valid verbosity level: "+value)
+                  case e: Exception => Logger.fatal(s"Non valid verbosity level: $value")
                 }
               config = config.copy(verbosityLevel = level)
             } else if(flag == "currency") {
@@ -76,7 +76,7 @@ object ParseCommandLine {
                 case "euro" => EuroBaseCoin
                 case "usd"  => USDBaseCoin
                 case "btc"  => BTCBaseCoin
-                case _      => Logger.fatal("Unknown currency: "+value)
+                case _      => Logger.fatal(s"Unknown currency: $value")
               }
               config = config.copy(baseCoin = baseCoin)
             } else if(flag == "download-prices") {
@@ -90,14 +90,14 @@ object ParseCommandLine {
                 case "low"       => PriceCalculation.low
                 case "high"      => PriceCalculation.high
                 case "lowHigh"   => PriceCalculation.lowHigh
-                case _           => Logger.fatal("Unknown price calculation method: "+value)
+                case _           => Logger.fatal(s"Unknown price calculation method: $value")
               }
               config = config.copy(priceCalculation = method)
             } else if(flag == "accounting-method") {
               val method = value match {
                 case "fifo" | "FIFO"  => Accounting.FIFO
                 case "lifo" | "LIFO"  => Accounting.LIFO
-                case _                => Logger.fatal("Unknown accounting method: "+value)
+                case _                => Logger.fatal(s"Unknown accounting method: $value")
               }
               config = config.copy(accountingMethod = method)
             } else if(flag == "decimal-places") {
@@ -105,7 +105,7 @@ object ParseCommandLine {
                 try {
                   Parse.asInt(value)
                 } catch {
-                  case e: Exception => Logger.fatal("Non valid decimal places: "+value)
+                  case e: Exception => Logger.fatal(s"Non valid decimal places: $value")
                 }
               config = config.copy(decimalPlaces = d)
             } else if(flag == "epsilon") {
@@ -113,7 +113,7 @@ object ParseCommandLine {
                 try {
                   Parse.asDouble(value)
                 } catch {
-                  case e: Exception => Logger.fatal("Non valid epsilon: "+value)
+                  case e: Exception => Logger.fatal(s"Non valid epsilon: $value")
                 }
               config = config.copy(epsilon = eps)
             } else if(flag == "time-zone") {

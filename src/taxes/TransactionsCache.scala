@@ -48,7 +48,7 @@ object TransactionsCache extends Initializable with Finalizable {
           saveToDisk()
           return info
         } else {
-          Logger.fatal("TransactionCache not implemented yet for %s. %s.".format(market, txid))
+          Logger.fatal(s"TransactionCache not implemented yet for $market. $txid.")
         }
       }
     }

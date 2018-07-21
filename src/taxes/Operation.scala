@@ -60,8 +60,8 @@ case class Exchange(date : LocalDateTime
                     ) extends Operation {
 
   override def toString : String = {
-    val feesStr = fees.map(fee => "%.8f %s".format(fee.amount, fee.market)).mkString("(", ", ", ")")
-    "Exchange(%s %18.8f %-5s -> %18.8f %-5s  %s  %s)" format(dateFormatted, fromAmount, fromMarket, toAmount, toMarket, feesStr, description)
+    val feesStr = fees.map(fee => f"${fee.amount}%.8f ${fee.market}").mkString("(", ", ", ")")
+    f"Exchange($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s  $feesStr  $description)"
   }
 }
 
@@ -86,26 +86,26 @@ case class Margin(date : LocalDateTime
                   ) extends Operation {
 
   override def toString : String =
-    "Margin(%s %18.8f %-5s -> %18.8f %-5s  %18.8f %-5s  %s)" format (dateFormatted, fromAmount, fromMarket, toAmount, toMarket, feeAmount, feeMarket, description)
+    f"Margin($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s  $feeAmount%18.8f $feeMarket%-5s  $description)"
 }
 
 
 case class Fee(date : LocalDateTime, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String, alt : Option[(Double, Market)] = None) extends Operation {
   override def toString : String =
-    "Fee(%s %18.8f %-5s  %s)" format (dateFormatted, amount, market, description)
+    f"Fee($dateFormatted $amount%18.8f $market%-5s  $description)"
 }
 
 
 case class Loss(date : LocalDateTime, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String) extends Operation {
   override def toString : String =
-    "Lost(%s %18.8f %-5s  %s)" format (dateFormatted, amount, market, description)
+    f"Lost($dateFormatted $amount%18.8f $market%-5s  $description)"
 }
 
 
 // amount is the real gain (fee has already been deducted)
 case class Gain(date : LocalDateTime, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String) extends Operation {
   override def toString : String =
-    "Gain(%s %18.8f %-5s   %s)" format (dateFormatted, amount, market, description)
+    f"Gain($dateFormatted $amount%18.8f $market%-5s   $description)"
 }
 
 

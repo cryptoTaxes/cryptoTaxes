@@ -131,7 +131,7 @@ object Bitfinex extends Exchanger {
             return CSVReader.Ok(margin)
       }
       else
-        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s. Margin should be true or false but it is %s".format(id, FileSystem.pathFromData(fileName), line, margin))
+        return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line. Margin should be true or false but it is $margin")
     }
   }
 
@@ -280,7 +280,7 @@ object Bitfinex extends Exchanger {
           )
         return CSVReader.Ok(fee)
       } */ else
-        return CSVReader.Warning("%s. Read file %s: Reading this transaction is not currently supported: %s.".format(id, FileSystem.pathFromData(fileName), line))
+        return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
     }
   }
 }

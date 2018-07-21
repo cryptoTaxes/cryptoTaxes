@@ -48,7 +48,7 @@ object CoinMarketCapPrice extends Initializable {
   def apply(market : Market, date : LocalDateTime) : Price =
     markets2CoinMarketPrices.get(market) match  {
       case Some(prices) => prices(date)
-      case None => Logger.fatal("price for %s at %s not found".format(market, date))
+      case None => Logger.fatal(s"price for $market at $date not found")
     }
 
   private def scrapContents(line : String) : String = {
@@ -81,7 +81,7 @@ object CoinMarketCapPrice extends Initializable {
 
     val inLines = src.getLines().filter(_.nonEmpty).map(_.dropWhile(_.isSpaceChar)).dropWhile( _ != tokenBegin).drop(13)
     if(inLines.isEmpty)
-      Logger.fatal("Error reading coinmarketcap prices. Couldn't find %s.".format(tokenBegin))
+      Logger.fatal(s"Error reading coinmarketcap prices. Couldn't find $tokenBegin.")
 
     val outLines = ListBuffer[String]()
 
@@ -104,7 +104,7 @@ object CoinMarketCapPrice extends Initializable {
       } else {
         goOn = false
         if(line1 != tokenEnd)
-          Logger.fatal("Something went wrong scrapping prices for %s.".format(coinMarketCapID))
+          Logger.fatal(s"Something went wrong scrapping prices for $coinMarketCapID.")
       }
     }
     src.close()
@@ -121,7 +121,7 @@ object CoinMarketCapPrice extends Initializable {
 class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID: String) extends PriceHistory {
 
   private def readPrices() : scala.collection.mutable.Map[LocalDate, Price] = {
-    Logger.trace("Reading CoinMarketPrice from " + fileFullPath + ".")
+    Logger.trace(s"Reading CoinMarketPrice from $fileFullPath.")
     val prices = scala.collection.mutable.Map[LocalDate, Price]()
     val file = new java.io.File(fileFullPath)
     val sc = new java.util.Scanner(file)
@@ -153,7 +153,7 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
             case PriceCalculation.lowHigh   => (high + low) / 2
           }
         } catch {
-          case _ => Logger.warning("CoinMarketCapPrice. Could not read line %d \"%s\" in file %s" format(lineNumber, line, file.getName))
+          case _ => Logger.warning(s"CoinMarketCapPrice. Could not read line $lineNumber '${line}' in file ${file.getName}")
         } finally {
           scLn.close()
         }
@@ -168,13 +168,13 @@ class CoinMarketCapPrice(market : Market, fileFullPath : String, coinMarketCapID
   def apply(date : LocalDateTime) : Price =
     prices.get(LocalDate.of(date)) match  {
       case None =>
-        Logger.fatal("price for %s at %s not found\n".format(market, date))
+        Logger.fatal(s"price for $market at $date not found")
       case Some(price) => price
     }
 
   def downloadPrices(): Unit = {
     val header = "Date\tOpen\tHigh\tLow\tClose"
-    Logger.trace("Downloading prices for "+market+" from coinmarketcap.com.")
+    Logger.trace(s"Downloading prices for $market from coinmarketcap.com.")
     val lines = CoinMarketCapPrice.scrapPrices(coinMarketCapID)
     FileSystem.backup(fileFullPath)
     val ps = FileSystem.PrintStream(fileFullPath)

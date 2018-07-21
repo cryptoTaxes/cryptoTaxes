@@ -16,17 +16,17 @@ object FileSystem extends Initializable {
       fullPath
   }
 
-  val prices = data+"/prices"
+  val prices = s"$data/prices"
 
-  val coinMarketCap = prices+"/coinmarketcap"
+  val coinMarketCap = s"$prices/coinmarketcap"
 
-  val euroUSDFile = prices+"/euroUSD/tc_1_1.csv"
+  val euroUSDFile = s"$prices/euroUSD/tc_1_1.csv"
 
   def coinMarketCapFile(market : Market) =
-    coinMarketCap+"/"+market+".txt"
+    s"$coinMarketCap/$market.txt"
 
   def coinMarketCapHtmlFile(market : Market) =
-    coinMarketCap+"/"+market+".html"
+    s"$coinMarketCap/$market.html"
 
   def backup(fileName : String): Unit = {
     val file = new java.io.File(fileName)
@@ -36,22 +36,22 @@ object FileSystem extends Initializable {
       var backup : java.io.File = null
       while(!ok) {
         i += 1
-        backup = new java.io.File(fileName + ".bak"+i)
+        backup = new java.io.File(s"$fileName.bak$i")
         ok = !backup.exists()
       }
       file.renameTo(backup)
     }
   }
 
-  val usr = data+"/usr"
-  lazy val userInputFolder = usr+"/"+Config.config.user+"/input"
-  lazy val userOutputFolder = usr+"/"+Config.config.user+"/output"
+  val usr = s"$data/usr"
+  lazy val userInputFolder = s"$usr/${Config.config.user}/input"
+  lazy val userOutputFolder = s"$usr/${Config.config.user}/output"
 
   def userOutputFolder(year : Int): String =
-    userOutputFolder+"/"+year
+    s"$userOutputFolder/$year"
 
-  val conf = data+"/config"
-  def configFile(fileName : String) = conf+"/"+fileName
+  val conf = s"$data/config"
+  def configFile(fileName : String) = s"$conf/$fileName"
 
   def findFilesAt(path : String, extension : String) : Array[java.io.File] = {
     val f = new java.io.File(path)
@@ -62,24 +62,24 @@ object FileSystem extends Initializable {
     return matchingFiles
   }
 
-  lazy val userPersistanceFolder = usr+"/"+Config.config.user+"/persistance"
+  lazy val userPersistanceFolder = s"$usr/${Config.config.user}/persistance"
 
-  lazy val transactionsCacheFile = userPersistanceFolder+"/"+"transactions.cache.json"
+  lazy val transactionsCacheFile = s"$userPersistanceFolder/transactions.cache.json"
 
   def userPersistanceFolder(year : Int) : String =
-    userPersistanceFolder+"/"+year
+    s"$userPersistanceFolder/$year"
 
-  def stocksFolder(year : Int) = userPersistanceFolder(year)+"/"+"stocks"
-  def stocksLedgerFolder(year : Int) = stocksFolder(year)+"/"+"ledger"
+  def stocksFolder(year : Int) = s"${userPersistanceFolder(year)}/stocks"
+  def stocksLedgerFolder(year : Int) = s"${stocksFolder(year)}/ledger"
   val stockExtension = ".json"
-  def stockFile(year : Int, id : String) = id+stockExtension
-  def stockLedgerFile(year : Int, id : String) = stocksLedgerFolder(year)+"/"+id+stockExtension
+  def stockFile(year : Int, id : String) = s"$id$stockExtension"
+  def stockLedgerFile(year : Int, id : String) = s"${stocksLedgerFolder(year)}/$id$stockExtension"
 
 
-  def marginFolder(year : Int, exchanger : Exchanger, isBuys : Boolean) = userPersistanceFolder(year)+"/"+"margin"+"/"+exchanger+"/"+(if(isBuys) "buys" else "sells")
-  def marginLedgerFolder(year : Int, exchanger : Exchanger, isBuys : Boolean) = marginFolder(year, exchanger, isBuys)+"/"+"ledger"
-  def marginFile(year : Int, exchanger : Exchanger, isBuys : Boolean, id : String) = marginFolder(year, exchanger, isBuys)+"/"+id+stockExtension
-  def marginLedgerFile(year : Int, exchanger : Exchanger, isBuys : Boolean, id : String) = marginLedgerFolder(year, exchanger, isBuys)+"/"+id+stockExtension
+  def marginFolder(year : Int, exchanger : Exchanger, isBuys : Boolean) = s"${userPersistanceFolder(year)}/margin/$exchanger/${if (isBuys) "buys" else "sells"}"
+  def marginLedgerFolder(year : Int, exchanger : Exchanger, isBuys : Boolean) = s"${marginFolder(year, exchanger, isBuys)}/ledger"
+  def marginFile(year : Int, exchanger : Exchanger, isBuys : Boolean, id : String) = s"${marginFolder(year, exchanger, isBuys)}/$id$stockExtension"
+  def marginLedgerFile(year : Int, exchanger : Exchanger, isBuys : Boolean, id : String) = s"${marginLedgerFolder(year, exchanger, isBuys)}/$id$stockExtension"
 
 
   def mkDir(path : String): Unit = {
@@ -106,7 +106,7 @@ object FileSystem extends Initializable {
 
   def compose(paths : Seq[String], name : String, ext : String) : String = {
     val ext1 = if(ext.head=='.') ext else "."+ext
-    return paths.mkString("/")+"/"+name+ext1
+    return s"${paths.mkString("/")}/$name$ext1"
   }
 
   override def init(): Unit = {

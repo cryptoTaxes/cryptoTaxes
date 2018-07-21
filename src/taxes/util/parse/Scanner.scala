@@ -14,7 +14,7 @@ trait Scanner {
     try {
       next()
     } catch {
-      case _ : Exception => throw ScannerException("Error reading " + what)
+      case _ : Exception => throw ScannerException(s"Error reading $what")
     }
   }
 
@@ -22,7 +22,7 @@ trait Scanner {
     try {
       nextDouble()
     } catch {
-      case _ : Exception => throw ScannerException("Error reading " + what)
+      case _ : Exception => throw ScannerException(s"Error reading $what")
     }
   }
 
@@ -30,7 +30,7 @@ trait Scanner {
     try {
       nextInt()
     } catch {
-      case _ : Exception => throw ScannerException("Error reading " + what)
+      case _ : Exception => throw ScannerException(s"Error reading $what")
     }
   }
 }

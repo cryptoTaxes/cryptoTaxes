@@ -5,7 +5,6 @@ import taxes.date._
 import taxes.exchanger.Exchanger
 
 
-
 trait Processed extends Boxed with ToHTML {
   val operationNumber : Int
 }
@@ -24,8 +23,7 @@ object Processed {
       <span>{processed.map(_.bodyToHTML)}</span>
   }
 
-  case class Exchange(
-                       operationNumber : Int
+  case class Exchange( operationNumber : Int
                        , exchange : taxes.Exchange
                        , baseCoinProxy : Market, baseCoinProxyRate : Double
                        , boughtBasisPriceInBaseCoin : Double
@@ -47,7 +45,7 @@ object Processed {
         <span class='operationNumber'>{operationNumber}</span>
         , exchange.date.format(df)
         , <span>
-          {(if (exchange.isSettlement) "Settlement " else "")+" Exchange of"}
+          {s"${if (exchange.isSettlement) "Settlement " else ""} Exchange of"}
           <span>
             {asMarket(exchange.fromAmount, exchange.fromMarket, decimals = headerDecimals)}
           </span>
@@ -123,7 +121,7 @@ object Processed {
           </span>
           {if(Config.verbosity(Verbosity.showRates) && usedStocks.nonEmpty && exchange.fromMarket != baseMarket)
           <span class='stock'>. Used
-            {(if(usedStocks.size > 1) "batches" else "batch")+":"}
+            {s"${if (usedStocks.size > 1) "batches" else "batch"}:"}
             ({usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
           </span>
           }
@@ -163,8 +161,7 @@ object Processed {
   }
 
 
-  case class Gain(
-                   operationNumber : Int
+  case class Gain(operationNumber : Int
                    , gain : taxes.Gain
                    , gainInBaseCoin : Double
                    , basePrice : Double
@@ -213,8 +210,7 @@ object Processed {
   }
 
 
-  case class Loss(
-                   operationNumber : Int
+  case class Loss(operationNumber : Int
                    , loss : taxes.Loss
                    , lossInBaseCoin : Double
                    , usedStocks : StockContainer
@@ -247,7 +243,7 @@ object Processed {
             <span class='small2'>
               ({if(usedStocks.nonEmpty)
               <span>Used
-                {(if(usedStocks.iterator.length > 1) "batches" else "batch")+":"}
+                {s"${if (usedStocks.iterator.length > 1) "batches" else "batch"}:"}
                 {usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}
               </span>
             else
@@ -268,8 +264,7 @@ object Processed {
       </span>
   }
 
-  case class Fee(
-                  operationNumber : Int
+  case class Fee(operationNumber : Int
                   , fee : taxes.Fee
                   , feeInBaseCoin : Double
                   , usedStocks : StockContainer
@@ -312,7 +307,7 @@ object Processed {
             <span class='small2'>
               ({if(usedStocks.nonEmpty)
               <span>
-                Used {(if(usedStocks.iterator.length > 1) "batches" else "batch")+":"}
+                Used {s"${if (usedStocks.iterator.length > 1) "batches" else "batch"}:"}
                 {usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}
               </span>
             else
@@ -334,8 +329,7 @@ object Processed {
   }
 
 
-  case class Margin(
-                     operationNumber : Int
+  case class Margin(operationNumber : Int
                      , date : LocalDateTime
                      , exchanger: Exchanger
                      , what : String
@@ -390,7 +384,7 @@ object Processed {
             <span>{asMarket(usedStocks.totalCost, usedStocks.baseMarket)}</span>
             {if(Config.verbosity(Verbosity.showRates) && usedStocksOpt.nonEmpty)
             <span class='small2'>. Used
-              {(if(usedStocksOpt.iterator.length > 1) "batches" else "batch")+":"}
+              {s"${if (usedStocksOpt.iterator.length > 1) "batches" else "batch"}:"}
               ({usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
             </span>
             }

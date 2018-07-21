@@ -48,12 +48,12 @@ object RippleTrade extends Exchanger {
       val optXRP = entries.find(entry => entry.hash == hash && entry.currency == "XRP")
       optXRP match {
         case None =>
-          Logger.fatal("RippleTrade.readFile %s: could not find XRP value for hash %s".format(FileSystem.pathFromData(fileName), hash))
+          Logger.fatal(s"RippleTrade.readFile ${FileSystem.pathFromData(fileName)}: could not find XRP value for hash $hash")
         case Some(entryXRP) => {
           val optBTC = entries.find(entry => entry.hash == hash && entry.currency == "BTC")
           optBTC match {
             case None =>
-              Logger.fatal("RippleTrade.readFile %s: could not find BTC value for hash %s".format(FileSystem.pathFromData(fileName), hash))
+              Logger.fatal(s"RippleTrade.readFile ${FileSystem.pathFromData(fileName)}: could not find BTC value for hash $hash")
             case Some(entryBTC) => {
               val desc = "Order: " + hash
               val exchange =

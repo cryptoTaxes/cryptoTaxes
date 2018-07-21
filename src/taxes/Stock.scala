@@ -14,9 +14,7 @@ object Stock {
 // basis is expressed in base unit. exchanger is where it was bought
 case class Stock(var amount : Double, costBasis : Price, exchanger : Exchanger, date : LocalDateTime, exchangeRate : Price, exchangeMarket : Market) {
   override def toString : String =
-    "Stock(%.4f, %.8f, %s, %.8f, %s, ".format(amount, costBasis, exchanger, exchangeRate, exchangeMarket) +
-    Format.df.format(date) +
-    ")"
+    f"Stock($amount%.4f, $costBasis%.8f, $exchanger, $exchangeRate%.8f, $exchangeMarket, ${Format.df.format(date)})"
 }
 
 object StockContainer {
@@ -56,7 +54,7 @@ object StockContainer {
             case "queue" =>
               StockQueue(id, market, baseMarket)
             case _ =>
-              Logger.fatal("StockContainer.read: expecting a stack or a queue %s.".format(containerType))
+              Logger.fatal(s"StockContainer.read: expecting a stack or a queue $containerType.")
           }
           container.ledger.initialBalance = finalBalance.doubleValue
           val vector = if(isStack) stocks.reverseIterator else stocks
@@ -156,7 +154,7 @@ trait StockContainer extends Container[Stock] with ToHTML {
         {if(showExchangeRates && stock.exchangeMarket != baseMarket)
           <span>
             {if(showAmounts)
-              Format.formatDecimal(stock.amount)+" x"
+              s"${Format.formatDecimal(stock.amount)} x"
              else
               ""
             }
@@ -166,7 +164,7 @@ trait StockContainer extends Container[Stock] with ToHTML {
         }
         <span>
           {if(showAmounts)
-            Format.formatDecimal(stock.amount)+" x"
+            s"${Format.formatDecimal(stock.amount)} x"
            else
             ""
           }

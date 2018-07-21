@@ -149,9 +149,9 @@ object Bittrex extends Exchanger {
               )
               operations ::= fee
             } else
-              Logger.warning("%s. Read withdrawal %s: This withdrawal was ignored: %s.".format(id, FileSystem.pathFromData(fileName), opts(0).get))
+              Logger.warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was ignored: ${opts(0).get}.")
           } catch {
-            case e => Logger.fatal("Something went wrong reading csv file %s. %s".format(fileName, e))
+            case e => Logger.fatal(s"Something went wrong reading csv file $fileName. $e")
           } finally
             scLn.foreach(_.close())
         }

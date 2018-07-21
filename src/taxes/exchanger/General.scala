@@ -28,9 +28,9 @@ object General extends Exchanger {
     val dateFormat = "yyyy-[MM][M]-[dd][d]"
     val timeFormat = " HH:mm[:ss]"
     val zoneFormat = "VV"
-    val pattern1 = "[%s%s%s]".format(dateFormat,timeFormat,zoneFormat)
-    val pattern2 = "[%s%s]".format(dateFormat,zoneFormat)
-    val pattern = "%s%s".format(pattern1, pattern2)
+    val pattern1 = s"[$dateFormat$timeFormat$zoneFormat]"
+    val pattern2 = s"[$dateFormat$zoneFormat]"
+    val pattern = s"$pattern1$pattern2"
     new java.time.format.DateTimeFormatterBuilder()
       .appendPattern(pattern)
       .parseDefaulting(java.time.temporal.ChronoField.HOUR_OF_DAY, 0)
