@@ -31,7 +31,6 @@ object GDAX extends Exchanger {
       val fee = scLn.nextDouble("Fee")
       val total = scLn.nextDouble("Total")
       val priceFeeTotalUnit = scLn.next("Price/Total Unit")
-      scLn.close()
 
       val desc = "Order: " + tradeID
       val date = LocalDateTime.parse(createdAt, "yyyy-MM-dd'T'HH:mm:ss.SSSX") // GDAX includes a zone-offset 'Z' at the end

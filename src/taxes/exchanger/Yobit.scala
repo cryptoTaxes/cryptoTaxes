@@ -34,7 +34,6 @@ object Yobit extends Exchanger {
       val amount = scLn.nextDouble("Amount")
       val completed = scLn.nextDouble("Completed")
       val total = scLn.nextDouble("Total")
-      scLn.close()
 
       val desc = ""
 

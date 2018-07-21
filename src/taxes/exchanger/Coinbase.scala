@@ -37,7 +37,6 @@ object Coinbase extends Exchanger {
       val currency = scLn.next("Currency")
       val price = scLn.nextDouble("Price")
       val paymentMethod = scLn.next("Payment Method")
-      scLn.close()
 
       val desc = paymentMethod
       val id = desc

@@ -36,7 +36,6 @@ object CCEX extends Exchanger {
         val toMarket = Market.normalize(scLn.next("To Market"))
         val fromAmount = scLn.nextDouble("From Amount")
         val fromMarket = Market.normalize(scLn.next("From Market"))
-        scLn.close()
 
         val feePercent = 0.2
 

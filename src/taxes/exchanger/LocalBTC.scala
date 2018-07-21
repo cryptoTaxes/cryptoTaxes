@@ -39,7 +39,6 @@ object LocalBTC extends Exchanger {
       val transaction_released_at = scLn.next("Transaction Released At")
       val online_provider = scLn.next("Online Provider")
       val reference = scLn.next("Reference")
-      scLn.close()
 
       val desc = "Order: " + orderId + "/" + reference
       if(tradeType=="ONLINE_SELL") { // ONLINE_SELL is really a buy
