@@ -4,6 +4,8 @@ import taxes.HTMLDoc._
 import taxes.date._
 import taxes.exchanger.Exchanger
 
+import spray.json._
+import spray.json.JsonProtocol._
 
 trait Processed extends Boxed with ToHTML {
   val operationNumber : Int
@@ -22,6 +24,7 @@ object Processed {
     override def bodyToHTML: HTML =
       <span>{processed.map(_.bodyToHTML)}</span>
   }
+
 
   case class Exchange( operationNumber : Int
                        , exchange : taxes.Exchange
@@ -264,6 +267,7 @@ object Processed {
       </span>
   }
 
+
   case class Fee(operationNumber : Int
                   , fee : taxes.Fee
                   , feeInBaseCoin : Double
@@ -402,4 +406,54 @@ object Processed {
         }
       </span>
   }
+
+
+
+  implicit val exchangeJson = jsonFormat17(Exchange)
+  implicit val gainJson = jsonFormat5(Gain)
+  implicit val lossJson = jsonFormat5(Loss)
+  implicit val feeJson = jsonFormat5(Fee)
+  //implicit val marginJson : JsonFormat[Margin] = rootFormat((jsonFormat13(Margin)))
+  implicit val marginJson = jsonFormat(Margin,"operationNumber", "date", "exchanger", "what", "fromAmount", "fromMarket", "toAmount", "toMarket","exchangeRate","description", "usedStocksOpt", "marginBuys", "marginSells")
+  implicit val processedJson = new RootJsonFormat[Processed] {
+    val _Composed = "Composed"
+    val _Exchange = "Exchange"
+    val _Margin = "Margin"
+    val _Fee = "Fee"
+    val _Loss = "Loss"
+    val _Gain ="Gain"
+
+    val _type = "type"
+    val _operation = "operation"
+
+    def write(processed: Processed) = {
+      val (tag, json) = processed match {
+        case c : Composed => (_Composed, composedJson.write(c))
+        case e : Exchange => (_Exchange, exchangeJson.write(e))
+        case m : Margin => (_Margin, marginJson.write(m))
+        case f : Fee => (_Fee, feeJson.write(f))
+        case l : Loss => (_Loss, lossJson.write(l))
+        case g : Gain => (_Gain, gainJson.write(g))
+      }
+      JsObject(_type -> JsString(tag), _operation -> json)
+    }
+
+    def read(value: JsValue) : Processed =
+      try {
+        value.asJsObject.getFields(_type, _operation) match {
+          case Seq(JsString(tag), jsObj) =>
+            tag match {
+              case `_Composed` => composedJson.read(jsObj)
+              case `_Exchange` => exchangeJson.read(jsObj)
+              case `_Margin` => marginJson.read(jsObj)
+              case `_Fee` => feeJson.read(jsObj)
+              case `_Loss` => lossJson.read(jsObj)
+              case `_Gain` => gainJson.read(jsObj)
+            }
+        }
+      } catch {
+        case _ => deserializationError(s"Processed expected in $value")
+      }
+  }
+  implicit val composedJson : JsonFormat[Composed] = jsonFormat2(Composed)
 }

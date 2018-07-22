@@ -5,6 +5,8 @@ import taxes.io.Network
 import taxes.util.Logger
 import taxes.util.parse.Parse
 
+import spray.json.JsonProtocol._
+
 
 object BlockExplorerSearcher {
   def apply(market : Market, txid : String, address : String) =
@@ -57,9 +59,6 @@ object BlockExplorerSearcher {
   }
 
   def chainzCryptoidInfoScrap(coin : String, txid : String, address : String) : (LocalDateTime, Double, Double) = {
-    import spray.json._
-    import DefaultJsonProtocol._
-
     case class Output(addr : String, amount : Double)
     implicit val outputJson = jsonFormat2(Output)
 
@@ -102,8 +101,6 @@ object BlockExplorerSearcher {
     chainzCryptoidInfoScrap("vtc", txid, address)
 
   def dogeScrap(txid : String, address : String) : (LocalDateTime, Double, Double) = {
-    import spray.json._
-    import DefaultJsonProtocol._
 
     case class Input(address : String, value : String)
     implicit val inputJson = jsonFormat2(Input)

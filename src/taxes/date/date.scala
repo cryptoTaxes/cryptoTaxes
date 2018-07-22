@@ -25,4 +25,8 @@ package object date  {
   implicit val localDateTimeJson = LocalDateTime.localDateTimeJson
 
   type ZonedDateTime = java.time.ZonedDateTime
+
+  type ZoneId = java.time.ZoneId
+
+  implicit val zoneIdJson = ZoneId.zoneIdJson
 }

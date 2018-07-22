@@ -7,6 +7,9 @@ import taxes.util.Logger
 
 import scala.collection.mutable.ListBuffer
 
+import spray.json._
+import spray.json.JsonProtocol._
+
 
 case class ValueTracker(baseMarket : Market) extends Iterable[(Market, Double)] with ToHTML {
   private val map = scala.collection.mutable.Map[Market,Double]()
@@ -220,6 +223,8 @@ object Report {
 
     val operations = Exchanger.readAllOperations().filter(relevant).sortBy(_.date)
 
+    val thisYearOperations = ListBuffer[Operation]()
+
     if(operations.isEmpty)
       Logger.fatal(s"No operation was found in any exchange for user: ${config.user}.")
 
@@ -257,6 +262,7 @@ object Report {
 
       operationNumber = 0
 
+      thisYearOperations.clear()
       processedOperations.clear()
 
       operationTracker.clear()
@@ -360,19 +366,38 @@ object Report {
       htmlLedgers.close()
 
       state.saveToDisk(year)
+
+      // save some more information
+      Market.saveToFile(FileSystem.marketFile(year))
+      Config.config.saveToFile(FileSystem.configFile(year))
+      FileSystem.withPrintStream(FileSystem.operationsFile(year)){ ps =>
+        ps.print(thisYearOperations.toList.toJson.prettyPrint)
+      }
+
+      if(Config.verbosity(Verbosity.showAll))
+        FileSystem.withPrintStream(FileSystem.processedOperationsFile(year)){ ps =>
+          ps.print(processedOperations.toList.toJson.prettyPrint)
+        }
     }
+
+    def simplify(processed: Seq[Processed]): Processed =
+      if(processed.length>1)
+        Processed.Composed(operationNumber, processed)
+      else
+        processed.head
+
 
     def marginPairKey(market1 : Market, market2: Market) : String
       = market1 ++ "-" ++ market2
 
 
-    def preprocessExchange(exchange: Exchange) : Processed.Composed =
+    def preprocessExchange(exchange: Exchange) : Processed =
       if(Config.config.deprecatedUp2017Version)
         _deprecated_preprocessExchange(exchange)
       else
         _preprocessExchange(exchange)
 
-    def _preprocessExchange(exchange: Exchange) : Processed.Composed = {
+    def _preprocessExchange(exchange: Exchange) : Processed = {
       val soldMarket = exchange.fromMarket
       val soldAmount = exchange.fromAmount // without fee
 
@@ -559,7 +584,7 @@ object Report {
       }
 
       processed ::= processedExchange // order for a Composed is important. Exchange must be at front
-      return Processed.Composed(operationNumber, processed)
+      return simplify(processed)
     }
 
 
@@ -882,7 +907,7 @@ object Report {
       }
     }
 
-    def _deprecated_preprocessExchange(exchange: Exchange) : Processed.Composed = {
+    def _deprecated_preprocessExchange(exchange: Exchange) : Processed = {
       val soldMarket = exchange.fromMarket
       val soldAmount = exchange.fromAmount // without fee
 
@@ -1105,7 +1130,7 @@ object Report {
       }
 
       processed ::= processedExchange // order for a Composed is important. Exchange must be at front
-      return Processed.Composed(operationNumber, processed)
+      return simplify(processed)
     }
 
     var currentYear : Int = operations.head.date.getYear
@@ -1123,6 +1148,8 @@ object Report {
 
       operationNumber += 1
       Logger.trace(s"*** $operationNumber $operation")
+
+      thisYearOperations += operation
 
       dispatch(operation)
 

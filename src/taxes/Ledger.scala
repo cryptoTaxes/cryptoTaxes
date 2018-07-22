@@ -5,7 +5,7 @@ import taxes.exchanger.Exchanger
 
 import scala.collection.mutable.ListBuffer
 import spray.json._
-import DefaultJsonProtocol._
+import spray.json.JsonProtocol._
 import taxes.io.FileSystem
 
 object Ledger {
@@ -29,14 +29,18 @@ object Ledger {
       )
     }
 
-    def read(value: JsValue) = value.asJsObject.getFields(_market, _initialBalance, _entries) match {
-      case Seq(JsString(market), JsNumber(initialBalance), JsArray(entries)) =>
-        val ledger = Ledger(market, initialBalance.doubleValue())
-        entries.foreach(x => ledger.entries += x.convertTo[Entry])
-        ledger
-      case _ =>
-        deserializationError("Ledger expected")
-    }
+    def read(value: JsValue) =
+      try {
+        value.asJsObject.getFields(_market, _initialBalance, _entries) match {
+          case Seq(JsString(market), JsNumber(initialBalance), JsArray(entries)) =>
+            val ledger = Ledger(market, initialBalance.doubleValue())
+            entries.foreach(x => ledger.entries += x.convertTo[Entry])
+            ledger
+        }
+      } catch {
+        case _ =>
+          deserializationError(s"Ledger expected in $value")
+      }
   }
 }
 

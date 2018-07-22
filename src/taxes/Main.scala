@@ -134,7 +134,7 @@ object ParseCommandLine {
             } else if(flag == "time-zone") {
               val tz =
                 try {
-                  java.time.ZoneId.of(value)
+                  date.ZoneId.of(value)
                 } catch {
                   case _ => Logger.fatal(s"Non valid time zone $value")
                 }

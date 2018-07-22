@@ -9,7 +9,7 @@ import taxes.util.parse.{Parse, SeparatedScanner}
 import scala.collection.mutable.ListBuffer
 
 import spray.json._
-import DefaultJsonProtocol._
+import spray.json.JsonProtocol._
 
 object CoinMarketCapPrice {
   case class DailyPrice(date: LocalDate, open: Double, high: Double, low: Double, close: Double)
@@ -118,7 +118,7 @@ object CoinMarketCapPrice {
   }
 
   private lazy val allPairs = Parse.readAssociations (
-    FileSystem.configFile("coinmarketcapMarkets.txt")
+    FileSystem.readConfigFile("coinmarketcapMarkets.txt")
     , "Reading coinmarketcap markets"
   ).map(parsePair)
 

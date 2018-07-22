@@ -1,5 +1,12 @@
 package taxes
 
+import taxes.BaseCoin._
+import taxes.date._
+import taxes.io.FileSystem
+
+import spray.json._
+import spray.json.JsonProtocol._
+
 
 object Verbosity extends Enumeration {
   type Level = Int
@@ -39,6 +46,20 @@ object Accounting extends Enumeration {
 }
 
 
+object Config {
+  var config : Config = DefaultConfig
+
+  def verbosity(level : Verbosity.Level) : Boolean =
+    config.verbosityLevel >= level
+
+  implicit val verbosityJson = jsonEnumFormat(Verbosity)
+  implicit val priceCalculationJson = jsonEnumFormat(PriceCalculation)
+  implicit val accountingJson = jsonEnumFormat(Accounting)
+
+  implicit val configJson = jsonFormat11(Config.apply)
+}
+
+
 case class Config(user : String
                   , verbosityLevel : Verbosity.Level
                   , baseCoin : BaseCoin
@@ -47,18 +68,17 @@ case class Config(user : String
                   , accountingMethod: Accounting.Method
                   , decimalPlaces : Int
                   , epsilon : Double
-                  , timeZone : java.time.ZoneId
+                  , timeZone : ZoneId
                   , filterYear : Option[Int]
                   // internal flags, not for users
                   , deprecatedUp2017Version : Boolean
-                  )
+                  ) {
 
-
-object Config {
-  var config : Config = DefaultConfig
-
-  def verbosity(level : Verbosity.Level) : Boolean =
-    config.verbosityLevel >= level
+  def saveToFile(path : String): Unit = {
+    FileSystem.withPrintStream(path) {
+      _.println(this.toJson.prettyPrint)
+    }
+  }
 }
 
 
@@ -70,7 +90,7 @@ object DefaultConfig extends Config( user = "demo"
                                      , accountingMethod = Accounting.FIFO
                                      , decimalPlaces = 2
                                      , epsilon = 0.00000001
-                                     , timeZone = java.time.ZoneId.systemDefault()
+                                     , timeZone = ZoneId.systemDefault()
                                      , filterYear = None
                                      , deprecatedUp2017Version = false
                                      )

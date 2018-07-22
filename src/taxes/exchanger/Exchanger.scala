@@ -6,6 +6,7 @@ import taxes.util.Logger
 
 import scala.collection.mutable.ListBuffer
 
+import spray.json._
 
 trait Exchanger {
   val id : String
@@ -50,19 +51,21 @@ object Exchanger {
   def parse(str : String) : Exchanger =
     stringToExchanger.getOrElse(str, General(str))
 
-  import spray.json.{JsonFormat, JsString, JsValue, deserializationError}
-
-  object exchangerJson extends JsonFormat[Exchanger] {
+    object exchangerJson extends JsonFormat[Exchanger] {
     def write(exchanger: Exchanger) = {
       JsString(exchanger.toString)
     }
 
-    def read(value: JsValue) = value match {
-      case JsString(str) =>
-        Exchanger.parse(str)
-      case _ =>
-        deserializationError("Exchanger expected")
-    }
+    def read(value: JsValue) =
+      try {
+        value match {
+          case JsString(str) =>
+            Exchanger.parse(str)
+        }
+      } catch {
+        case _ =>
+          deserializationError(s"Exchanger expected in $value")
+      }
   }
 }
 

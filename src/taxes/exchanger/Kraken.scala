@@ -10,7 +10,7 @@ import taxes.util.parse._
 object Kraken extends Exchanger {
   override val id: String = "Kraken"
 
-  private val configFileName = FileSystem.configFile("krakenMarkets.txt")
+  private val configFileName = FileSystem.readConfigFile("krakenMarkets.txt")
 
   private val conversions: Map[Market, Market] =
     Parse.readAssociations(configFileName, "Reading Kraken markets")

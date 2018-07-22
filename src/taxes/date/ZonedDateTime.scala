@@ -1,7 +1,5 @@
 package taxes.date
 
-import java.time.ZoneId
-
 object ZonedDateTime {
 
   import java.time.format.DateTimeFormatter

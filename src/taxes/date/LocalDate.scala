@@ -1,13 +1,14 @@
 package taxes.date
 
+import spray.json._
+
+
 object LocalDate {
   def apply(year : Int, month : Int, dayOfMonth : Int) : LocalDate =
     java.time.LocalDate.of(year, month, dayOfMonth)
 
   def of(localDateTime : LocalDateTime) : LocalDate =
     localDateTime.toLocalDate
-
-  import spray.json.{JsonFormat, JsString, JsValue, deserializationError}
 
   object localDateJson extends JsonFormat[LocalDate] {
     private val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -16,15 +17,14 @@ object LocalDate {
       JsString(formatter.format(ld))
     }
 
-    def read(value: JsValue) = value match {
-      case JsString(str) =>
-        try {
-          java.time.LocalDate.parse(str, formatter)
-        } catch {
-          case _ => deserializationError("LocalDate expected")
+    def read(value: JsValue) =
+      try {
+        value match {
+          case JsString(str) =>
+            java.time.LocalDate.parse(str, formatter)
         }
-      case _ =>
-        deserializationError("LocalDate expected")
-    }
+      } catch {
+        case _ => deserializationError(s"LocalDate expected in $value")
+      }
   }
 }

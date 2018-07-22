@@ -3,8 +3,11 @@ package taxes
 import taxes.date._
 import taxes.exchanger.Exchanger
 
+import spray.json._
+import spray.json.JsonProtocol._
 
-trait Operation {
+
+sealed trait Operation {
   def date : LocalDateTime
   def id : String
   def exchanger : Exchanger
@@ -18,6 +21,54 @@ object Operation {
   object OrderType extends Enumeration {
     val Buy, Sell = Value
   }
+
+  implicit val orderJson = jsonEnumFormat(OrderType)
+  implicit val feePairJson = jsonFormat2(FeePair)
+  implicit val exchangeJson = jsonFormat10(Exchange)
+  implicit val marginJson = jsonFormat12(Margin)
+  implicit val feeJson = jsonFormat7(Fee)
+  implicit val feeJLoss = jsonFormat6(Loss)
+  implicit val gainJson = jsonFormat6(Gain)
+
+  implicit object operationJson extends RootJsonFormat[Operation] {
+    val _Exchange = "Exchange"
+    val _Margin = "Margin"
+    val _Fee = "Fee"
+    val _Loss = "Loss"
+    val _Gain ="Gain"
+
+    val _type = "type"
+    val _operation = "operation"
+
+    def write(operation: Operation) = {
+      val (tag, json) = operation match {
+        case e : Exchange => (_Exchange, e.toJson)
+        case m : Margin => (_Margin, m.toJson)
+        case f : Fee => (_Fee, f.toJson)
+        case l : Loss => (_Loss, l.toJson)
+        case g : Gain => (_Gain, g.toJson)
+      }
+      JsObject(_type -> JsString(tag), _operation -> json)
+    }
+
+    def read(value: JsValue) : Operation =
+      try {
+        value.asJsObject.getFields(_type, _operation) match {
+          case Seq(JsString(tag), jsObj) =>
+            tag match {
+              case `_Exchange` => jsObj.convertTo[Exchange]
+              case `_Margin` => jsObj.convertTo[Margin]
+              case `_Fee` => jsObj.convertTo[Fee]
+              case `_Loss` => jsObj.convertTo[Loss]
+              case `_Gain` => jsObj.convertTo[Gain]
+            }
+        }
+      } catch {
+            case _ => deserializationError(s"Operation expected in $value")
+      }
+  }
+
+
 }
 
 
@@ -64,6 +115,7 @@ case class Exchange(date : LocalDateTime
     f"Exchange($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s  $feesStr  $description)"
   }
 }
+
 
 
 /*************************************************************************

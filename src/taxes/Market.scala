@@ -3,12 +3,15 @@ package taxes
 import taxes.io.FileSystem
 import taxes.util.parse.Parse
 
+import spray.json._
+import spray.json.JsonProtocol._
+
 object Market {
   private val conversions : Map[Market, Market] = {
     def parsePair(t : (Market, Market)) = t match {
       case (market1, market2) => (market1.toUpperCase(), market2.toUpperCase())
     }
-    Parse.readAssociations ( FileSystem.configFile("marketsNormalization.txt")
+    Parse.readAssociations ( FileSystem.readConfigFile("marketsNormalization.txt")
                            , "Reading market normalizations."
                            ).map(parsePair)
   }
@@ -48,11 +51,22 @@ object Market {
     def parsePair(t : (Market, String)) = t match {
       case (market, str) => (normalize(market), str.toInt)
     }
-    Parse.readAssociations( FileSystem.configFile("parityPriorities.txt")
+    Parse.readAssociations( FileSystem.readConfigFile("parityPriorities.txt")
                           , "Reading market priorities."
                           ).map(parsePair)
   }
 
   def priority(market : Market) : Int =
     priorities.getOrElse(market, 0)
+
+  def saveToFile(path : String): Unit = {
+    val json = JsObject(
+      "conversions" -> JsArray(conversions.toVector.sortBy(_._1).map(_.toJson))
+      , "priorities" -> JsArray(priorities.toVector.sortBy(- _._2).map(_.toJson))
+    )
+
+    FileSystem.withPrintStream(path) {
+      _.println(json.prettyPrint)
+    }
+  }
 }

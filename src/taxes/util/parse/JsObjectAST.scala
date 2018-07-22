@@ -1,7 +1,7 @@
 package taxes.util.parse
 
 
-import spray.json.{JsArray, JsNumber, JsObject, JsString, JsValue}
+import spray.json._
 import taxes.io.FileSystem
 
 case class JSONException(msg : String) extends RuntimeException(msg)

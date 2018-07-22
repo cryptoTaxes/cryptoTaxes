@@ -1,10 +1,11 @@
 package taxes
 
 import taxes.date._
-import taxes.util.Logger
-import spray.json._
-import DefaultJsonProtocol._
 import taxes.io.FileSystem
+import taxes.util.Logger
+
+import spray.json._
+import spray.json.JsonProtocol._
 
 object TransactionsCache extends Initializable with Finalizable {
   case class TxKey(market: Market, txid : String, address : String)

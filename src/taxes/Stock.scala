@@ -4,7 +4,7 @@ import taxes.date._
 import taxes.exchanger.Exchanger
 import taxes.util.Logger
 import spray.json._
-import DefaultJsonProtocol._
+import spray.json.JsonProtocol._
 import taxes.io.FileSystem
 
 object Stock {
@@ -32,9 +32,9 @@ object StockContainer {
 
     def write(container: StockContainer) = {
       val containerType = container match {
-        case _ : StockStack =>
+        case _: StockStack =>
           _stack
-        case _ : StockQueue =>
+        case _: StockQueue =>
           _queue
         case _ =>
           Logger.fatal("stockContainerJson: expecting a stack or a queue.")
@@ -47,33 +47,35 @@ object StockContainer {
         _finalBalance -> JsNumber(container.ledger.finalBalance),
         _stocks -> {
           val builder = new scala.collection.immutable.VectorBuilder[JsValue]()
-          for(stock <- container.doubleEndedContainer)
+          for (stock <- container.doubleEndedContainer)
             builder += stock.toJson
           JsArray(builder.result())
         }
       )
     }
 
-    def read(value: JsValue) = {
-      value.asJsObject.getFields(_containerType, _id, _market, _baseMarket, _finalBalance, _stocks) match {
-        case Seq(JsString(containerType), JsString(id), JsString(market), JsString(baseMarket), JsNumber(finalBalance), JsArray(stocks)) =>
-          var isStack = false
-          val container : StockContainer = containerType match {
-            case `_stack` =>
-              isStack = true
-              StockStack(id, market, baseMarket)
-            case `_queue` =>
-              StockQueue(id, market, baseMarket)
-            case _ =>
-              Logger.fatal(s"StockContainer.read: expecting a stack or a queue $containerType.")
-          }
-          container.ledger.initialBalance = finalBalance.doubleValue
-          val vector = if(isStack) stocks.reverseIterator else stocks
-          vector.foreach(x => container.insert(x.convertTo[Stock]))
-          container
-        case _ => throw DeserializationException("StockContainer expected")
+    def read(value: JsValue) =
+      try {
+        value.asJsObject.getFields(_containerType, _id, _market, _baseMarket, _finalBalance, _stocks) match {
+          case Seq(JsString(containerType), JsString(id), JsString(market), JsString(baseMarket), JsNumber(finalBalance), JsArray(stocks)) =>
+            var isStack = false
+            val container: StockContainer = containerType match {
+              case `_stack` =>
+                isStack = true
+                StockStack(id, market, baseMarket)
+              case `_queue` =>
+                StockQueue(id, market, baseMarket)
+              case _ =>
+                Logger.fatal(s"StockContainer.read: expecting a stack or a queue $containerType.")
+            }
+            container.ledger.initialBalance = finalBalance.doubleValue
+            val vector = if (isStack) stocks.reverseIterator else stocks
+            vector.foreach(x => container.insert(x.convertTo[Stock]))
+            container
+        }
+      } catch {
+        case _ => throw DeserializationException(s"StockContainer expected in $value")
       }
-    }
   }
 
   def fromFile(path : String) : StockContainer =
@@ -82,7 +84,7 @@ object StockContainer {
   }
 }
 
-trait StockContainer extends Container[Stock] with ToHTML {
+sealed trait StockContainer extends Container[Stock] with ToHTML {
   val id : String
 
   val market : Market  // what do we store
@@ -313,8 +315,11 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
         }
     }
 
+    def relevant(stockContainer : StockContainer) =
+      stockContainer.ledger.initialBalance > 1.0E-7 || stockContainer.nonEmpty
+
     for(stockContainer <- src.read())
-      if(stockContainer.ledger.initialBalance > 1.0E-7 || stockContainer.nonEmpty) {
+      if(relevant(stockContainer)) {
         containers(stockContainer.id) = stockContainer
       }
   }

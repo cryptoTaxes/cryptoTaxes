@@ -1,10 +1,11 @@
 package taxes
 
-import java.text.{DecimalFormat, NumberFormat}
-
 import taxes.date._
 import taxes.priceHistory.{CryptoUSDParity, EuroUSDParity}
 
+import spray.json._
+
+import java.text.{DecimalFormat, NumberFormat}
 
 object PriceUtils {
   def priceToUSDs(price : Price, priceUnit: Market, date : LocalDateTime) : Price = {
@@ -32,7 +33,29 @@ object PriceUtils {
 }
 
 
-trait BaseCoin {
+object BaseCoin {
+
+  implicit object baseCoinJson extends JsonFormat[BaseCoin] {
+    val _BaseCoin = "BaseCoin"
+    def write(baseCoin: BaseCoin) = {
+      JsString(baseCoin.market)
+    }
+
+    def read(value: JsValue) =
+      try {
+        value match {
+          case JsString(market) => market match {
+            case BTCBaseCoin.market => BTCBaseCoin
+            case EuroBaseCoin.market => EuroBaseCoin
+            case USDBaseCoin.market => USDBaseCoin
+          }
+        }
+      } catch {
+        case _ => deserializationError("BaseCoin expected")
+      }
+  }}
+
+sealed trait BaseCoin {
   val market : Market
 
   val format : NumberFormat

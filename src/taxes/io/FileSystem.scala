@@ -44,6 +44,15 @@ object FileSystem {
   def userPersistanceFolder(year : Int) : String =
     s"$userPersistanceFolder/$year"
 
+  def marketFile(year : Int) =
+    s"${userPersistanceFolder(year)}/market.json"
+
+  def configFile(year : Int) = s"${userPersistanceFolder(year)}/config.json"
+
+  def operationsFile(year : Int) = s"${userPersistanceFolder(year)}/operations.json"
+
+  def processedOperationsFile(year : Int) = s"${userPersistanceFolder(year)}/processed.json"
+
   def stocksFolder(year : Int) = s"${userPersistanceFolder(year)}/stocks"
   def stocksLedgerFolder(year : Int) = s"${stocksFolder(year)}/ledger"
   val stockExtension = ".json"
@@ -66,8 +75,9 @@ object FileSystem {
   def userOutputFolder(year : Int): String =
     s"$userOutputFolder/$year"
 
-  val config = s"$data/config"
-  def configFile(fileName : String) = s"$config/$fileName"
+  val readConfigFolder = s"$data/config"
+  def readConfigFile(fileName : String) = s"$readConfigFolder/$fileName"
+
 
   def backup(file : java.io.File): Unit = {
     val (folder, name, ext) = decompose(file)
@@ -160,7 +170,6 @@ object FileSystem {
 
   def withPrintStream(fileName : String)(p : java.io.PrintStream => Unit): Unit =
     withPrintStream(new File(fileName))(p)
-
 
   def withSource[A](file : java.io.File)(p : scala.io.Source => A) : A = {
     var src : scala.io.Source = null

@@ -2,9 +2,11 @@ package taxes.date
 
 import taxes.Config
 
+import spray.json._
+
 object LocalDateTime {
   import java.time.format.DateTimeFormatter
-  import java.time.{Instant, ZoneId}
+  import java.time.Instant
 
   // LocalDateTimes are in myZoneId
   lazy val myZoneId : ZoneId = Config.config.timeZone // ZoneId.of("Europe/Madrid") // ZoneId.systemDefault()
@@ -45,24 +47,21 @@ object LocalDateTime {
   def parseAsMyZoneId(str : String, format: String) : LocalDateTime =
     parse(str+myZoneId, s"${format}VV")
 
-  import spray.json.{JsonFormat, JsString, JsValue, deserializationError}
-
   object localDateTimeJson extends JsonFormat[LocalDateTime] {
     def write(ldt: LocalDateTime) = {
       val zonedDateTime = ZonedDateTime.of(ldt, Config.config.timeZone)
       JsString(formatter.format(zonedDateTime))
     }
 
-    def read(value: JsValue) = value match {
-      case JsString(str) =>
-        try {
-          LocalDateTime.parse(str, formatter)
-        } catch {
-          case _ => deserializationError("LocalDateTime expected")
+    def read(value: JsValue) =
+      try {
+        value match {
+          case JsString(str) =>
+            LocalDateTime.parse(str, formatter)
         }
-      case _ =>
-        deserializationError("LocalDateTime expected")
-    }
+      } catch {
+        case _ => deserializationError(s"LocalDateTime expected in $value")
+      }
   }
 }
 
