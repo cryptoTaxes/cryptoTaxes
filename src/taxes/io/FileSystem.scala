@@ -29,11 +29,13 @@ object FileSystem {
 
   val euroUSDFile = s"$prices/euroUSD/tc_1_1.csv"
 
-  def coinMarketCapFile(market : Market) =
-    s"$coinMarketCap/$market.txt"
+  val coinMarketCapExtension = ".json"
 
-  def coinMarketCapHtmlFile(market : Market) =
-    s"$coinMarketCap/$market.html"
+  def coinMarketCapFolder(market : Market) =
+    s"$coinMarketCap/$market"
+
+  def coinMarketCapFile(market : Market, year : Int) =
+    s"${coinMarketCapFolder(market)}/$market.$year.$coinMarketCapExtension"
 
   lazy val userPersistanceFolder = s"$usr/${Config.config.user}/persistance"
 
@@ -76,7 +78,7 @@ object FileSystem {
     val fileName = name+ext
 
     if(file.exists()) {
-      Logger.trace(s"Backing up file $file")
+      Logger.trace(s"Backing up file $file.")
       var i = 0
       var ok = false
       var backup : java.io.File = null

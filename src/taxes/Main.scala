@@ -15,6 +15,7 @@ object Main extends App {
   Config.config = ParseCommandLine(cmdLine)
 
   Logger.trace("cryptoTaxes (https://github.com/cryptoTaxes/cryptoTaxes)\n")
+  Logger.trace(s"Starting execution at ${java.time.LocalDateTime.now()}.")
 
   if(Config.config.downloadPrices) {
     CoinMarketCapPrice.downloadPrices()
@@ -27,7 +28,7 @@ object Main extends App {
 
   // Modules that should be initalized
   private val initializables : List[Initializable] =
-    List(Market, CoinMarketCapPrice, EuroUSDParity, Logger, TransactionsCache) ++ exchangers
+    List(Market, EuroUSDParity, Logger, TransactionsCache) ++ exchangers
 
   // Do initialization of modules firstly
   for(initializable <- initializables)
@@ -37,6 +38,8 @@ object Main extends App {
 
   // Modules that should be finalize
   private val finalizables = List(Logger, TransactionsCache)
+
+  Logger.trace(s"End of execution at ${java.time.LocalDateTime.now()}.")
 
   // Do finalization of modules
   for(finalizable <- finalizables)

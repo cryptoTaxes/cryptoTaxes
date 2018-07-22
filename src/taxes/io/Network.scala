@@ -7,7 +7,7 @@ object Network {
     import java.io.BufferedInputStream
     import java.net.{HttpURLConnection, URL}
 
-    Logger.trace(s"Downloading from $urlString")
+    Logger.trace(s"Downloading from $urlString.")
 
     val sb = new StringBuilder
     var conn : HttpURLConnection = null

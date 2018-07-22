@@ -9,7 +9,7 @@ object Market extends Initializable {
       case (market1, market2) => (market1.toUpperCase(), market2.toUpperCase())
     }
     Parse.readAssociations ( FileSystem.configFile("marketsNormalization.txt")
-                           , "Reading market normalizations"
+                           , "Reading market normalizations."
                            ).map(parsePair)
   }
 
@@ -49,7 +49,7 @@ object Market extends Initializable {
       case (market, str) => (normalize(market), str.toInt)
     }
     Parse.readAssociations( FileSystem.configFile("parityPriorities.txt")
-                          , "Reading market priorities"
+                          , "Reading market priorities."
                           ).map(parsePair)
   }
 
