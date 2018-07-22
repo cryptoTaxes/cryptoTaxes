@@ -17,6 +17,8 @@ object TransactionsCache extends Initializable with Finalizable {
 
   private val file = FileSystem.File(FileSystem.transactionsCacheFile)
 
+  private var modified = false
+
   def saveToDisk(): Unit = {
     FileSystem.withPrintStream(file){ ps =>
       ps.println(map.toList.toJson.prettyPrint)
@@ -45,7 +47,7 @@ object TransactionsCache extends Initializable with Finalizable {
             val key = TxKey(market, txid, address)
             val info = TxInfo(searcher.amount, searcher.fee, searcher.date)
             map += (key -> info)
-            saveToDisk()
+            modified = true
             return info
           case None =>
             Logger.fatal(s"TransactionCache not implemented yet for $market. $txid.")
@@ -58,6 +60,7 @@ object TransactionsCache extends Initializable with Finalizable {
   }
 
   override def wrapUp(): Unit = {
-    saveToDisk()
+    if(modified)
+      saveToDisk()
   }
 }

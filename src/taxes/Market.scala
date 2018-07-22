@@ -3,7 +3,7 @@ package taxes
 import taxes.io.FileSystem
 import taxes.util.parse.Parse
 
-object Market extends Initializable {
+object Market {
   private val conversions : Map[Market, Market] = {
     def parsePair(t : (Market, Market)) = t match {
       case (market1, market2) => (market1.toUpperCase(), market2.toUpperCase())

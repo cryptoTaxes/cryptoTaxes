@@ -1,17 +1,17 @@
 package taxes.util
 
 import taxes.io.FileSystem
-import taxes.{Finalizable, Initializable}
+import taxes.Finalizable
 
 
-object Logger extends Initializable with Finalizable {
+object Logger extends Finalizable {
   val suffix = {
     val now = java.time.LocalDateTime.now()
     val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm-ss")
     now.format(formatter)
   }
-  private lazy val warningStream = FileSystem.PrintStream(FileSystem.File(s"${FileSystem.userOutputFolder}/warnings $suffix.txt"), doBackUp = false)
-  private lazy val traceStream = FileSystem.PrintStream(FileSystem.File(s"${FileSystem.userOutputFolder}/trace $suffix.txt"), doBackUp = false)
+  private val warningStream = FileSystem.PrintStream(FileSystem.File(s"${FileSystem.userOutputFolder}/warnings $suffix.txt"), doBackUp = false)
+  private val traceStream = FileSystem.PrintStream(FileSystem.File(s"${FileSystem.userOutputFolder}/trace $suffix.txt"), doBackUp = false)
 
   def trace(what : String): Unit = {
     traceStream.println(what)

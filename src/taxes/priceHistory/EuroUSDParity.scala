@@ -8,7 +8,7 @@ import taxes.io.{FileSystem, Network}
 import taxes.util.Logger
 
 
-object EuroUSDParity extends Initializable {
+object EuroUSDParity {
   // see https://www.bde.es/webbde/es/estadis/infoest/tipos/tipos.html
   //     https://www.bde.es/webbde/es/estadis/infoest/series/tc_1_1.csv
   private def parseMonth(month : String) =

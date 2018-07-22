@@ -11,7 +11,6 @@ object Main extends App {
   java.util.Locale.setDefault(java.util.Locale.ENGLISH)
 
   val cmdLine = args.mkString(" ")
-  //val cmdLine = "-user=user1 -verbosity=3 -currency=euro -download-prices=no"
   Config.config = ParseCommandLine(cmdLine)
 
   Logger.trace("cryptoTaxes (https://github.com/cryptoTaxes/cryptoTaxes)\n")
@@ -26,20 +25,20 @@ object Main extends App {
   private val exchangers : List[Exchanger] =
     Exchanger.allExchangers
 
-  // Modules that should be initalized
+  // Modules that should be initialized
   private val initializables : List[Initializable] =
-    List(Market, EuroUSDParity, Logger, TransactionsCache) ++ exchangers
+    List(TransactionsCache)
 
   // Do initialization of modules firstly
   for(initializable <- initializables)
     initializable.init()
 
-  private val nets = Report.process()
-
-  // Modules that should be finalize
-  private val finalizables = List(Logger, TransactionsCache)
+  Report.process()
 
   Logger.trace(s"End of execution at ${java.time.LocalDateTime.now()}.")
+
+  // Modules that should be finalized
+  private val finalizables = List(TransactionsCache, Logger)
 
   // Do finalization of modules
   for(finalizable <- finalizables)

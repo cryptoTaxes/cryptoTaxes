@@ -7,7 +7,7 @@ import taxes.util.Logger
 import scala.collection.mutable.ListBuffer
 
 
-trait Exchanger extends Initializable {
+trait Exchanger {
   val id : String
 
   override def toString: String = id
