@@ -135,7 +135,7 @@ object CoinMarketCapPrice {
 
     val ext = Config.config.filterYear match {
       case None => FileSystem.coinMarketCapExtension
-      case Some(year) => s"$year${FileSystem.coinMarketCapExtension}"
+      case Some(year) => FileSystem.coinMarketCapExtension(year)
     }
 
     val path = FileSystem.coinMarketCapFolder(market)

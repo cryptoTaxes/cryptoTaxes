@@ -31,11 +31,13 @@ object FileSystem {
 
   val coinMarketCapExtension = ".json"
 
+  def coinMarketCapExtension(year : Int) : String = s".$year$coinMarketCapExtension"
+
   def coinMarketCapFolder(market : Market) =
     s"$coinMarketCap/$market"
 
   def coinMarketCapFile(market : Market, year : Int) =
-    s"${coinMarketCapFolder(market)}/$market.$year.$coinMarketCapExtension"
+    s"${coinMarketCapFolder(market)}/$market${coinMarketCapExtension(year)}"
 
   lazy val userPersistanceFolder = s"$usr/${Config.config.user}/persistance"
 
