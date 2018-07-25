@@ -25,7 +25,7 @@ object Shapeshift extends Exchanger {
 
     var lnNumber = 0
     val f = FileSystem.File(fileName)
-    val sc = new java.util.Scanner(f)
+    val sc = new java.util.Scanner(f, taxes.io.defaultCharset.name())
 
     def nextLine(): String = {
       lnNumber += 1

@@ -54,16 +54,17 @@ object CoinMarketCapPrice {
     }
 
     val url = s"https://coinmarketcap.com/currencies/$coinMarketCapID/historical-data/?start=${yearBegin}0101&end=${yearEnd}1231"
-    val contents = Network.fromHttpURL(url)
-    return scrapPrices(market, coinMarketCapID, contents)
+    return Network.Http.withSource(url){src =>
+      scrapPrices(market, coinMarketCapID, src)
+    }
   }
 
-  private def scrapPrices(market: Market, coinMarketCapID: String, contents: String): List[DailyPrice] = {
+  private def scrapPrices(market: Market, coinMarketCapID: String, source : FileSystem.Source): List[DailyPrice] = {
     val tokenBegin = "<table class=\"table\">"
     val tokenEnd = "</tbody>"
     val tokenNoResults = "<tr class=\"text-center\">"
 
-    val inLines = contents.split("\n").filter(_.nonEmpty).map(_.dropWhile(_.isSpaceChar)).dropWhile(_ != tokenBegin).drop(13).iterator
+    val inLines = source.getLines.filter(_.nonEmpty).map(_.dropWhile(_.isSpaceChar)).dropWhile(_ != tokenBegin).drop(13)
     if (inLines.isEmpty)
       Logger.fatal(s"Error reading coinmarketcap prices. Couldn't find $tokenBegin.")
 

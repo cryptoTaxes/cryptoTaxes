@@ -29,7 +29,7 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
 
   lazy val skippedLines = new Array[String](linesToSkip)
 
-  val charSet : String = "UTF-8"
+  val charset : String = taxes.io.defaultCharset.name
 
   def lineScanner(line : String) : Scanner
 
@@ -37,7 +37,7 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
 
   def read() : List[A] = {
     val f = FileSystem.File(fileName)
-    val sc = new java.util.Scanner(f, charSet)
+    val sc = new java.util.Scanner(f, charset)
 
     val xs = ListBuffer[A]()
     var lnNumber = 0

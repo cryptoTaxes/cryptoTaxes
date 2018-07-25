@@ -35,7 +35,9 @@ object BlockExplorerSearcher {
 
   def etcScrap(txid : String, address : String) : (LocalDateTime, Double, Double) = {
     val url = s"https://gastracker.io/tx/$txid"
-    val str = Network.fromHttpURL(url)
+    val str = Network.Http.withSource(url){
+      src => src.mkString
+    }
 
     val dateStr = locateAndSkip(str, "<dt>Timestamp</dt>", '>', 1, "</dd>")
     val date = LocalDateTime.parse(dateStr, "EE MMM dd HH:mm:ss zzz yyyy")
@@ -58,6 +60,63 @@ object BlockExplorerSearcher {
     return (date, amount, fee)
   }
 
+
+  def etcScrap2(txid : String, address : String) : (LocalDateTime, Double, Double) = {
+    def JsonGetTransactionCommand(transactionHash : String) =
+      s"""{"jsonrpc":"2.0","method":"eth_getTransactionByHash","params":["$transactionHash"],"id":1}"""
+
+    def JsonGetBlockCommand(blockHash : String) =
+      s"""{"jsonrpc":"2.0","method":"eth_getBlockByHash","params":["$blockHash", true],"id":1}"""
+
+    def JsonGetTransactionReceiptCommand(transactionHash : String) =
+      s"""{"jsonrpc":"2.0","method":"eth_getTransactionReceipt","params":["$transactionHash"],"id":1}"""
+
+    import spray.json._
+    import spray.json.JsonProtocol._
+
+    def JsonETCQuery[A](command : String)(implicit json : JsonFormat[A]) : A = {
+      val RPC_API_endPoint = "http://web3.gastracker.io"
+      val response = Network.Http.Json.RPC(RPC_API_endPoint, spray.json.JsonParser(command).asJsObject)
+      return response.convertTo[A]
+    }
+
+    case class Transaction(blockHash : String, blockNumber : String, from : String, to : String, gas : String, gasPrice : String, value : String)
+    implicit val transactionJson = jsonFormat7(Transaction)
+
+    case class Block(timestamp : String)
+    implicit val blockJson = jsonFormat1(Block)
+
+    case class TransactionReceipt(gasUsed : String, cumulativeGasUsed : String)
+    implicit val transactionReceiptJson = jsonFormat2(TransactionReceipt)
+
+
+    val tx = JsonETCQuery[Transaction](JsonGetTransactionCommand(txid))
+
+    if(tx.to.toUpperCase != address.toUpperCase())
+      Logger.fatal(s"BlockExplorerScraper.etcScrap: address doesn't match $address ${tx.to}")
+
+    val block = JsonETCQuery[Block](JsonGetBlockCommand(tx.blockHash))
+
+    val txReceipt = JsonETCQuery[TransactionReceipt](JsonGetTransactionReceiptCommand(txid))
+
+    def parseHex(str : String) : BigInt = {
+      val toParse = if(str.startsWith("0x")) str.drop(2) else str
+      BigInt(toParse, 16)
+    }
+
+    def weiToGwei(x : BigInt) : BigInt = x / BigInt(10).pow(9)
+
+    def weiToETC(x : BigInt) : Double =
+      weiToGwei(x).toDouble / 1E9
+
+    val date = LocalDateTime.fromUnix(parseHex(block.timestamp).toLong)
+    val amount = weiToETC(parseHex(tx.value))
+    val fee = weiToETC(parseHex(txReceipt.gasUsed) * parseHex(tx.gasPrice))
+
+    return (date, amount, fee)
+  }
+
+
   def chainzCryptoidInfoScrap(coin : String, txid : String, address : String) : (LocalDateTime, Double, Double) = {
     case class Output(addr : String, amount : Double)
     implicit val outputJson = jsonFormat2(Output)
@@ -66,7 +125,7 @@ object BlockExplorerSearcher {
     implicit val responseJson = jsonFormat3(Response)
 
     val url = s"https://chainz.cryptoid.info/$coin/api.dws?q=txinfo;t=$txid"
-    val resp = Network.fromHttpURL(url)
+    val resp = Network.Http.withSource(url){src => src.mkString}
 
     val json = spray.json.JsonParser(resp)
     val response = json.convertTo[Response]
@@ -115,7 +174,7 @@ object BlockExplorerSearcher {
     implicit val responseJson = jsonFormat2(Response)
 
     val url = s"https://dogechain.info/api/v1/transaction/$txid"
-    val resp = Network.fromHttpURL(url)
+    val resp = Network.Http.withSource(url){src => src.mkString}
 
     val json = spray.json.JsonParser(resp)
     val response = json.convertTo[Response]
@@ -160,7 +219,7 @@ object BlockExplorerSearcher {
 
   def btcScrap2(txid : String, address : String) : (LocalDateTime, Double, Double) = {
     val url = s"https://blockchain.info/tx/$txid"
-    val str = Network.fromHttpURL(url)
+    val str = Network.Http.withSource(url){src => src.mkString}
 
     val dateStr = Parse.trimSpaces(locateAndSkip(str, "<td>Received Time</td>", '>', 1, "</td>"))
     val date = LocalDateTime.parseAsUTC(dateStr, "yyyy-MM-dd HH:mm:ss")
@@ -175,7 +234,7 @@ object BlockExplorerSearcher {
   }
 
   def dogeScrap2(url : String) : (LocalDateTime, Double, Double) = {
-    val str = Network.fromHttpURL(url)
+    val str = Network.Http.withSource(url){src => src.mkString}
 
     val feeStr = locateAndSkip(str, "<td>Fee</td>", '>', 1, "<")
     val fee = Parse.asDouble(feeStr.replace("<small>", "").replace("</small>", ""))
@@ -187,7 +246,7 @@ object BlockExplorerSearcher {
 
 
   def vtcScrap2(url : String) : (LocalDateTime, Double, Double) = {
-    val str = Network.fromHttpURL(url)
+    val str = Network.Http.withSource(url){src => src.mkString}
 
     val feeStr = locateAndSkip(str, "<th>Fees</th>", '>', 1, "V")
     val fee = Parse.asDouble(feeStr.replace("<span class='muteds'>", "").replace("</span>", ""))

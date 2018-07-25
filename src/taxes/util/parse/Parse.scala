@@ -71,7 +71,7 @@ object Parse {
     val trace = s"$traceMsg from $fileName."
     Logger.trace(trace)
     val file = FileSystem.File(fileName)
-    val sc = new java.util.Scanner(file)
+    val sc = new java.util.Scanner(file, taxes.io.defaultCharset.name())
     var associations = Map[String, String]()
     var lineNumber = 0
     while (sc.hasNextLine) {

@@ -1,5 +1,7 @@
 package taxes.io
 
+import java.nio.charset._
+
 import taxes.exchanger.Exchanger
 import taxes.util.Logger
 import taxes.{Config, Market}
@@ -9,8 +11,8 @@ object FileSystem {
   type File = java.io.File
 
   object File {
-    def apply(fileName : String) : java.io.File =
-      new java.io.File(fileName)
+    def apply(fileName : String) : File =
+      new File(fileName)
   }
 
   val data = "data"
@@ -81,7 +83,7 @@ object FileSystem {
   def readConfigFile(fileName : String) = s"$readConfigFolder/$fileName"
 
 
-  def backup(file : java.io.File): Unit = {
+  def backup(file : File): Unit = {
     val (folder, name, ext) = decompose(file)
 
     val backupFolder = s"$folder/backup"
@@ -93,27 +95,27 @@ object FileSystem {
       Logger.trace(s"Backing up file $file.")
       var i = 0
       var ok = false
-      var backup : java.io.File = null
+      var backup : File = null
       while(!ok) {
         i += 1
-        backup = new java.io.File(s"$backupFolder/$fileName.bak$i")
+        backup = new File(s"$backupFolder/$fileName.bak$i")
         ok = !backup.exists()
       }
       file.renameTo(backup)
     }
   }
 
-  def findFilesAt(path : String, extension : String) : Array[java.io.File] = {
-    val f = new java.io.File(path)
+  def findFilesAt(path : String, extension : String) : Array[File] = {
+    val f = new File(path)
     val matchingFiles = f.listFiles(new java.io.FilenameFilter() {
-      def accept(dir: java.io.File, name: String): Boolean =
+      def accept(dir: File, name: String): Boolean =
         !name.startsWith("readme") && name.endsWith(extension)
     })
     return matchingFiles
   }
 
   def mkDir(path : String): Unit = {
-    val folder = new java.io.File(path)
+    val folder = new File(path)
     if (!folder.exists())
       folder.mkdirs()
   }
@@ -127,14 +129,14 @@ object FileSystem {
   def getExtension(path : String) : String =
     decompose(path)._3
 
-  def decompose(file : java.io.File) : (String, String, String) = {
+  def decompose(file : File) : (String, String, String) = {
     val name = file.getName
     val idx = name.lastIndexOf(".")
     return(file.getParent, name.substring(0, idx), name.substring(idx))
   }
 
   def decompose(path : String) : (String, String, String) =
-    decompose(new java.io.File(path))
+    decompose(new File(path))
 
   def compose(paths : Seq[String], name : String, ext : String) : String = {
     val ext1 = if(ext.head=='.') ext else "."+ext
@@ -144,7 +146,7 @@ object FileSystem {
   type PrintStream = java.io.PrintStream
 
   object PrintStream {
-    def apply(file : File, doBackUp : Boolean = true): java.io.PrintStream = {
+    private def _apply(file : File, charset : Charset = defaultCharset, doBackUp : Boolean = true): java.io.PrintStream = {
       val path = file.getParentFile
 
       if(!path.exists())
@@ -152,17 +154,39 @@ object FileSystem {
 
       if(doBackUp)
         backup(file)
-      new java.io.PrintStream(file)
+      new java.io.PrintStream(file, charset.name())
     }
 
+    def apply(file : File, charset : Charset, doBackUp : Boolean): java.io.PrintStream =
+      _apply(file, charset, doBackUp)
+
+    def apply(file : File, charset : Charset): java.io.PrintStream =
+      _apply(file, charset = charset)
+
+    def apply(file : File, doBackUp : Boolean): java.io.PrintStream =
+      _apply(file, doBackUp = doBackUp)
+
+    def apply(file : File): java.io.PrintStream =
+      _apply(file)
+
+    def apply(fileName : String, charset : Charset, doBackUp : Boolean): java.io.PrintStream =
+      _apply(new File(fileName), charset, doBackUp)
+
+    def apply(fileName : String, charset : Charset): java.io.PrintStream =
+      _apply(new File(fileName), charset = charset)
+
+    def apply(fileName : String, doBackUp : Boolean): java.io.PrintStream =
+      _apply(new File(fileName), doBackUp = doBackUp)
+
     def apply(fileName : String): java.io.PrintStream =
-      apply(new File(fileName))
+      _apply(new File(fileName))
   }
 
-  def withPrintStream(file : java.io.File)(p : java.io.PrintStream => Unit): Unit = {
+
+  private def _withPrintStream(file : File, charset : Charset = defaultCharset)(p : java.io.PrintStream => Unit): Unit = {
     var ps : java.io.PrintStream = null
     try {
-      ps = PrintStream(file)
+      ps = PrintStream(file, charset)
       p(ps)
     } finally {
       if (ps != null)
@@ -170,20 +194,42 @@ object FileSystem {
     }
   }
 
-  def withPrintStream(fileName : String)(p : java.io.PrintStream => Unit): Unit =
-    withPrintStream(new File(fileName))(p)
+  def withPrintStream(file : File, charset : Charset)(p : java.io.PrintStream => Unit): Unit =
+    _withPrintStream(file, charset)(p)
 
-  def withSource[A](file : java.io.File)(p : scala.io.Source => A) : A = {
+  def withPrintStream(file : File)(p : java.io.PrintStream => Unit): Unit =
+    _withPrintStream(file)(p)
+
+  def withPrintStream(fileName : String, charset : Charset)(p : java.io.PrintStream => Unit): Unit =
+    _withPrintStream(new File(fileName), charset)(p)
+
+  def withPrintStream(fileName : String)(p : java.io.PrintStream => Unit): Unit =
+    _withPrintStream(new File(fileName))(p)
+
+
+  type Source = scala.io.Source
+
+  private def _withSource[A](file : File, charset: Charset = defaultCharset)(p : scala.io.Source => A) : A = {
     var src : scala.io.Source = null
     try {
-      src = scala.io.Source.fromFile(file)
+      src = scala.io.Source.fromFile(file, charset.name())
       val x = p(src)
       return x
     } finally {
+      // toDo if src escapes p procedure scope, we will close connection before reading from it
       if(src != null)
         src.close()
     }
   }
+
+  def withSource[A](file : File, charset: Charset)(p : scala.io.Source => A) : A =
+    _withSource(file, charset)(p)
+
+  def withSource[A](file : File)(p : scala.io.Source => A) : A =
+    _withSource(file)(p)
+
+  def withSource[A](fileName : String, charset: Charset)(p : scala.io.Source => A) : A =
+    withSource(new File(fileName), charset)(p)
 
   def withSource[A](fileName : String)(p : scala.io.Source => A) : A =
     withSource(new File(fileName))(p)

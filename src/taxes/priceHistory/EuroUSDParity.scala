@@ -33,7 +33,7 @@ object EuroUSDParity {
 
     val prices = scala.collection.mutable.Map[LocalDate, Price]()
     var lineNumber = 0
-    val sc = new java.util.Scanner(file)
+    val sc = new java.util.Scanner(file, taxes.io.defaultCharset.name())
     val header1 = sc.nextLine()
     val header2 = sc.nextLine()
     val header3 = sc.nextLine()
@@ -105,10 +105,11 @@ object EuroUSDParity {
     Logger.trace("Downloading prices for euros/usd from www.bde.es.")
 
     val url = "https://www.bde.es/webbde/es/estadis/infoest/series/tc_1_1.csv"
-    val contents = Network.fromHttpURL(url)
-    val fileName = FileSystem.euroUSDFile
-    FileSystem.withPrintStream(fileName) { ps =>
-      ps.print(contents)
+    Network.Http.withSource(url, charset = java.nio.charset.StandardCharsets.ISO_8859_1){ src =>
+      FileSystem.withPrintStream(FileSystem.euroUSDFile) { ps =>
+        for(line <- src.getLines())
+          ps.println(line)
+      }
     }
   }
 }

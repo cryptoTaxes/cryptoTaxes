@@ -22,7 +22,7 @@ object Bittrex extends Exchanger {
   private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
-    override val charSet: String = "UTF-16LE"
+    override val charset: String = "UTF-16LE"
 
     override def lineScanner(line: String) =
       SeparatedScanner(line, "[,]")
