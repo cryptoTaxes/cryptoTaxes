@@ -17,7 +17,7 @@ object JsObjectAST {
     JsObjectAST(jsValue.asJsObject)
 
   def fromString(str: String): JsObjectAST =
-    JsObjectAST(spray.json.JsonParser(str).asJsObject())
+    JsObjectAST(str.parseJson.asJsObject())
 
   def fromFile(file: FileSystem.File): JsObjectAST =
     FileSystem.withSource(file){ src => JsObjectAST.fromString(src.mkString) }

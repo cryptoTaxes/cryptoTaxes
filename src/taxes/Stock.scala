@@ -80,7 +80,7 @@ object StockContainer {
 
   def fromFile(path : String) : StockContainer =
     FileSystem.withSource(path){ src =>
-      JsonParser(src.mkString).convertTo[StockContainer]
+      src.mkString.parseJson.convertTo[StockContainer]
   }
 }
 

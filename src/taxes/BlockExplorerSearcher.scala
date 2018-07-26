@@ -5,8 +5,6 @@ import taxes.io.Network
 import taxes.util.Logger
 import taxes.util.parse.Parse
 
-import spray.json.JsonProtocol._
-
 
 object BlockExplorerSearcher {
   def apply(market : Market, txid : String, address : String) =
@@ -62,21 +60,12 @@ object BlockExplorerSearcher {
 
 
   def etcScrap2(txid : String, address : String) : (LocalDateTime, Double, Double) = {
-    def JsonGetTransactionCommand(transactionHash : String) =
-      s"""{"jsonrpc":"2.0","method":"eth_getTransactionByHash","params":["$transactionHash"],"id":1}"""
-
-    def JsonGetBlockCommand(blockHash : String) =
-      s"""{"jsonrpc":"2.0","method":"eth_getBlockByHash","params":["$blockHash", true],"id":1}"""
-
-    def JsonGetTransactionReceiptCommand(transactionHash : String) =
-      s"""{"jsonrpc":"2.0","method":"eth_getTransactionReceipt","params":["$transactionHash"],"id":1}"""
-
     import spray.json._
     import spray.json.JsonProtocol._
 
-    def JsonETCQuery[A](command : String)(implicit json : JsonFormat[A]) : A = {
+    def JsonETCQuery[A](method : String, params : JsArray)(implicit json : JsonFormat[A]) : A = {
       val RPC_API_endPoint = "http://web3.gastracker.io"
-      val response = Network.Http.Json.RPC(RPC_API_endPoint, spray.json.JsonParser(command).asJsObject)
+      val response = Network.Http.Json.RPC(RPC_API_endPoint, method = method, params = params)
       return response.convertTo[A]
     }
 
@@ -89,15 +78,14 @@ object BlockExplorerSearcher {
     case class TransactionReceipt(gasUsed : String, cumulativeGasUsed : String)
     implicit val transactionReceiptJson = jsonFormat2(TransactionReceipt)
 
-
-    val tx = JsonETCQuery[Transaction](JsonGetTransactionCommand(txid))
+    val tx = JsonETCQuery[Transaction]("eth_getTransactionByHash", JsArray(JsString(txid)))
 
     if(tx.to.toUpperCase != address.toUpperCase())
       Logger.fatal(s"BlockExplorerScraper.etcScrap: address doesn't match $address ${tx.to}")
 
-    val block = JsonETCQuery[Block](JsonGetBlockCommand(tx.blockHash))
+    val block = JsonETCQuery[Block]("eth_getBlockByHash", JsArray(JsString(tx.blockHash), JsBoolean(true)))
 
-    val txReceipt = JsonETCQuery[TransactionReceipt](JsonGetTransactionReceiptCommand(txid))
+    val txReceipt = JsonETCQuery[TransactionReceipt]("eth_getTransactionReceipt", JsArray(JsString(txid)))
 
     def parseHex(str : String) : BigInt = {
       val toParse = if(str.startsWith("0x")) str.drop(2) else str
@@ -116,8 +104,10 @@ object BlockExplorerSearcher {
     return (date, amount, fee)
   }
 
-
   def chainzCryptoidInfoScrap(coin : String, txid : String, address : String) : (LocalDateTime, Double, Double) = {
+    import spray.json._
+    import spray.json.JsonProtocol._
+
     case class Output(addr : String, amount : Double)
     implicit val outputJson = jsonFormat2(Output)
 
@@ -127,7 +117,7 @@ object BlockExplorerSearcher {
     val url = s"https://chainz.cryptoid.info/$coin/api.dws?q=txinfo;t=$txid"
     val resp = Network.Http.withSource(url){src => src.mkString}
 
-    val json = spray.json.JsonParser(resp)
+    val json = resp.parseJson
     val response = json.convertTo[Response]
 
     val date = LocalDateTime.fromUnix(response.timestamp)
@@ -160,6 +150,8 @@ object BlockExplorerSearcher {
     chainzCryptoidInfoScrap("vtc", txid, address)
 
   def dogeScrap(txid : String, address : String) : (LocalDateTime, Double, Double) = {
+    import spray.json._
+    import spray.json.JsonProtocol._
 
     case class Input(address : String, value : String)
     implicit val inputJson = jsonFormat2(Input)
@@ -176,7 +168,7 @@ object BlockExplorerSearcher {
     val url = s"https://dogechain.info/api/v1/transaction/$txid"
     val resp = Network.Http.withSource(url){src => src.mkString}
 
-    val json = spray.json.JsonParser(resp)
+    val json = resp.parseJson
     val response = json.convertTo[Response]
 
     if(response.success != 1)

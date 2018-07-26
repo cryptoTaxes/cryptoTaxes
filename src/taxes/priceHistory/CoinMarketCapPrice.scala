@@ -146,7 +146,7 @@ object CoinMarketCapPrice {
         new FileSource[DailyPrice](fileName) {
           override def read(): Seq[DailyPrice] =
             FileSystem.withSource(fileName) { src =>
-              JsonParser(src.mkString).convertTo[Seq[DailyPrice]]
+              src.mkString.parseJson.convertTo[Seq[DailyPrice]]
             }
         }
     }
@@ -157,8 +157,8 @@ object CoinMarketCapPrice {
         case PriceCalculation.open      => dailyPrice.open
         case PriceCalculation.close     => dailyPrice.close
         case PriceCalculation.openClose => (dailyPrice.open + dailyPrice.close) / 2
-        case PriceCalculation.high      => dailyPrice.high
         case PriceCalculation.low       => dailyPrice.low
+        case PriceCalculation.high      => dailyPrice.high
         case PriceCalculation.lowHigh   => (dailyPrice.high + dailyPrice.low) / 2
       }
 
@@ -185,7 +185,7 @@ object CoinMarketCapPrice {
   def apply(market : Market, date : LocalDateTime) : Price =
     markets2CoinMarketPrices.get(market) match  {
       case Some(coinMarketCapPrice) => coinMarketCapPrice(date)
-      case None => Logger.fatal(s"price for $market at $date not found.")
+      case None => Logger.fatal(s"prices for $market not found.")
     }
 }
 

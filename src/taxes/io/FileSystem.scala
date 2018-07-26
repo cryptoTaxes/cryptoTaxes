@@ -146,7 +146,7 @@ object FileSystem {
   type PrintStream = java.io.PrintStream
 
   object PrintStream {
-    private def _apply(file : File, charset : Charset = defaultCharset, doBackUp : Boolean = true): java.io.PrintStream = {
+    def apply(file : File, charset : Charset = defaultCharset, doBackUp : Boolean = true): java.io.PrintStream = {
       val path = file.getParentFile
 
       if(!path.exists())
@@ -157,33 +157,21 @@ object FileSystem {
       new java.io.PrintStream(file, charset.name())
     }
 
-    def apply(file : File, charset : Charset, doBackUp : Boolean): java.io.PrintStream =
-      _apply(file, charset, doBackUp)
-
-    def apply(file : File, charset : Charset): java.io.PrintStream =
-      _apply(file, charset = charset)
-
-    def apply(file : File, doBackUp : Boolean): java.io.PrintStream =
-      _apply(file, doBackUp = doBackUp)
-
-    def apply(file : File): java.io.PrintStream =
-      _apply(file)
-
     def apply(fileName : String, charset : Charset, doBackUp : Boolean): java.io.PrintStream =
-      _apply(new File(fileName), charset, doBackUp)
+      apply(new File(fileName), charset, doBackUp)
 
     def apply(fileName : String, charset : Charset): java.io.PrintStream =
-      _apply(new File(fileName), charset = charset)
+      apply(new File(fileName), charset = charset)
 
     def apply(fileName : String, doBackUp : Boolean): java.io.PrintStream =
-      _apply(new File(fileName), doBackUp = doBackUp)
+      apply(new File(fileName), doBackUp = doBackUp)
 
     def apply(fileName : String): java.io.PrintStream =
-      _apply(new File(fileName))
+      apply(new File(fileName))
   }
 
 
-  private def _withPrintStream(file : File, charset : Charset = defaultCharset)(p : java.io.PrintStream => Unit): Unit = {
+  def withPrintStream(file : File, charset : Charset = defaultCharset)(p : java.io.PrintStream => Unit): Unit = {
     var ps : java.io.PrintStream = null
     try {
       ps = PrintStream(file, charset)
@@ -194,22 +182,16 @@ object FileSystem {
     }
   }
 
-  def withPrintStream(file : File, charset : Charset)(p : java.io.PrintStream => Unit): Unit =
-    _withPrintStream(file, charset)(p)
-
-  def withPrintStream(file : File)(p : java.io.PrintStream => Unit): Unit =
-    _withPrintStream(file)(p)
-
   def withPrintStream(fileName : String, charset : Charset)(p : java.io.PrintStream => Unit): Unit =
-    _withPrintStream(new File(fileName), charset)(p)
+    withPrintStream(new File(fileName), charset)(p)
 
   def withPrintStream(fileName : String)(p : java.io.PrintStream => Unit): Unit =
-    _withPrintStream(new File(fileName))(p)
+    withPrintStream(new File(fileName))(p)
 
 
   type Source = scala.io.Source
 
-  private def _withSource[A](file : File, charset: Charset = defaultCharset)(p : scala.io.Source => A) : A = {
+  def withSource[A](file : File, charset: Charset = defaultCharset)(p : scala.io.Source => A) : A = {
     var src : scala.io.Source = null
     try {
       src = scala.io.Source.fromFile(file, charset.name())
@@ -221,12 +203,6 @@ object FileSystem {
         src.close()
     }
   }
-
-  def withSource[A](file : File, charset: Charset)(p : scala.io.Source => A) : A =
-    _withSource(file, charset)(p)
-
-  def withSource[A](file : File)(p : scala.io.Source => A) : A =
-    _withSource(file)(p)
 
   def withSource[A](fileName : String, charset: Charset)(p : scala.io.Source => A) : A =
     withSource(new File(fileName), charset)(p)

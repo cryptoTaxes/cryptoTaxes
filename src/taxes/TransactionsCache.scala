@@ -31,7 +31,7 @@ object TransactionsCache extends Initializable with Finalizable {
       return
 
     val pairs = FileSystem.withSource(file){ src =>
-      JsonParser(src.mkString).convertTo[List[(TxKey, TxInfo)]]
+      src.mkString.parseJson.convertTo[List[(TxKey, TxInfo)]]
     }
 
     for(pair <- pairs)
