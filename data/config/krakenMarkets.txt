@@ -1,9 +1,11 @@
-// Different names for markets at kraken.com
-// One line for each market. 
+/// Different names for markets at kraken.com
+// One line for each market.
 // Kraken market names on the left (separated by commas).
 // Normalized market name on the right.
 
+ADA       -> ADA
 BCH       -> BCH
+DASH      -> DASH
 EUR, ZEUR -> EURO
 XBT, XXBT -> BTC
 XETC      -> ETC
@@ -13,6 +15,7 @@ XLTC      -> LTC
 XMLN      -> MLN
 XNMC      -> NMC
 XREP      -> REP
+XTZ       -> XTZ
 XXDG      -> XDG
 XXLM      -> XLM
 XXMR      -> XMR
@@ -23,4 +26,4 @@ ZCAD      -> CAD
 ZGBP      -> GBP
 ZJPY      -> JPY
 ZKRW      -> KRW
-ZUSD      -> USD
+ZUSD, USD -> USD
