@@ -94,7 +94,7 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
   def copy: StockContainer
 
   val eps : Double =
-    if(baseMarket==Market.euro || baseMarket==Market.usd)
+    if(market==Market.euro || market==Market.usd)
       0.00001
     else
       Config.config.epsilon
