@@ -47,53 +47,40 @@ object Binance extends Exchanger {
           // Fee is 0.1% but can get deduced if BNB is used for paying fees.
           // It's applied over toMarket
 
-          // If feeCoin is BNB you get `amount' but you additionally pay a BNB fee
-          // Else feeCoin is toMarket and you really get `amount' - `feeAmount'
+          // If feeCoin is toMarket (even if it is BNB) you really get
+          // `amount' - `feeAmount'
+          // Else you get `amount' but you additionally pay a BNB fee
 
           if (orderType == "BUY") {
-            // toDo check this
+            // toDo check this further
             // This has to be the first case as if you're buying BNB and you pay
-            // your fee with BNB, your fee is a deducted one so I assume the case
-            // where you get `amount` should apply for when you buy BNB
-            if(feeCoin == Market.normalize("BNB")) {
+            // your fee with BNB, you get `amount` - `feeAmount'
+            if(feeCoin == baseMarket) {
+              val exchange = Exchange(
+                date = date
+                , id = ""
+                , fromAmount = total, fromMarket = quoteMarket
+                , toAmount = amount - feeAmount, toMarket = baseMarket
+                , fees = List(FeePair(feeAmount, feeCoin))
+                , exchanger = Binance
+                , description = desc
+              )
+              return CSVReader.Ok(exchange)
+            } else if(feeCoin == Market.normalize("BNB")) {
               val exchange = Exchange(
                 date = date
                 , id = ""
                 , fromAmount = total, fromMarket = quoteMarket
                 , toAmount = amount, toMarket = baseMarket
-                , fees = List(FeePair(feeAmount, feeCoin)) //todo detached
-                , exchanger = Binance
-                , description = desc
-              )
-              return CSVReader.Ok(exchange)
-            } else if(feeCoin == baseMarket) {
-              val exchange = Exchange(
-                date = date
-                , id = ""
-                , fromAmount = total, fromMarket = quoteMarket
-                , toAmount = amount - feeAmount, toMarket = baseMarket // this has been confirmed
                 , fees = List(FeePair(feeAmount, feeCoin))
                 , exchanger = Binance
                 , description = desc
               )
-
               return CSVReader.Ok(exchange)
             } else
               return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
           } else if (orderType == "SELL") {
-            if(feeCoin == Market.normalize("BNB")) {
-              val exchange = Exchange(
-                date = date
-                , id = ""
-                , fromAmount = amount, fromMarket = baseMarket
-                , toAmount = total, toMarket = quoteMarket
-                , fees = List(FeePair(feeAmount, feeCoin)) //todo detached
-                , exchanger = Binance
-                , description = desc
-              )
-
-              return CSVReader.Ok(exchange)
-            } else if(feeCoin == quoteMarket) {
+            if(feeCoin == quoteMarket) {
               val exchange = Exchange(
                 date = date
                 , id = ""
@@ -103,11 +90,20 @@ object Binance extends Exchanger {
                 , exchanger = Binance
                 , description = desc
               )
-
+              return CSVReader.Ok(exchange)
+            } else if(feeCoin == Market.normalize("BNB")) {
+              val exchange = Exchange(
+                date = date
+                , id = ""
+                , fromAmount = amount, fromMarket = baseMarket
+                , toAmount = total, toMarket = quoteMarket
+                , fees = List(FeePair(feeAmount, feeCoin))
+                , exchanger = Binance
+                , description = desc
+              )
               return CSVReader.Ok(exchange)
             } else
               return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
-
           } else
             return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
       }
