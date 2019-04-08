@@ -11,15 +11,19 @@ object Bittrex extends Exchanger {
   override val id: String = "Bittrex"
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("bittrex", ".csv") {
-      def fileSource(fileName: String) = operationsReader(fileName)
+    new UserInputFolderSource[Operation]("bittrex/exchanges/20142017", ".csv") {
+      def fileSource(fileName: String) = operationsReader2014_2017(fileName)
+    },
+    new UserInputFolderSource[Operation]("bittrex/exchanges", ".csv") {
+      def fileSource(fileName: String) = operationsReader2018(fileName)
     },
     new UserInputFolderSource[Operation]("bittrex/withdrawals", ".csv") {
       def fileSource(fileName: String) = withdrawalsReader(fileName)
     }
   )
 
-  private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
+  // This is for the csv format used by Bittrex from 2014 till 2017
+  private def operationsReader2014_2017(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
     override val charset: String = "UTF-16LE"
@@ -28,22 +32,22 @@ object Bittrex extends Exchanger {
       SeparatedScanner(line, "[,]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val orderId = scLn.next("Order ID")
-      val (m1, m2) = Parse.split(scLn.next("Pair"), "-")
+      val orderId = scLn.next("OrderUuid")
+      val (m1, m2) = Parse.split(scLn.next("Exchange"), "-")
 
       val quoteMarket = Market.normalize(m1)
       val baseMarket = Market.normalize(m2)
 
-      val isSell = scLn.next("Order Type") == "LIMIT_SELL"
+      val isSell = scLn.next("Type") == "LIMIT_SELL"
       val quantity = scLn.nextDouble("Quantity")
       val limit = scLn.nextDouble("Limit")
-      val comissionPaid = scLn.nextDouble("Comission Paid")
+      val comissionPaid = scLn.nextDouble("Commission Paid")
 
       val price = scLn.nextDouble("Price")
 
       val fmt = "[M][MM]/[d][dd]/yyyy [h][hh]:mm:ss a"
-      val dateOpen = LocalDateTime.parseAsUTC(scLn.next("Open Date"), fmt)   // Bittrex csv trade history uses UTC time zone
-      val dateClose = LocalDateTime.parseAsUTC(scLn.next("Close Date"), fmt) // but notice that the GUI uses your local time
+      val dateOpen = LocalDateTime.parseAsUTC(scLn.next("Opened"), fmt)   // Bittrex csv trade history uses UTC time zone
+      val dateClose = LocalDateTime.parseAsUTC(scLn.next("Closed"), fmt) // but notice that the GUI uses your local time
 
       val desc = "Order: " + orderId
 
@@ -77,6 +81,83 @@ object Bittrex extends Exchanger {
             , id = orderId
             , fromAmount = price, fromMarket = quoteMarket
             , toAmount = quantity, toMarket = baseMarket
+            , fees = List(FeePair(comissionPaid, quoteMarket))
+            , exchanger = Bittrex
+            , description = desc
+          )
+      return CSVReader.Ok(exchange)
+    }
+
+    // toDo some bittrex operations have same close date so their order will depend on order in csv file which can change for different downloads
+  }
+
+  // This is for the csv format used by Bittrex from 2018 onwards
+  private def operationsReader2018(fileName: String) = new CSVSortedOperationReader(fileName) {
+    override val linesToSkip = 1
+
+    override val charset: String = "UTF-8"
+
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[,]")
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val orderId = scLn.next("Uuid")
+      val (m1, m2) = Parse.split(scLn.next("Exchange"), "-")
+
+      val quoteMarket = Market.normalize(m1)
+      val baseMarket = Market.normalize(m2)
+
+      val fmt = "[M][MM]/[d][dd]/yyyy [h][hh]:mm:ss a"
+      val dateOpen = LocalDateTime.parseAsUTC(scLn.next("TimeStamp"), fmt)   // Bittrex csv trade history uses UTC time zone
+                                                                             // but notice that the GUI uses your local time
+      val isSell = scLn.next("Order Type") == "LIMIT_SELL"
+      val limit = scLn.nextDouble("Limit")
+      val quantity = scLn.nextDouble("Quantity")
+      val quantityRemaining = scLn.nextDouble("QuantityRemaining")
+      val comissionPaid = scLn.nextDouble("Commission")
+      val price = scLn.nextDouble("Price")
+      val pricePerUnit = scLn.nextDouble("PricePerUnit")
+      val isConditional = scLn.next("IsConditional") == "True"
+
+      val condition = scLn.next("Condition")
+      val conditionTarget = scLn.next("ConditionTarget")
+      val immediateOrCancel = scLn.next("ImmediateOrCancel") == "True"
+
+      val dateClose = LocalDateTime.parseAsUTC(scLn.next("Close Date"), fmt)
+
+      val desc = "Order: " + orderId
+
+      // quoteMarket is one of BTC, USDT or ETH.
+      // quantity - quantityRemaining stands for the amount of baseMarket
+      // coins you're either selling or buying.
+      // fees are ALWAYS denominated in quoteMarket.
+      // price stands for:
+      //  * In a sell: the amount of quoteMarket coins you get from this operation,
+      //               but then you'll have to pay comissionPaid from these.
+      //  * In a buy: the amount of quoteMarket coins you're paying in this exchange,
+      //               but you'll have to additionally pay comissionPaid
+      // In this way:
+      // * In a sell: you release quantity - quantityRemaining coins. You get price coins, but then you'll pay
+      //              the comission from these, so really you end up getting (price - comissionPaid) coins
+      // * In a buy:  you release (price + comissionPaid) coins and you get quantity - quantityRemaining coins.
+
+      val exchange =
+        if (isSell)
+          Exchange(
+            date = dateClose
+            , id = orderId
+            , fromAmount = quantity - quantityRemaining, fromMarket = baseMarket
+            , toAmount = price - comissionPaid, toMarket = quoteMarket
+            , fees = List(FeePair(comissionPaid, quoteMarket))
+            , exchanger = Bittrex
+            , description = desc
+          )
+        else
+          Exchange(
+            date = dateClose
+            , id = orderId
+            , fromAmount = price, fromMarket = quoteMarket
+            , toAmount = quantity - quantityRemaining, toMarket = baseMarket
             , fees = List(FeePair(comissionPaid, quoteMarket))
             , exchanger = Bittrex
             , description = desc
