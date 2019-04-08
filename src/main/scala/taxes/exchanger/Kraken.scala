@@ -47,18 +47,31 @@ object Kraken extends Exchanger {
     )
   }
 
-  override val sources = Seq(
-    new UserInputFolderSource[Operation]("kraken/ledgers", ".csv") {
-      def fileSource(fileName: String) = ledgerReader(fileName)
-    },
-    new UserInputFolderSource[Operation]("kraken/trades", ".csv") {
-      def fileSource(fileName: String) = operationsReader(fileName)
-    }
-  )
 
   private type TxID = String
   private case class Ledger(txType : String, market: Market, amount: Double, fee: Double)
   private val ledgersCache = scala.collection.mutable.Map[TxID, Ledger]()
+
+  private type OrderID = String
+  private val isMarginCache = scala.collection.mutable.Map[OrderID, Boolean]()
+
+  override val sources = {
+    val tradesFolder = "kraken/trades"
+    Seq(
+      // Reads deposits/withdrawals but also populates ledgersCache
+      new UserInputFolderSource[Operation]("kraken/ledgers", ".csv") {
+        def fileSource(fileName: String) = ledgerReader(fileName)
+      },
+      // This one is not really a reader but a preprocessor
+      // for populating isMarginCache
+      new UserInputFolderSource[Nothing](tradesFolder, ".csv") {
+        def fileSource(fileName: String) = isMarginPreprocessReader(fileName)
+      },
+      new UserInputFolderSource[Operation](tradesFolder, ".csv") {
+        def fileSource(fileName: String) = operationsReader(fileName)
+      }
+    )
+  }
 
   private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
@@ -89,7 +102,7 @@ object Kraken extends Exchanger {
 
       val isSell = sellBuy == "sell"
       val isBuy = sellBuy == "buy"
-      val isMargin = margin != 0
+      val isMargin = isMarginCache(ordertxid)
 
       val ledgersTxids = Parse.sepBy(ledgers, ",")
 
@@ -102,69 +115,17 @@ object Kraken extends Exchanger {
         case List() =>
           (0.0, baseMarket, 0.0, quoteMarket)   // no fees for this operation
         case List(feeLedger) =>                 // a single fee1
-          if(feeLedger.market == baseMarket)
-            (feeLedger.fee, baseMarket, 0.0, quoteMarket)
-          else if(feeLedger.market == quoteMarket)
-            (feeLedger.fee, quoteMarket, 0.0, baseMarket)
-          else
-            (0.0, baseMarket, feeLedger.fee, feeLedger.market)
+          (feeLedger.fee, feeLedger.market, 0.0, quoteMarket)
         case List(feeLedger1, feeLedger2) =>  // two fees for this operation
           // We assume feeLedger1.market != feeLedger2.market
           if(feeLedger1.market == feeLedger2.market)
             Logger.fatal(s"${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as fee1 market is the same as fee2 market: $line.\n$feeLedger1\n$feeLedger2")
-
-          // We try to set as fee1 the one whose market is baseMarket.
-          // Otherwise we set as fee1 the one expressed in quoteMarket
-          if (feeLedger1.market == baseMarket)
-            (feeLedger1.fee, feeLedger1.market, feeLedger2.fee, feeLedger2.market)
-          else if (feeLedger2.market == baseMarket)
-            (feeLedger2.fee, feeLedger2.market, feeLedger1.fee, feeLedger1.market)
-          else if (feeLedger1.market == quoteMarket)
-            (feeLedger1.fee, feeLedger1.market, feeLedger2.fee, feeLedger2.market)
-          else if (feeLedger2.market == quoteMarket)
-            (feeLedger2.fee, feeLedger2.market, feeLedger1.fee, feeLedger1.market)
-          else
-            Logger.fatal(s"${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as fee1 market is neither fromMarket nor toMarket: $line.\n$feeLedger1\n$feeLedger2")
-
-/*
-          if(isBuy) {
-            // We try to set as fee1 the one whose market is baseMarket.
-            // Otherwise we set as fee1 the one expressed in quoteMarket
-            if(feeLedger1.market == baseMarket)
-              (feeLedger1.fee1, feeLedger1.market, feeLedger2.fee1, feeLedger2.market)
-            else if(feeLedger2.market == baseMarket)
-              (feeLedger2.fee1, feeLedger2.market, feeLedger1.fee1, feeLedger1.market)
-            else if(feeLedger1.market == quoteMarket)
-              (feeLedger1.fee1, feeLedger1.market, feeLedger2.fee1, feeLedger2.market)
-            else if(feeLedger2.market == quoteMarket)
-              (feeLedger2.fee1, feeLedger2.market, feeLedger1.fee1, feeLedger1.market)
-            else
-              Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as market fee1 is neither fromMarket nor toMarket: %s.\n%s\n%s".format(Kraken.id, Paths.pathFromData(fileName), line, feeLedger1, feeLedger2))
-          } else { // isBuy
-            // We try to set as fee1 the one whose market is quoteMarket.
-            // Otherwise we set as fee1 the one expressed in baseMarket
-            if(feeLedger1.market == quoteMarket)
-              (feeLedger1.fee1, feeLedger1.market, feeLedger2.fee1, feeLedger2.market)
-            else if(feeLedger2.market == quoteMarket)
-              (feeLedger2.fee1, feeLedger2.market, feeLedger1.fee1, feeLedger1.market)
-            else if(feeLedger1.market == baseMarket)
-              (feeLedger1.fee1, feeLedger1.market, feeLedger2.fee1, feeLedger2.market)
-            else if(feeLedger2.market == baseMarket)
-              (feeLedger2.fee1, feeLedger2.market, feeLedger1.fee1, feeLedger1.market)
-            else
-              Logger.fatal("%s. Read file %s: Reading this transaction is not currently supported as market fee1 is neither fromMarket nor toMarket: %s.\n%s\n%s".format(Kraken.id, Paths.pathFromData(fileName), line, feeLedger1, feeLedger2))
-          }
-*/
+          (feeLedger1.fee, feeLedger1.market, feeLedger2.fee, feeLedger2.market)
         case ls =>
           Logger.fatal(s"${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as it has more than two fees: $line.\n$ls")
       }
 
       if (isMargin) { // margin trade
-        if(feeLedgers.length > 1)
-          Logger.fatal(s"Several fees for a margin order are not currently supported:\n$feeLedgers\n$line")
-
-        // Logger.trace("%s\n%f %s   %f\n\n".format(line,fee1,fee1Market,if(fee1Market==quoteMarket) fee1 else -fee1*price))
-
         if(isSell) {
           val margin =
             Margin(
@@ -172,8 +133,7 @@ object Kraken extends Exchanger {
               , id = id
               , fromAmount = vol, fromMarket = baseMarket
               , toAmount = cost /* + (if(fee1Market==quoteMarket) fee1 else -fee1 * price) */, toMarket = quoteMarket
-              , feeAmount = fee1
-              , feeMarket = fee1Market
+              , fees = List(FeePair(fee1, fee1Market), FeePair(fee2, fee2Market))
               , orderType = Operation.OrderType.Sell
               , pair = (baseMarket, quoteMarket)
               , exchanger = Kraken
@@ -187,8 +147,7 @@ object Kraken extends Exchanger {
               , id = id
               , fromAmount = cost /* + (if(fee1Market==quoteMarket) fee1 else -fee1 * price) */, fromMarket = quoteMarket
               , toAmount = vol, toMarket = baseMarket
-              , feeAmount = fee1
-              , feeMarket = fee1Market
+              , fees = List(FeePair(fee1, fee1Market), FeePair(fee2, fee2Market))
               , orderType = Operation.OrderType.Buy
               , pair = (baseMarket, quoteMarket)
               , exchanger = Kraken
@@ -214,9 +173,9 @@ object Kraken extends Exchanger {
                 cost - (if (fee1Market == quoteMarket) fee1 else 0)
               else
                 cost - {
-                  if (fee2Market == quoteMarket)
+                  if(fee2Market == quoteMarket)
                     fee2 // we end up getting cost - fee2
-                  else if(fee1Market ==quoteMarket)
+                  else if(fee1Market == quoteMarket)
                     fee1 // we end up getting cost - fee1
                   else 0
                 }
@@ -229,7 +188,7 @@ object Kraken extends Exchanger {
                 , fromMarket = baseMarket
                 , toAmount = toAmount
                 , toMarket = quoteMarket
-                , fees = List(FeePair(fee1, fee1Market)) ++ (if(fee2>0) List(FeePair(fee2, fee2Market)) else List())
+                , fees = List(FeePair(fee1, fee1Market), FeePair(fee2, fee2Market))
                 , exchanger = Kraken
                 , description = desc
               )
@@ -250,7 +209,7 @@ object Kraken extends Exchanger {
               vol - (if (fee1Market == quoteMarket) fee1 else 0)
             else
               vol - {
-                if (fee1Market == baseMarket)
+                if(fee1Market == baseMarket)
                   fee1 // we end up getting cost - fee1
                 else if(fee2Market == baseMarket)
                   fee2 // we end up getting cost - fee2
@@ -265,7 +224,7 @@ object Kraken extends Exchanger {
                 , fromMarket = quoteMarket
                 , toAmount = toAmount
                 , toMarket = baseMarket
-                , fees = List(FeePair(fee1, fee1Market)) ++ (if(fee2>0) List(FeePair(fee2, fee2Market)) else List())
+                , fees = List(FeePair(fee1, fee1Market), FeePair(fee2, fee2Market))
                 , exchanger = Kraken
                 , description = desc
               )
@@ -315,6 +274,33 @@ object Kraken extends Exchanger {
         return CSVReader.Ok(fee)
       }  else
         return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}; Reading this transaction is not currently supported: $line.")
+    }
+  }
+
+  private def isMarginPreprocessReader(fileName: String) = new CSVReader[Nothing](fileName) {
+    override val linesToSkip = 1
+
+    override def lineScanner(line: String): Scanner =
+      QuotedScanner(line, '\"', ',')
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Nothing] = {
+      val txid = scLn.next("Transaction ID")
+      val ordertxid = scLn.next("Order ID")
+      val pair = scLn.next("Pair")
+      val time = scLn.next("Time")
+      val sellBuy = scLn.next("Sell/Buy")
+      val ordertype = scLn.next("Order Type")
+      val price = scLn.nextDouble("Price")
+      val cost = scLn.nextDouble("Cost")
+      val fee0 = scLn.nextDouble("Fee")
+      val vol = scLn.nextDouble("Volume")
+      val margin = scLn.nextDouble("Margin")
+      val misc = scLn.next("Misc")
+      val ledgers = scLn.next("Ledgers")
+
+      // only one txId for the OrderId need to have margin for it to be a margin order
+      isMarginCache(ordertxid) = isMarginCache.getOrElse(ordertxid, false) || (margin != 0)
+      return CSVReader.Ignore
     }
   }
 }

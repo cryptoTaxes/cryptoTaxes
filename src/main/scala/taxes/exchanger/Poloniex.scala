@@ -130,7 +130,7 @@ object Poloniex extends Exchanger {
               , id = orderNumber
               , fromAmount = amount, fromMarket = baseMarket // we short the whole amount but only pay with provided total minus fee
               , toAmount = total - fee /*this total*/ /* baseTotalLessFee */, toMarket = quoteMarket
-              , feeAmount = fee, feeMarket = quoteMarket // quoteMarket is usually BTC
+              , fees = List(FeePair(fee, quoteMarket)) // quoteMarket is usually BTC
               , orderType = Operation.OrderType.Sell
               , pair = (baseMarket, quoteMarket)
               , exchanger = Poloniex
@@ -143,7 +143,7 @@ object Poloniex extends Exchanger {
               , id = orderNumber
               , fromAmount = total /*this * (100 - feePercent)/100 */, fromMarket = quoteMarket
               , toAmount = quoteTotalLessFee, toMarket = baseMarket
-              , feeAmount = fee, feeMarket = baseMarket
+              , fees = List(FeePair(fee, baseMarket))
               // Usually, quoteMarket is BTC so we can set fee in BTC
               //, fee = amount*feePercent/100*price, feeMarket = quoteMarket
               , orderType = Operation.OrderType.Buy
@@ -174,7 +174,7 @@ object Poloniex extends Exchanger {
         val op = margin1.copy(
             fromAmount = margin1.fromAmount + margin2.fromAmount
           , toAmount = margin1.toAmount + margin2.toAmount
-          , feeAmount = margin1.feeAmount + margin2.feeAmount
+          , fees = margin1.fees ++ margin2.fees
         )
         group(op :: ops)
       case op1::op2::ops =>

@@ -78,16 +78,6 @@ object Bitfinex extends Exchanger {
             )
         return CSVReader.Ok(exchange)
       } else if (margin.toLowerCase == "true") { // margin order
-        // toDo integrate fee in margin operation and move code to process detached fee to processMargin just like we did for exchanges
-
-        // fee is only part of operation if expressed in one of two markets involved in this operation
-        val isDetachedFee = feeMarket!=baseMarket && feeMarket!=quoteMarket
-        val (attachedFeeValue, attachedFeeMarket) =
-          if (isDetachedFee)
-            (0.0, baseMarket) // or quoteMarket, it doesn't matter as long as its value is 0
-          else
-            (fee.abs, feeMarket)
-
         val margin =
           if(amount<0)
             Margin(
@@ -95,8 +85,7 @@ object Bitfinex extends Exchanger {
               , id = reference
               , fromAmount = amount.abs, fromMarket = baseMarket
               , toAmount = price * amount.abs /* + (if(feeMarket==quoteMarket) fee.abs else if(feeMarket==baseMarket) -fee.abs * price else 0) */, toMarket = quoteMarket
-              , feeAmount = attachedFeeValue
-              , feeMarket = attachedFeeMarket
+              , fees = List(FeePair(fee.abs, feeMarket))
               , orderType = Operation.OrderType.Sell
               , pair = (baseMarket, quoteMarket)
               , exchanger = Bitfinex
@@ -108,28 +97,14 @@ object Bitfinex extends Exchanger {
               , id = reference
               , fromAmount = amount.abs * price /* + (if (feeMarket==quoteMarket) fee.abs else if(feeMarket==baseMarket) -fee.abs * price else 0) */, fromMarket = quoteMarket
               , toAmount = amount.abs, toMarket = baseMarket
-              , feeAmount = attachedFeeValue
-              , feeMarket = attachedFeeMarket
+              , fees = List(FeePair(fee.abs, feeMarket))
               , orderType = Operation.OrderType.Buy
               , pair = (baseMarket, quoteMarket)
               , exchanger = Bitfinex
               , description = desc + " @ " + price
             )
 
-          if(isDetachedFee) {
-            val detachedFee =
-              Fee(
-                date = date
-                , id = reference + " fee"
-                , amount = fee.abs
-                , market = feeMarket
-                , exchanger = Bitfinex
-                , description = desc +  " fee"
-              )
-
-            return CSVReader.Ok(List(margin, detachedFee))
-          } else
-            return CSVReader.Ok(margin)
+          return CSVReader.Ok(margin)
       }
       else
         return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line. Margin should be true or false but it is $margin")
@@ -197,7 +172,7 @@ object Bitfinex extends Exchanger {
                   , id = reference
                   , fromAmount = amountExecuted.abs, fromMarket = Market.normalize(market1)
                   , toAmount = amountExecuted.abs*averageExecutionPrice - 0.abs , toMarket = Market.normalize(market2) // Assumes feeCurrency == market2
-                  , feeAmount = 0.abs, feeMarket = Market.normalize(market1)
+                  , fees = List()
                   , orderType = Operation.OrderType.Sell
                   , pair = (market1, market2)
                   , exchanger = Bitfinex
@@ -209,7 +184,7 @@ object Bitfinex extends Exchanger {
                   , id = reference
                   , fromAmount = amountExecuted.abs * averageExecutionPrice, fromMarket = Market.normalize(market2)
                   , toAmount = amountExecuted.abs, toMarket = Market.normalize(market1)
-                  , feeAmount = 0.abs, feeMarket = Market.normalize(market1)
+                  , fees = List()
                   , orderType = Operation.OrderType.Buy
                   , pair = (market1, market2)
                   , exchanger = Bitfinex

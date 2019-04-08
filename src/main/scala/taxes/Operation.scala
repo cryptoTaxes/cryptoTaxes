@@ -18,6 +18,9 @@ sealed trait Operation {
 
 
 object Operation {
+  def feesToString(fees: Seq[FeePair]): String =
+    fees.map(fee => f"${fee.amount}%.8f ${fee.market}").mkString("(", ", ", ")")
+
   object OrderType extends Enumeration {
     val Buy, Sell = Value
   }
@@ -25,7 +28,7 @@ object Operation {
   implicit val orderJson = jsonEnumFormat(OrderType)
   implicit val feePairJson = jsonFormat2(FeePair)
   implicit val exchangeJson = jsonFormat10(Exchange)
-  implicit val marginJson = jsonFormat12(Margin)
+  implicit val marginJson = jsonFormat11(Margin)
   implicit val feeJson = jsonFormat7(Fee)
   implicit val feeJLoss = jsonFormat6(Loss)
   implicit val gainJson = jsonFormat6(Gain)
@@ -110,10 +113,8 @@ case class Exchange(date : LocalDateTime
                     , description : String
                     ) extends Operation {
 
-  override def toString : String = {
-    val feesStr = fees.map(fee => f"${fee.amount}%.8f ${fee.market}").mkString("(", ", ", ")")
-    f"Exchange($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s  $feesStr  $description)"
-  }
+  override def toString : String =
+    f"Exchange($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s  ${Operation.feesToString(fees)}  $description)"
 }
 
 
@@ -130,7 +131,7 @@ case class Margin(date : LocalDateTime
                   , id : String
                   , fromAmount : Double, fromMarket : Market
                   , toAmount : Double, toMarket : Market
-                  , feeAmount : Double, feeMarket : Market
+                  , fees : Seq[FeePair]
                   , orderType : Operation.OrderType.Value
                   , pair : (Market, Market)
                   , exchanger : Exchanger
@@ -138,7 +139,7 @@ case class Margin(date : LocalDateTime
                   ) extends Operation {
 
   override def toString : String =
-    f"Margin($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s  $feeAmount%18.8f $feeMarket%-5s  $description)"
+    f"Margin($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s  ${Operation.feesToString(fees)}  $description)"
 }
 
 
