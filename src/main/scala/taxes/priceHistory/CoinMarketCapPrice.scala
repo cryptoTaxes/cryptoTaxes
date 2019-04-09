@@ -126,6 +126,7 @@ object CoinMarketCapPrice {
 
   def downloadPrices(): Unit = {
     for((market, coinMarketCapID) <- allPairs) {
+      Thread.sleep(5000) // to avoid Http 429 error
       val dailyPrices = downloadPricesFor(market, coinMarketCapID)
       saveToDisk(market, dailyPrices)
     }
