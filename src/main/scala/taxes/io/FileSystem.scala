@@ -10,6 +10,31 @@ import taxes.{Config, Market}
 object FileSystem {
   type File = java.io.File
 
+  def looksLikeUTF16LE(fileName : String): Boolean = {
+    var is : java.io.FileInputStream = null
+    var isUTF16LE = false
+    try {
+      is = new java.io.FileInputStream(fileName)
+      val sz = 10
+      val buffer = new Array[Byte](sz)
+      val readSz = is.read(buffer, 0, sz)
+
+      isUTF16LE = readSz > 1
+      var i = 0
+      while (isUTF16LE && i < readSz) {
+        isUTF16LE = isUTF16LE && (if (i % 2 == 0) buffer(i) != 0 else buffer(i) == 0)
+        i += 1
+      }
+    } catch {
+      case _ =>
+        ;
+    } finally {
+      if(is != null)
+        is.close()
+    }
+    return isUTF16LE
+  }
+
   object File {
     def apply(fileName : String) : File =
       new File(fileName)
