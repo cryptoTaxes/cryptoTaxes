@@ -94,10 +94,18 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
   def copy: StockContainer
 
   val eps : Double =
-    if(market==Market.euro || market==Market.usd)
-      0.00001
-    else
-      Config.config.epsilon
+    if(Config.config.deprecatedUp2017Version) {
+      // this is really a bug, fixed below for non-deprecated version
+      if (baseMarket == Market.euro || baseMarket == Market.usd)
+        0.00001
+      else
+        Config.config.epsilon
+    } else {
+      if (market == Market.euro || market == Market.usd)
+        0.00001
+      else
+        Config.config.epsilon
+    }
 
   val ledger = Ledger(market)
 
