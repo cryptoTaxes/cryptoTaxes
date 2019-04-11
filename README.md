@@ -33,7 +33,7 @@ The following command line parameters can be written after the command:
 
 * `-verbosity=level`     where level is a number from 0 on, the higher the number, the more information is shown in report.
 
-* `-currency=curr`       where `curr` can be `euro`, `btc` or `usd`.
+* `-currency=curr`       your base coin, where `curr` can be `euro`, `btc` or `usd`.
 
 * `-download-prices=yes` in order to update prices from [Coinmarketcap](coinmarketcap.com) and [BDE](www.bde.es).
 
@@ -59,11 +59,13 @@ The following command line parameters can be written after the command:
 
 * `-year=y` to only process operations for year `y`. Assumes previous years have been processed before.
 
-After running the program, output report will be produced in folder `data/usr/yourUser/output`.
+* `-parity-priorities=file` file (in `data/config` folder) defining priorities for choosing proxies in order to calculate prices in your base coin.
+
+After running the program, output reports will be produced in folder `data/usr/yourUser/output`.
 
 ## Configuration
 
-The program can be further configured by editing text files in folder `data/config`.
+The program can be further configured by editing text files in `data/config` folder.
 
 
 

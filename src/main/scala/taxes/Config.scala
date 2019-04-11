@@ -56,7 +56,7 @@ object Config {
   implicit val priceCalculationJson = jsonEnumFormat(PriceCalculation)
   implicit val accountingJson = jsonEnumFormat(Accounting)
 
-  implicit val configJson = jsonFormat11(Config.apply)
+  implicit val configJson = jsonFormat12(Config.apply)
 }
 
 
@@ -70,6 +70,7 @@ case class Config(user : String
                   , epsilon : Double
                   , timeZone : ZoneId
                   , filterYear : Option[Int]
+                  , parityPrioritiesFile : String // in readConfigFolder
                   // internal flags, not for users
                   , deprecatedUp2017Version : Boolean
                   ) {
@@ -92,6 +93,7 @@ object DefaultConfig extends Config( user = "demo"
                                      , epsilon = 0.00000001
                                      , timeZone = ZoneId.systemDefault()
                                      , filterYear = None
+                                     , parityPrioritiesFile = "parityPriorities.txt"
                                      , deprecatedUp2017Version = false
                                      )
 

@@ -51,7 +51,7 @@ object Market {
     def parsePair(t : (Market, String)) = t match {
       case (market, str) => (normalize(market), str.toInt)
     }
-    Parse.readAssociations( FileSystem.readConfigFile("parityPriorities.txt")
+    Parse.readAssociations( FileSystem.readConfigFile(Config.config.parityPrioritiesFile)
                           , "Reading market priorities."
                           ).map(parsePair)
   }

@@ -150,6 +150,9 @@ object ParseCommandLine {
                   case _ => Logger.fatal(s"Non valid year $value")
                 }
               config = config.copy(filterYear = Some(year))
+            } else if(flag == "parity-priorities") {
+              val fileName = value
+              config = config.copy(parityPrioritiesFile = fileName)
             } else
               failParse
           } else
