@@ -3,6 +3,7 @@ package taxes.exchanger
 import taxes._
 import taxes.date._
 import taxes.io.FileSystem
+import taxes.util.Logger
 import taxes.util.parse._
 
 
@@ -10,16 +11,30 @@ object Binance extends Exchanger {
   override val id: String = "Binance"
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("binance", ".csv") {
-      def fileSource(fileName : String) = operationsReader(fileName)
+    new UserInputFolderSource[Operation]("binance", ".xlsx") {
+      def fileSource(fileName : String) = {
+        val csvFileName = extractToCSV(fileName)
+        operationsReader(csvFileName)
+      }
     }
   )
+
+  private val csvSeparator = ','
+
+  private def extractToCSV(fileName : String): String = {
+    Logger.trace(s"Generating csv file for $fileName.")
+    val (path, name, ext) = FileSystem.decompose(fileName)
+    val csvFileName = FileSystem.compose(Seq(path, "generated"), name, ".csv")
+
+    ExcelReader.XLSXToCSV(fileName, csvFileName, sep = csvSeparator)
+    return csvFileName
+  }
 
   private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
     override def lineScanner(line: String): Scanner =
-      QuotedScanner(line, '\"', ',')
+      QuotedScanner(line, '\"', csvSeparator)
 
     private val baseMarkets = List[Market]("BNB", "BTC", "ETH", "USDT")
 
@@ -55,7 +70,7 @@ object Binance extends Exchanger {
             // toDo check this further
             // This has to be the first case as if you're buying BNB and you pay
             // your fee with BNB, you get `amount` - `feeAmount'
-            if(feeCoin == baseMarket) {
+            if (feeCoin == baseMarket) {
               val exchange = Exchange(
                 date = date
                 , id = ""
@@ -66,7 +81,7 @@ object Binance extends Exchanger {
                 , description = desc
               )
               return CSVReader.Ok(exchange)
-            } else if(feeCoin == Market.normalize("BNB")) {
+            } else if (feeCoin == Market.normalize("BNB")) {
               val exchange = Exchange(
                 date = date
                 , id = ""
@@ -80,7 +95,7 @@ object Binance extends Exchanger {
             } else
               return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
           } else if (orderType == "SELL") {
-            if(feeCoin == quoteMarket) {
+            if (feeCoin == quoteMarket) {
               val exchange = Exchange(
                 date = date
                 , id = ""
@@ -91,7 +106,7 @@ object Binance extends Exchanger {
                 , description = desc
               )
               return CSVReader.Ok(exchange)
-            } else if(feeCoin == Market.normalize("BNB")) {
+            } else if (feeCoin == Market.normalize("BNB")) {
               val exchange = Exchange(
                 date = date
                 , id = ""
@@ -108,5 +123,6 @@ object Binance extends Exchanger {
             return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
       }
     }
+
   }
 }

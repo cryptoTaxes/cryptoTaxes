@@ -1,11 +1,11 @@
-Place in this folder your Binance trade history in csv format.
+Place in this folder your Binance trade history in xlsx format.
 
 Binance only lets you export your trade history in xlsx format
 (from Orders -> Trade History -> Export Complete Trade History menu).
 
-You will have to convert your xlsx file into csv format (using some spreadsheet
-application such as OpenOffice Calc or Microsoft Excel) and place the resulting
-file in this folder.
+CryptoTaxes will preprocess your xlxs files in this folder and will
+extract corresponding csv files into "generated" folder. Please, don't
+place csv files yourself into "generated" folder as they won't be
+processed by the program and could get overwritten.
 
-Check provided TradeHistory.csv example and please note that a comma
-is used as a separator for cells in same row.
+Check provided TradeHistory.xlsx example file.
