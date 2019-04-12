@@ -23,9 +23,10 @@ object Bittrex extends Exchanger {
   private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
+    private val (isUTF16LE, hasBOM) = FileSystem.looksLikeUTF16LE(fileName)
     override val charset: String =
-      if(FileSystem.looksLikeUTF16LE(fileName))
-        "UTF-16LE"
+      if(isUTF16LE)
+        if (hasBOM) "x-UTF-16LE-BOM" else "UTF-16LE"
       else
         "UTF-8"
 
@@ -40,9 +41,9 @@ object Bittrex extends Exchanger {
     private lazy val is2018Format = skippedLines(0) == header2018
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] =
-      if(is2014_2017Format)
+      if (is2014_2017Format)
         readLine2014_2017(line, scLn)
-      else if(is2018Format)
+      else if (is2018Format)
         readLine2018(line, scLn)
       else
         Logger.fatal(s"Error reading Bittrex order history.\nFile: $fileName.\nUnknown header: ${skippedLines(0)}")

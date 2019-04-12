@@ -10,17 +10,24 @@ import taxes.{Config, Market}
 object FileSystem {
   type File = java.io.File
 
-  def looksLikeUTF16LE(fileName : String): Boolean = {
+  def looksLikeUTF16LE(fileName : String): (Boolean, Boolean) = {
     var is : java.io.FileInputStream = null
     var isUTF16LE = false
+    var hasBOM = false
     try {
       is = new java.io.FileInputStream(fileName)
       val sz = 10
       val buffer = new Array[Byte](sz)
       val readSz = is.read(buffer, 0, sz)
 
+      hasBOM =
+        if(readSz>1)
+          buffer(0) == 0xFF.toByte && buffer(1) == 0xFE.toByte
+        else
+          false
+
       isUTF16LE = readSz > 1
-      var i = 0
+      var i = if (hasBOM) 2 else 0
       while (isUTF16LE && i < readSz) {
         isUTF16LE = isUTF16LE && (if (i % 2 == 0) buffer(i) != 0 else buffer(i) == 0)
         i += 1
@@ -32,7 +39,7 @@ object FileSystem {
       if(is != null)
         is.close()
     }
-    return isUTF16LE
+    return (isUTF16LE, hasBOM)
   }
 
   object File {
@@ -196,10 +203,10 @@ object FileSystem {
   }
 
 
-  def withPrintStream(file : File, charset : Charset = defaultCharset)(p : java.io.PrintStream => Unit): Unit = {
+  def withPrintStream(file : File, charset : Charset = defaultCharset, doBackUp : Boolean = true)(p : java.io.PrintStream => Unit): Unit = {
     var ps : java.io.PrintStream = null
     try {
-      ps = PrintStream(file, charset)
+      ps = PrintStream(file, charset, doBackUp)
       p(ps)
     } finally {
       if (ps != null)
@@ -207,8 +214,14 @@ object FileSystem {
     }
   }
 
+  def withPrintStream(fileName : String, charset : Charset, doBackUp : Boolean)(p : java.io.PrintStream => Unit): Unit =
+    withPrintStream(new File(fileName), charset, doBackUp)(p)
+
   def withPrintStream(fileName : String, charset : Charset)(p : java.io.PrintStream => Unit): Unit =
     withPrintStream(new File(fileName), charset)(p)
+
+  def withPrintStream(fileName : String, doBackUp : Boolean)(p : java.io.PrintStream => Unit): Unit =
+    withPrintStream(new File(fileName), doBackUp = doBackUp)(p)
 
   def withPrintStream(fileName : String)(p : java.io.PrintStream => Unit): Unit =
     withPrintStream(new File(fileName))(p)
