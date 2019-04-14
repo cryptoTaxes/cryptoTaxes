@@ -44,6 +44,9 @@ object LocalDateTime {
   def parseAsUTC(str : String, format : String) : LocalDateTime =
     parse(str+UTC_Offset, s"${format}Z")
 
+  def parseAsUTC(str : String, UTC_Offset : String, format : String) : LocalDateTime =
+    parse(str+UTC_Offset, s"${format}Z")
+
   def parseAsMyZoneId(str : String, format: String) : LocalDateTime =
     parse(str+myZoneId, s"${format}VV")
 }

@@ -29,6 +29,7 @@ object Exchanger {
       , GDAX
       , HitBTC
       , Kraken
+      , Kucoin
       , LocalBTC
       , Poloniex
       , Shapeshift
