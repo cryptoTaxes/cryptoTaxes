@@ -1,0 +1,4 @@
+transactionId,transactionHash,date,market,makerOrTaker,buyOrSell,tokenAmount,etherAmount,usdValue,fee,gasFee					
+1831522,0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,2018-07-11 03:54:19,GET/ETH,maker,buy,261.14677833,0.26506398,114.40,0.261146778325123153,0.00255
+1808733,0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,2018-07-08 01:08:44,SNTR/ETH,maker,buy,1408450.7042,0.25,121.19,1408.4507042,0.01037
+1808695,0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,2018-07-08 01:04:19,PCLOLD/ETH,maker,buy,38514.1014766,0.23493602,113.89,38.5141014766,0.01037

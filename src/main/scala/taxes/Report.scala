@@ -526,7 +526,7 @@ object Report {
       // removes corresponding amounts from our stock of coins and records the
       // fee as part of the current operation.
       for(fee <- fees; if fee.amount>0)
-        processed ::=
+        processed :+=
           preprocessFee(Fee(
             date = exchange.date
             , id = exchange.id
@@ -534,6 +534,7 @@ object Report {
             , market = fee.market
             , exchanger = exchange.exchanger
             , description = ""
+            , alt = fee.alt
           ))
 
 
@@ -714,13 +715,14 @@ object Report {
           )
         } else {
           for (fee <- fees; if fee.amount > 0)
-            processedFees ::= preprocessFee(
+            processedFees :+= preprocessFee(
               Fee(margin.date
               , margin.id
               , fee.amount
               , fee.market
               , margin.exchanger
               , ""
+              , alt = fee.alt
               )
             )
         }

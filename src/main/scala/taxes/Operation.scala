@@ -26,7 +26,7 @@ object Operation {
   }
 
   implicit val orderJson = jsonEnumFormat(OrderType)
-  implicit val feePairJson = jsonFormat2(FeePair)
+  implicit val feePairJson = jsonFormat3(FeePair)
   implicit val exchangeJson = jsonFormat10(Exchange)
   implicit val marginJson = jsonFormat11(Margin)
   implicit val feeJson = jsonFormat7(Fee)
@@ -100,7 +100,7 @@ object Operation {
       and independently pay the fee from other funds
   ************************************************************************/
 
-case class FeePair(amount : Double, market: Market)
+case class FeePair(amount : Double, market: Market, alt : Option[(Double, Market)] = None)
 
 
 case class Exchange(date : LocalDateTime

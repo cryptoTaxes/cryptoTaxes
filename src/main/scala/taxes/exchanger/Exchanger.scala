@@ -28,6 +28,7 @@ object Exchanger {
       , General
       , GDAX
       , HitBTC
+      , Idex
       , Kraken
       , Kucoin
       , LocalBTC
