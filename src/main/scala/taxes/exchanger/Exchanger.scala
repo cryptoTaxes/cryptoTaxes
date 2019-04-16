@@ -37,7 +37,18 @@ object Exchanger {
       , Yobit
       )
 
-  def readAllOperations(): Seq[Operation] = {
+  def preprocessAndReadAllSources(): Seq[Operation] = {
+    for (exchanger <- allExchangers) {
+      Logger.trace(s"Preprocessing data for $exchanger.")
+      for (src <- exchanger.sources)
+        src.preprocess() match {
+          case None =>
+            ;
+          case Some(procedure) =>
+            procedure()
+        }
+    }
+
     val operations = ListBuffer[Operation]()
     for (exchanger <- allExchangers) {
       Logger.trace(s"Reading data for $exchanger.")

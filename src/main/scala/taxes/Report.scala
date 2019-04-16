@@ -221,7 +221,7 @@ object Report {
         operation.date.getYear == year
     }
 
-    val operations = Exchanger.readAllOperations().filter(relevant).sortBy(_.date)
+    val operations = Exchanger.preprocessAndReadAllSources().filter(relevant).sortBy(_.date)
 
     val thisYearOperations = ListBuffer[Operation]()
 

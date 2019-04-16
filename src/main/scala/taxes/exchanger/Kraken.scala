@@ -47,7 +47,6 @@ object Kraken extends Exchanger {
     )
   }
 
-
   private type TxID = String
   private case class Ledger(txType : String, market: Market, amount: Double, fee: Double)
   private val ledgersCache = scala.collection.mutable.Map[TxID, Ledger]()
@@ -62,11 +61,6 @@ object Kraken extends Exchanger {
       new UserInputFolderSource[Operation]("kraken/ledgers", ".csv") {
         def fileSource(fileName: String) = ledgerReader(fileName)
       },
-      // This one is not really a reader but a preprocessor
-      // for populating isMarginCache
-      new UserInputFolderSource[Nothing](tradesFolder, ".csv") {
-        def fileSource(fileName: String) = isMarginPreprocessReader(fileName)
-      },
       new UserInputFolderSource[Operation](tradesFolder, ".csv") {
         def fileSource(fileName: String) = operationsReader(fileName)
       }
@@ -74,6 +68,12 @@ object Kraken extends Exchanger {
   }
 
   private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
+    // A preprocessor for populating isMarginCache
+    override def preprocess() = Some { () =>
+      Logger.trace(s"Determining margin trades from $fileName.")
+      isMarginPreprocessReader(fileName).read()
+    }
+
     override val linesToSkip = 1
 
     override def lineScanner(line: String): Scanner =
