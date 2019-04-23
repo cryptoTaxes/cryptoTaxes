@@ -173,7 +173,9 @@ object Kraken extends Exchanger {
                 cost - (if (fee1Market == quoteMarket) fee1 else 0)
               else
                 cost - {
-                  if(fee2Market == quoteMarket)
+                  if(fee1Market == quoteMarket && fee2Market == quoteMarket)
+                    fee1 + fee2
+                  else if(fee2Market == quoteMarket)
                     fee2 // we end up getting cost - fee2
                   else if(fee1Market == quoteMarket)
                     fee1 // we end up getting cost - fee1
@@ -209,7 +211,9 @@ object Kraken extends Exchanger {
               vol - (if (fee1Market == quoteMarket) fee1 else 0)
             else
               vol - {
-                if(fee1Market == baseMarket)
+                if(fee1Market == baseMarket && fee2Market == baseMarket)
+                  fee1 + fee2
+                else if(fee1Market == baseMarket)
                   fee1 // we end up getting cost - fee1
                 else if(fee2Market == baseMarket)
                   fee2 // we end up getting cost - fee2
@@ -259,7 +263,9 @@ object Kraken extends Exchanger {
         ledgersCache += (txid -> ledger)
 
         return CSVReader.Ignore
-      } else if (txType == "withdrawal" && (currency == Market.bitcoin || currency == Market.euro)) {
+      } else if (txType == "withdrawal"
+                  && txid.nonEmpty // kraken annotates withdrawals twice. Only valid one has a non-empty txid
+                  && (currency == Market.bitcoin || currency == Market.euro)) {
         val date = LocalDateTime.parseAsUTC(time, "yyyy-MM-dd HH:mm:ss") // kraken ledgers.csv uses UTC time zone
         val id = txid + "/" + refid
 
