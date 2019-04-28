@@ -313,6 +313,43 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
     </table>
   }
 
+  def printToCSVFile(csvFileName : String, year : Int): Unit = {
+    FileSystem.withPrintStream(csvFileName) { ps =>
+      ps.println()
+      ps.println(s"$year Final Portfolio")
+      ps.println("")
+
+      val sep = ";"
+      val decimals = 8
+
+      toList.filter(_.nonEmpty).sortBy(_.market).foreach { stockContainer =>
+        val baseMarket = stockContainer.baseMarket
+        val header = List("date", "exchanger", "amount", s"cost basis ($baseMarket)", s"subtotal ($baseMarket)", "total amount", s"total cost ($baseMarket)", s"average cost ($baseMarket)")
+        ps.println(stockContainer.market)
+        ps.println(header.mkString(sep))
+
+        var amount = 0.0
+        var cost = 0.0
+        for (stock: Stock <- stockContainer) {
+          amount += stock.amount
+          val subtotal = stock.amount * stock.costBasis
+          cost += subtotal
+          val line = List[Any](stock.date.format(Format.df), stock.exchanger
+            , Format.formatDecimal(stock.amount, decimals)
+            , Format.formatDecimal(stock.costBasis, decimals)
+            , Format.formatDecimal(subtotal, decimals)
+            , Format.formatDecimal(amount, decimals)
+            , Format.formatDecimal(cost, decimals)
+            , Format.formatDecimal(cost / amount, decimals)
+          )
+          ps.println(line.mkString(sep))
+        }
+        ps.println()
+        ps.println()
+        ps.println()
+      }
+    }
+  }
 
   def loadFromDisk(path : String): Unit = {
     val src = new FolderSource[StockContainer](path, FileSystem.stockExtension) {

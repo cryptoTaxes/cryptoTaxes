@@ -293,6 +293,9 @@ object Report {
       htmlPortfolio += state.stocks.toHTML(htmlPortfolioTitle)
       htmlPortfolio.close()
 
+      val csvFileName = FileSystem.userOutputFolder(year)+s"/Portfolio$year.csv"
+      state.stocks.printToCSVFile(csvFileName, year)
+
 
       val htmlExtraFile = s"${FileSystem.userOutputFolder(year)}/Extra$year.html"
       val htmlExtraTitle = s"$year Statistics"
