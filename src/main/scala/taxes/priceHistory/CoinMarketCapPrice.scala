@@ -59,7 +59,65 @@ object CoinMarketCapPrice {
     }
   }
 
-  private def scrapPrices(market: Market, coinMarketCapID: String, source : FileSystem.Source): List[DailyPrice] = {
+ private def scrapPrices(market: Market, coinMarketCapID: String, source : FileSystem.Source): List[DailyPrice] = {
+   val tokenBeginRow = "<div class=\"ec35kh-0 dWPDaQ\">"
+   val tokenBeginPrice = "<div class=\"sc-47a23l-0 jzTYkA\">"
+   val tokenEnd = "<"
+
+   var textLine = source.getLines().dropWhile(_.indexOf(tokenBeginRow) < 0).next()
+
+   def getToken(before: String, after: String): String = {
+     var idx = textLine.indexOf(before)
+     if(idx < 0)
+       Logger.fatal(s"Error reading coinmarketcap prices. Couldn't find $before.")
+
+     textLine = textLine.drop(idx+before.length)
+
+     idx = textLine.indexOf(after)
+     if(idx < 0)
+       Logger.fatal(s"Error reading coinmarketcap prices. Couldn't find $after.")
+
+     val token = textLine.take(idx)
+     textLine = textLine.drop(idx+after.length)
+     return token
+   }
+
+   def getPrice(): Double = Parse.asDouble(getToken(tokenBeginPrice, tokenEnd))
+
+   val dailyPrices = ListBuffer[DailyPrice]()
+
+   var goOn = true
+   while(goOn) {
+     val idx = textLine.indexOf(tokenBeginRow)
+     if(idx < 0)
+       goOn = false
+     else {
+       val dateStr = getToken(tokenBeginRow, tokenEnd)
+
+       val sc = SeparatedScanner(dateStr, "[\t ,]+")
+       val month = sc.next()
+       val day = sc.nextInt()
+       val year = sc.nextInt()
+       sc.close()
+
+       val date = LocalDate.apply(year, parseMonth(month), day)
+       val open = getPrice()
+       val high = getPrice()
+       val low = getPrice()
+       val close = getPrice()
+
+       val dailyPrice = DailyPrice(date, open, high, low, close)
+       dailyPrices += dailyPrice
+     }
+   }
+
+   if (dailyPrices.isEmpty)
+     Logger.fatal(s"Error reading coinmarketcap prices. Couldn't find $tokenBeginRow.")
+
+   return dailyPrices.toList
+  }
+
+  private def scrapPricesOld(market: Market, coinMarketCapID: String, source : FileSystem.Source): List[DailyPrice] = {
     val tokenBegin = "<table class=\"table\">"
     val tokenEnd = "</tbody>"
     val tokenNoResults = "<tr class=\"text-center\">"
