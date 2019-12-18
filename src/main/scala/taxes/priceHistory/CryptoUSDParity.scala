@@ -4,6 +4,6 @@ import taxes._
 import taxes.date._
 
 object CryptoUSDParity {
-  def apply(market: Market, date: LocalDateTime): Price =
-    CoinMarketCapPrice(market, date)
+  def apply(currency: Currency, date: LocalDateTime): Price =
+    CoinMarketCapPrice(currency, date)
 }

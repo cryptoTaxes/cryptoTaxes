@@ -26,7 +26,7 @@ object Idex extends Exchanger {
       val transactionId = scLn.next("transactionId")
       val transactionHash = scLn.next("transactionHash")
       val date = LocalDateTime.parseAsUTC(scLn.next("date"), "+0100", "yyyy-MM-dd HH:mm:ss") // Idex trade history file seems to use UTC+1 time zone
-      val market = scLn.next("market")
+      val currency = scLn.next("market")
       val makerOrTaker = scLn.next("makerOrTaker")
       val buyOrSell = scLn.next("buyOrSell")
       val tokenAmount = scLn.nextDouble("tokenAmount")
@@ -36,31 +36,31 @@ object Idex extends Exchanger {
       val gasFee = scLn.nextDouble("gasFee")
 
 
-      val (baseMarket_0, quoteMarket_0) = Parse.split(market, "/")
-      val baseMarket = Market.normalize(baseMarket_0)
-      val quoteMarket = Market.normalize(quoteMarket_0)
+      val (_baseCurrency, _quoteCurrency) = Parse.split(currency, "/")
+      val baseCurrency = Currency.normalize(_baseCurrency)
+      val quoteCurrency = Currency.normalize(_quoteCurrency)
 
       val desc = "Order: " + transactionId + " " + transactionHash
 
       /*
-      https://idex.market/faq
+      https://idex.currency/faq
 
       What are the fees to trade on IDEX?
 
-      IDEX charges 0.2% for the market taker and 0.1% for the market maker.
+      IDEX charges 0.2% for the currency taker and 0.1% for the currency maker.
       Users also pay gas fees to put their transactions on blockchain (read more below).
 
       What is a maker and taker?
 
-      Market makers place new orders on the books and wait for another user to match them.
-      They can be buys or sells. Market takers find existing orders on the books and fill
+      Currency makers place new orders on the books and wait for another user to match them.
+      They can be buys or sells. Currency takers find existing orders on the books and fill
       them, thus taking orders off of the books.
 
-      I made a trade as a market taker, why was I charged more than 0.2%?
+      I made a trade as a currency taker, why was I charged more than 0.2%?
 
-      Market takers are responsible for covering the gas fees associated with each trade.
+      Currency takers are responsible for covering the gas fees associated with each trade.
       Given our design, the exchange must pay this gas fee, priced in ether, when dispatching
-      the trade to the network and then deduct it from the balance of the market taker. When
+      the trade to the network and then deduct it from the balance of the currency taker. When
       exchanging tokens for ether the amount of eth deducted matches that of the gas fee. When
       exchanging ether for tokens, IDEX deducts the equivalent amount of tokens based on the
       price of the asset in ETH. This price is calculated using the average of the last 10 trades.
@@ -90,8 +90,8 @@ object Idex extends Exchanger {
       */
 
       if(buyOrSell == "buy") {
-        val gasFeeInBaseMarket =
-          if(quoteMarket != Market.ethereum) {
+        val gasFeeInBaseCurrency =
+          if(quoteCurrency != Currency.ethereum) {
             Logger.warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading gass fee for this transaction is not currently supported: $line.")
             0
           } else {
@@ -102,9 +102,9 @@ object Idex extends Exchanger {
         val exchange = Exchange(
           date = date
           , id = transactionId
-          , fromAmount = etherAmount, fromMarket = quoteMarket
-          , toAmount = tokenAmount - fee - gasFeeInBaseMarket, toMarket = baseMarket
-          , fees = List(FeePair(fee, baseMarket), FeePair(gasFeeInBaseMarket, baseMarket, alt = Some(gasFee, quoteMarket)))
+          , fromAmount = etherAmount, fromCurrency = quoteCurrency
+          , toAmount = tokenAmount - fee - gasFeeInBaseCurrency, toCurrency = baseCurrency
+          , fees = List(FeePair(fee, baseCurrency), FeePair(gasFeeInBaseCurrency, baseCurrency, alt = Some(gasFee, quoteCurrency)))
           , exchanger = Idex
           , description = desc
         )

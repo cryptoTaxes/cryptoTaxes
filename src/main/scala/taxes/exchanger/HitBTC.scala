@@ -43,18 +43,18 @@ object HitBTC extends Exchanger {
       val desc = "Order: " + tradeID + "/" + orderID
 
       val (m1,m2) = Parse.split(instrument,"/")
-      val baseMarket = Market.normalize(m1)
-      val quoteMarket = Market.normalize(m2)
-      val isShort = side == "sell"
+      val baseCurrency = Currency.normalize(m1)
+      val quoteCurrency = Currency.normalize(m2)
+      val isSell = side == "sell"
 
-      // quoteMarket is usually BTC
-      if(isShort) {
+      // quoteCurrency is usually BTC
+      if(isSell) {
         val exchange = Exchange(
           date = date
           , id = tradeID + "/" + orderID
-          , fromAmount = quantity, fromMarket = baseMarket
-          , toAmount = volume - fee + rebate, toMarket = quoteMarket
-          , fees = List(FeePair(fee, quoteMarket))
+          , fromAmount = quantity, fromCurrency = baseCurrency
+          , toAmount = volume - fee + rebate, toCurrency = quoteCurrency
+          , fees = List(FeePair(fee, quoteCurrency))
           , exchanger = HitBTC
           , description = desc
         )
@@ -81,7 +81,7 @@ object HitBTC extends Exchanger {
       val amount = scLn.nextDouble("Amount")
       val txHash = scLn.next("Transaction Hash")
       val mainAccountBalance = scLn.nextDouble("Main account balance")
-      val currency = Market.normalize(scLn.next("Currency"))
+      val currency = Currency.normalize(scLn.next("Currency"))
 
       if(what=="Deposit") {
         val desc = "Deposit " + txHash
@@ -89,7 +89,7 @@ object HitBTC extends Exchanger {
           date = date
           , id = operationId
           , amount = amount
-          , market = currency
+          , currency = currency
           , exchanger = HitBTC
           , description = desc
         )
@@ -100,7 +100,7 @@ object HitBTC extends Exchanger {
           date = date
           , id = operationId
           , amount = amount.abs
-          , market = currency
+          , currency = currency
           , exchanger = HitBTC
           , description = desc
         )

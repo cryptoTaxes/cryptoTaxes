@@ -46,20 +46,20 @@ object CoinMarketCapPrice {
     return contents
   }
 
-  private def downloadPricesFor(market: Market, coinMarketCapID: String): List[DailyPrice] = {
-    Logger.trace(s"Downloading prices for $market from coinmarketcap.com.")
+  private def downloadPricesFor(currency: Currency, coinMarketCapId: String): List[DailyPrice] = {
+    Logger.trace(s"Downloading prices for $currency from coinmarketcap.com.")
     val (yearBegin, yearEnd) = Config.config.filterYear match {
       case None => (2010, 2500)
       case Some(year) => (year, year)
     }
 
-    val url = s"https://coinmarketcap.com/currencies/$coinMarketCapID/historical-data/?start=${yearBegin}0101&end=${yearEnd}1231"
+    val url = s"https://coinmarketcap.com/currencies/$coinMarketCapId/historical-data/?start=${yearBegin}0101&end=${yearEnd}1231"
     return Network.Http.withSource(url){src =>
-      scrapPrices(market, coinMarketCapID, src)
+      scrapPrices(currency, coinMarketCapId, src)
     }
   }
 
- private def scrapPrices(market: Market, coinMarketCapID: String, source: FileSystem.Source): List[DailyPrice] = {
+ private def scrapPrices(currency: Currency, coinMarketCapId: String, source: FileSystem.Source): List[DailyPrice] = {
    val tokenBeginRow = "<div class=\"ec35kh-0 dWPDaQ\">"
    val tokenBeginPrice = "<div class=\"sc-47a23l-0 jzTYkA\">"
    val tokenEnd = "<"
@@ -117,7 +117,7 @@ object CoinMarketCapPrice {
    return dailyPrices.toList
   }
 
-  private def scrapPricesOld(market: Market, coinMarketCapID: String, source: FileSystem.Source): List[DailyPrice] = {
+  private def scrapPricesOld(currency: Currency, coinMarketCapId: String, source: FileSystem.Source): List[DailyPrice] = {
     val tokenBegin = "<table class=\"table\">"
     val tokenEnd = "</tbody>"
     val tokenNoResults = "<tr class=\"text-center\">"
@@ -155,17 +155,17 @@ object CoinMarketCapPrice {
       } else {
         goOn = false
         if(line1 != tokenEnd && line1 != tokenNoResults)
-          Logger.fatal(s"Something went wrong scrapping prices for $coinMarketCapID.\n$line1")
+          Logger.fatal(s"Something went wrong scrapping prices for $coinMarketCapId.\n$line1")
       }
     }
     return dailyPrices.toList
   }
 
-  private def saveToDisk(market: Market, dailyPrices: List[DailyPrice]): Unit = {
+  private def saveToDisk(currency: Currency, dailyPrices: List[DailyPrice]): Unit = {
     val map = dailyPrices.groupBy(_.date.getYear)
 
     for ((year, dailyPrices) <- map) {
-      val fileName = FileSystem.coinMarketCapFile(market, year)
+      val fileName = FileSystem.coinMarketCapFile(currency, year)
       FileSystem.withPrintStream(fileName) { ps =>
         ps.print(dailyPrices.toJson.prettyPrint)
       }
@@ -173,28 +173,28 @@ object CoinMarketCapPrice {
   }
 
    private lazy val allPairs = Parse.readKeysValue(
-    FileSystem.readConfigFile("coinmarketcapMarkets.txt")
-    , "Reading coinmarketcap markets").map{
-      case (market, url) => (Market.normalize(market), url)
+    FileSystem.readConfigFile("coinmarketcapCurrencies.txt")
+    , "Reading coinmarketcap currencies").map{
+      case (currency, url) => (Currency.normalize(currency), url)
     }
 
   def downloadPrices(): Unit = {
-    for((market, coinMarketCapID) <- allPairs) {
+    for((currency, coinMarketCapId) <- allPairs) {
       Thread.sleep(5000) // to avoid Http 429 error
-      val dailyPrices = downloadPricesFor(market, coinMarketCapID)
-      saveToDisk(market, dailyPrices)
+      val dailyPrices = downloadPricesFor(currency, coinMarketCapId)
+      saveToDisk(currency, dailyPrices)
     }
   }
 
-  private def loadFromDisk(market: Market): scala.collection.mutable.Map[LocalDate, Price] = {
-    Logger.trace(s"Loading CoinMarketCap prices for $market.")
+  private def loadFromDisk(currency: Currency): scala.collection.mutable.Map[LocalDate, Price] = {
+    Logger.trace(s"Loading CoinMarketCap prices for $currency.")
 
     val ext = Config.config.filterYear match {
       case None => FileSystem.coinMarketCapExtension
       case Some(year) => FileSystem.coinMarketCapExtension(year)
     }
 
-    val path = FileSystem.coinMarketCapFolder(market)
+    val path = FileSystem.coinMarketCapFolder(currency)
 
     val src = new FolderSource[DailyPrice](path, ext) {
       override def fileSource(fileName: String): FileSource[DailyPrice] =
@@ -220,27 +220,27 @@ object CoinMarketCapPrice {
     return map
   }
 
-  case class CoinMarketCapPrice(market: Market) extends PriceHistory {
-    lazy val prices = loadFromDisk(market)
+  case class CoinMarketCapPrice(currency: Currency) extends PriceHistory {
+    lazy val prices = loadFromDisk(currency)
 
     def apply(date: LocalDateTime): Price =
       prices.get(LocalDate.of(date)) match {
         case None =>
-          Logger.fatal(s"price for $market at $date not found")
+          Logger.fatal(s"price for $currency at $date not found")
         case Some(price) => price
       }
   }
 
-  private lazy val markets2CoinMarketPrices = {
-    for((market, _) <- allPairs)
-      yield (market, CoinMarketCapPrice(market))
+  private lazy val currencies2CoinMarketCapPrices = {
+    for((currency, _) <- allPairs)
+      yield (currency, CoinMarketCapPrice(currency))
   }
 
-  // returns price in USD for a market at a given date
-  def apply(market: Market, date: LocalDateTime): Price =
-    markets2CoinMarketPrices.get(market) match  {
+  // returns price in USD for a currency at a given date
+  def apply(currency: Currency, date: LocalDateTime): Price =
+    currencies2CoinMarketCapPrices.get(currency) match  {
       case Some(coinMarketCapPrice) => coinMarketCapPrice(date)
-      case None => Logger.fatal(s"prices for $market not found.")
+      case None => Logger.fatal(s"prices for $currency not found.")
     }
 }
 

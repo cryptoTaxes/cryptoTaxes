@@ -34,17 +34,17 @@ object Poloniex extends Exchanger {
       val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Poloniex csv trade history uses UTC time zone
 
       val (aux1, aux2) = Parse.split(scLn.next("Pair"), "/")
-      val baseMarket = Market.normalize(aux1)
-      val quoteMarket = Market.normalize(aux2)
+      val baseCurrency = Currency.normalize(aux1)
+      val quoteCurrency = Currency.normalize(aux2)
 
       // BEWARE!!!
       // According to the Wikipedia (https://en.wikipedia.org/wiki/Currency_pair),
-      // throughout this program we call quote the market unit used for the price and
-      // base the other market in the pair. In other words, price is expressed as a quote per base ratio.
+      // throughout this program we call quote the currency unit used for the price and
+      // base the other currency in the pair. In other words, price is expressed as a quote per base ratio.
       //
       // So, if price for ETH/BTC pair is 0.07 BTC/ETH, quote is BTC and base is ETH.
-      // When you sell a pair, you release coins from the base market and
-      // when you buy, you acquire coins from the base market.
+      // When you sell a pair, you release coins from the base currency and
+      // when you buy, you acquire coins from the base currency.
       //
       // This seems to be the usual convention but Poloniex uses the opposite one. Nevertheless
       // we still maintain the same terminology used in the rest of this program for Poloniex too.
@@ -88,9 +88,9 @@ object Poloniex extends Exchanger {
             Exchange(
               date = date
               , id = orderNumber
-              , fromAmount = amount, fromMarket = baseMarket
-              , toAmount = total - fee, toMarket = quoteMarket
-              , fees = List(FeePair(fee, quoteMarket))
+              , fromAmount = amount, fromCurrency = baseCurrency
+              , toAmount = total - fee, toCurrency = quoteCurrency
+              , fees = List(FeePair(fee, quoteCurrency))
               , exchanger = Poloniex
               , description = desc
             )
@@ -99,11 +99,11 @@ object Poloniex extends Exchanger {
             Exchange(
               date = date
               , id = orderNumber
-              , fromAmount = total, fromMarket = quoteMarket
-              , toAmount = amount - fee, toMarket = baseMarket
-              , fees = List(FeePair(fee, baseMarket))
-              // Usually, quoteMarket is BTC so we set fee in BTC
-              // fee = amount*feePercent/100*price, feeMarket = quoteMarket
+              , fromAmount = total, fromCurrency = quoteCurrency
+              , toAmount = amount - fee, toCurrency = baseCurrency
+              , fees = List(FeePair(fee, baseCurrency))
+              // Usually, quoteCurrency is BTC so we set fee in BTC
+              // fee = amount*feePercent/100*price, feeCurrency = quoteCurrency
               , exchanger = Poloniex
               , description = desc
             )
@@ -114,12 +114,12 @@ object Poloniex extends Exchanger {
         val settlement = Exchange(
           date = date
           , id = orderNumber
-          , fromAmount = total, fromMarket = quoteMarket
-          , toAmount = amount*(100-feePercent)/100, toMarket = baseMarket
-          , fees = List(FeePair(amount*feePercent/100, baseMarket))
+          , fromAmount = total, fromCurrency = quoteCurrency
+          , toAmount = amount*(100-feePercent)/100, toCurrency = baseCurrency
+          , fees = List(FeePair(amount*feePercent/100, baseCurrency))
           , isSettlement = true
-          // Usually, quoteMarket is BTC so we can set fee in BTC
-          //, fee = amount*feePercent/100*price, feeMarket = quoteMarket
+          // Usually, quoteCurrency is BTC so we can set fee in BTC
+          //, fee = amount*feePercent/100*price, feeCurrency = quoteCurrency
           , exchanger = Poloniex
           , description = desc + " settlement"
         )
@@ -131,11 +131,13 @@ object Poloniex extends Exchanger {
             Margin(
               date = date
               , id = orderNumber
-              , fromAmount = amount, fromMarket = baseMarket // we short the whole amount but only pay with provided total minus fee
-              , toAmount = total - fee /*this total*/ /* baseTotalLessFee */, toMarket = quoteMarket
-              , fees = List(FeePair(fee, quoteMarket)) // quoteMarket is usually BTC
+              , fromAmount = amount
+              , fromCurrency = baseCurrency // we short the whole amount but only pay with provided total minus fee
+              , toAmount = total - fee /*this total*/ /* baseTotalLessFee */
+              , toCurrency = quoteCurrency
+              , fees = List(FeePair(fee, quoteCurrency)) // quoteCurrency is usually BTC
               , orderType = Operation.OrderType.Sell
-              , pair = (baseMarket, quoteMarket)
+              , pair = (baseCurrency, quoteCurrency)
               , exchanger = Poloniex
               , description = desc
             )
@@ -144,13 +146,15 @@ object Poloniex extends Exchanger {
             Margin(
               date = date
               , id = orderNumber
-              , fromAmount = total /*this * (100 - feePercent)/100 */, fromMarket = quoteMarket
-              , toAmount = quoteTotalLessFee, toMarket = baseMarket
-              , fees = List(FeePair(fee, baseMarket))
-              // Usually, quoteMarket is BTC so we can set fee in BTC
-              //, fee = amount*feePercent/100*price, feeMarket = quoteMarket
+              , fromAmount = total /*this * (100 - feePercent)/100 */
+              , fromCurrency = quoteCurrency
+              , toAmount = quoteTotalLessFee
+              , toCurrency = baseCurrency
+              , fees = List(FeePair(fee, baseCurrency))
+              // Usually, quoteCurrency is BTC so we can set fee in BTC
+              //, fee = amount*feePercent/100*price, feeCurrency = quoteCurrency
               , orderType = Operation.OrderType.Buy
-              , pair = (baseMarket, quoteMarket)
+              , pair = (baseCurrency, quoteCurrency)
               , exchanger = Poloniex
               , description = desc
             )
@@ -193,7 +197,7 @@ object Poloniex extends Exchanger {
       SeparatedScanner(line, "[,%]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val currency = Market.normalize(scLn.next("Currency"))
+      val currency = Currency.normalize(scLn.next("Currency"))
       val rate = scLn.nextDouble("Rate")
       val amount = scLn.nextDouble("Amount")
       val duration = scLn.nextDouble("Duration")
@@ -207,7 +211,7 @@ object Poloniex extends Exchanger {
         date = close
         , id = desc
         , amount = totalFee
-        , market = currency
+        , currency = currency
         , exchanger = Poloniex
         , description = desc
       )
@@ -223,7 +227,7 @@ object Poloniex extends Exchanger {
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Poloniex csv withdrawal history uses UTC time zone
-      val currency = Market.normalize(scLn.next("Currency"))
+      val currency = Currency.normalize(scLn.next("Currency"))
       val amount = scLn.nextDouble("Amount")
       val address = scLn.next("Address")
       val status = scLn.next("Status")
@@ -237,31 +241,11 @@ object Poloniex extends Exchanger {
           date = date
           , id = address
           , amount = amount
-          , market = currency
+          , currency = currency
           , exchanger = Poloniex
           , description = desc
         )
         return CSVReader.Ok(deposit)
-        /*
-        if(currency == Market.bitcoin) {
-          val desc = id + " Withdrawal fee " + currency + " " + txid
-
-          val txInfo = TransactionsCache.lookup(currency, txid, address)
-
-          val totalFee = amount - txInfo.amount
-
-          val fee = Fee(
-            date = date
-            , id = desc
-            , amount = totalFee
-            , market = currency
-            , exchanger = Poloniex
-            , description = desc
-          )
-          return CSVReader.Ok(fee)
-        } else
-          CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was ignored: $line.")
-        */
       } else
         CSVReader.Warning(s"$id. Read deposit ${FileSystem.pathFromData(fileName)}: This deposit was not completed: $line.")
     }
@@ -275,7 +259,7 @@ object Poloniex extends Exchanger {
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Poloniex csv withdrawal history uses UTC time zone
-      val currency = Market.normalize(scLn.next("Currency"))
+      val currency = Currency.normalize(scLn.next("Currency"))
       val amount = scLn.nextDouble("Amount")
       val address = scLn.next("Address")
       val status = scLn.next("Status")
@@ -291,31 +275,11 @@ object Poloniex extends Exchanger {
           date = date
           , id = txid
           , amount = amount
-          , market = currency
+          , currency = currency
           , exchanger = Poloniex
           , description = desc
         )
         return CSVReader.Ok(withdrawal)
-        /*
-        if(currency == Market.bitcoin) {
-          val desc = id + " Withdrawal fee " + currency + " " + txid
-
-          val txInfo = TransactionsCache.lookup(currency, txid, address)
-
-          val totalFee = amount - txInfo.amount
-
-          val fee = Fee(
-            date = date
-            , id = desc
-            , amount = totalFee
-            , market = currency
-            , exchanger = Poloniex
-            , description = desc
-          )
-          return CSVReader.Ok(fee)
-        } else
-          CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was ignored: $line.")
-        */
       } else
         CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was not completed: $line.")
     }

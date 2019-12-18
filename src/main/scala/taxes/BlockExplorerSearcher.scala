@@ -7,8 +7,8 @@ import taxes.util.parse.Parse
 
 
 object BlockExplorerSearcher {
-  def apply(market: Market, txid: String, address: String) =
-    new BlockExplorerSearcher(market, txid, address)
+  def apply(currency: Currency, txid: String, address: String) =
+    new BlockExplorerSearcher(currency, txid, address)
 
   private def locateAndSkip(str: String, prefix: String, toSkip: Char, numSkip: Int, endToken: String): String = {
     val before = str.indexOf(prefix)
@@ -249,18 +249,18 @@ object BlockExplorerSearcher {
   }
 }
 
-class BlockExplorerSearcher(market: Market, txid: String, address: String) {
-  lazy val search = market match {
-    case Market.bitcoin  => Some(BlockExplorerSearcher.btcScrap(txid, address))
-    case Market.dogecoin => Some(BlockExplorerSearcher.dogeScrap(txid, address))
-    case Market.etc      => Some(BlockExplorerSearcher.etcScrap(txid, address))
-    case Market.litecoin => Some(BlockExplorerSearcher.ltcScrap(txid, address))
-    case Market.vertcoin => Some(BlockExplorerSearcher.vtcScrap(txid, address))
-    case _               => None
+class BlockExplorerSearcher(currency: Currency, txid: String, address: String) {
+  lazy val search = currency match {
+    case Currency.bitcoin  => Some(BlockExplorerSearcher.btcScrap(txid, address))
+    case Currency.dogecoin => Some(BlockExplorerSearcher.dogeScrap(txid, address))
+    case Currency.etc      => Some(BlockExplorerSearcher.etcScrap(txid, address))
+    case Currency.litecoin => Some(BlockExplorerSearcher.ltcScrap(txid, address))
+    case Currency.vertcoin => Some(BlockExplorerSearcher.vtcScrap(txid, address))
+    case _                 => None
   }
 
   lazy val (date, amount, fee) = search match {
     case Some(t3) => t3
-    case None => Logger.fatal(s"BlockExplorerScraper: non-supported market $market")
+    case None => Logger.fatal(s"BlockExplorerScraper: non-supported currency $currency")
   }
 }

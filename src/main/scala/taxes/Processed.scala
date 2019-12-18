@@ -27,20 +27,20 @@ object Processed {
 
 
   case class Exchange( operationNumber: Int
-                       , exchange: taxes.Exchange
-                       , baseCoinProxy: Market, baseCoinProxyRate: Double
-                       , boughtBasisPriceInBaseCoin: Double
-                       , soldPriceInBaseCoin: Double
-                       , proceedsInBaseCoin: Double
-                       , soldBasisInBaseCoin: Double
-                       , _deprecated_feeAmount: Double
-                       , _deprecated_feeMarket: Market
-                       , _deprecated_feeInBaseCoin: Double
-                       , gainInBaseCoin: Double
-                       , boughtSoldExchangeRate: Double, soldBoughtExchangeRate: Double
-                       , usedStocks: StockContainer
-                       , buys: StockContainer
-                       , sells: StockContainer
+                     , exchange: taxes.Exchange
+                     , baseCurrencyProxy: Currency, baseCurrencyProxyRate: Double
+                     , boughtBasisPriceInBaseCurrency: Double
+                     , soldPriceInBaseCurrency: Double
+                     , proceedsInBaseCurrency: Double
+                     , soldBasisInBaseCurrency: Double
+                     , _deprecated_feeAmount: Double
+                     , _deprecated_feeCurrency: Currency
+                     , _deprecated_feeInBaseCurrency: Double
+                     , gainInBaseCurrency: Double
+                     , boughtSoldExchangeRate: Double, soldBoughtExchangeRate: Double
+                     , usedStocks: StockContainer
+                     , buys: StockContainer
+                     , sells: StockContainer
                      ) extends Processed {
 
     override def headerToHTML: HTML =
@@ -50,11 +50,11 @@ object Processed {
         , <span>
           {s"${if(exchange.isSettlement) "Settlement " else ""} Exchange of"}
           <span>
-            {asMarket(exchange.fromAmount, exchange.fromMarket, decimals = headerDecimals)}
+            {asCurrency(exchange.fromAmount, exchange.fromCurrency, decimals = headerDecimals)}
           </span>
           for
           <span>
-            {asMarket(exchange.toAmount, exchange.toMarket, decimals = headerDecimals)}
+            {asCurrency(exchange.toAmount, exchange.toCurrency, decimals = headerDecimals)}
           </span>
         </span>
         , <span class='exchanger'>{exchange.exchanger}</span>
@@ -69,19 +69,19 @@ object Processed {
         }
         {if(Config.verbosity(Verbosity.showRates))
         <div class='rates'>
-          {if(baseCoinProxy != baseMarket)
+          {if(baseCurrencyProxy != baseCurrency)
           <span>
             <span class='embold'>Proxy rate:</span>
-            {asRate(baseCoinProxyRate, baseMarket, baseCoinProxy)}.
+            {asRate(baseCurrencyProxyRate, baseCurrency, baseCurrencyProxy)}.
           </span>
           }
           {def isOK(x: Double) = !x.isNaN && !x.isInfinity
-        if(isOK(boughtBasisPriceInBaseCoin) && isOK(soldBoughtExchangeRate))
+        if(isOK(boughtBasisPriceInBaseCurrency) && isOK(soldBoughtExchangeRate))
           <span>
             <span class='embold'>Exchange rates:</span>
-            {asRate(boughtSoldExchangeRate, exchange.toMarket, exchange.fromMarket)}
+            {asRate(boughtSoldExchangeRate, exchange.toCurrency, exchange.fromCurrency)}
             ,
-            {asRate(soldBoughtExchangeRate, exchange.fromMarket, exchange.toMarket)}
+            {asRate(soldBoughtExchangeRate, exchange.fromCurrency, exchange.toCurrency)}
           </span>
           }
         </div>
@@ -90,10 +90,10 @@ object Processed {
         <div class='marginBottom5'>
           <span class='embold'>Bought:</span>
           <span>
-            {asMarket(exchange.toAmount, exchange.toMarket)}
-            {if(Config.verbosity(Verbosity.showRates) && exchange.toMarket != baseMarket)
+            {asCurrency(exchange.toAmount, exchange.toCurrency)}
+            {if(Config.verbosity(Verbosity.showRates) && exchange.toCurrency != baseCurrency)
             <span class='small2'>
-              ({asRate(boughtBasisPriceInBaseCoin, baseMarket, exchange.toMarket)})
+              ({asRate(boughtBasisPriceInBaseCurrency, baseCurrency, exchange.toCurrency)})
             </span>
             }
           </span>
@@ -102,27 +102,27 @@ object Processed {
         <div>
           <span class='embold'>Proceeds:</span>
           <span>
-            {asMarket(exchange.fromAmount, exchange.fromMarket)}
+            {asCurrency(exchange.fromAmount, exchange.fromCurrency)}
           </span>
-          {if(exchange.fromMarket != baseMarket)
+          {if(exchange.fromCurrency != baseCurrency)
           <span>
             {if(Config.verbosity(Verbosity.showRates))
             <span class='small2'>
-              ({asRate(soldPriceInBaseCoin, baseMarket, exchange.fromMarket)})
+              ({asRate(soldPriceInBaseCurrency, baseCurrency, exchange.fromCurrency)})
             </span>
             }
             =
-            {asMarket(proceedsInBaseCoin, baseMarket)}
+            {asCurrency(proceedsInBaseCurrency, baseCurrency)}
           </span>
           }
         </div>
-        {if(soldBasisInBaseCoin>0)
+        {if(soldBasisInBaseCurrency>0)
         <div>
           <span class='embold'>Cost basis:</span>
           <span>
-            {asMarket(soldBasisInBaseCoin, baseMarket)}
+            {asCurrency(soldBasisInBaseCurrency, baseCurrency)}
           </span>
-          {if(Config.verbosity(Verbosity.showRates) && usedStocks.nonEmpty && exchange.fromMarket != baseMarket)
+          {if(Config.verbosity(Verbosity.showRates) && usedStocks.nonEmpty && exchange.fromCurrency != baseCurrency)
           <span class='stock'>. Used
             {s"${if(usedStocks.size > 1) "batches" else "batch"}:"}
             ({usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
@@ -130,26 +130,26 @@ object Processed {
           }
         </div>
         }
-        {if(_deprecated_feeInBaseCoin > 0)
+        {if(_deprecated_feeInBaseCurrency > 0)
         <div>
           <span class='embold'>Fee:</span>
           <span>
-            {asMarket(_deprecated_feeAmount, _deprecated_feeMarket)}
+            {asCurrency(_deprecated_feeAmount, _deprecated_feeCurrency)}
           </span>
-          {if(_deprecated_feeMarket != baseMarket)
+          {if(_deprecated_feeCurrency != baseCurrency)
           <span>
             =
-            {asMarket(_deprecated_feeInBaseCoin, baseMarket)}
+            {asCurrency(_deprecated_feeInBaseCurrency, baseCurrency)}
           </span>
           }
         </div>
         }
-        {if(exchange.fromMarket != baseMarket)
+        {if(exchange.fromCurrency != baseCurrency)
         <span>
           <span class='embold'>
-            {if(gainInBaseCoin > 0) "Gain:" else "Loss:"}
+            {if(gainInBaseCurrency > 0) "Gain:" else "Loss:"}
           </span>
-          {asMarket(gainInBaseCoin.abs, baseMarket)}
+          {asCurrency(gainInBaseCurrency.abs, baseCurrency)}
         </span>
         }
         {if(Config.verbosity(Verbosity.showStocks))
@@ -164,11 +164,11 @@ object Processed {
   }
 
 
-  case class Gain(operationNumber: Int
-                   , gain: taxes.Gain
-                   , gainInBaseCoin: Double
-                   , basePrice: Double
-                   , stocks: StockContainer
+  case class Gain( operationNumber: Int
+                 , gain: taxes.Gain
+                 , gainInBaseCurrency: Double
+                 , basePrice: Double
+                 , stocks: StockContainer
                  ) extends Processed {
 
     override def headerToHTML: HTML =
@@ -176,10 +176,9 @@ object Processed {
         <span class='operationNumber'>{operationNumber}</span>
         , gain.date.format(df)
         , <span> Gain of
-          {asMarket(gain.amount, gain.market, decimals = headerDecimals)}
+          {asCurrency(gain.amount, gain.currency, decimals = headerDecimals)}
         </span>
         , <span class='exchanger'>{gain.exchanger}</span>
-
       )
 
     override def bodyToHTML: HTML =
@@ -191,15 +190,15 @@ object Processed {
         }
         <div>
           <span class='embold'>Gain:</span>
-          {asMarket(gain.amount, gain.market)}
-          {if(gain.market != baseMarket)
+          {asCurrency(gain.amount, gain.currency)}
+          {if(gain.currency != baseCurrency)
           <span>
             {if(Config.verbosity(Verbosity.showRates))
             <span class='small2'>
-              ({asRate(basePrice, baseMarket, gain.market)})
+              ({asRate(basePrice, baseCurrency, gain.currency)})
             </span>
             }
-            = {asMarket(gainInBaseCoin, baseMarket)}
+            = {asCurrency(gainInBaseCurrency, baseCurrency)}
           </span>
           }
         </div>
@@ -213,11 +212,11 @@ object Processed {
   }
 
 
-  case class Loss(operationNumber: Int
-                   , loss: taxes.Loss
-                   , lossInBaseCoin: Double
-                   , usedStocks: StockContainer
-                   , stocks: StockContainer
+  case class Loss( operationNumber: Int
+                 , loss: taxes.Loss
+                 , lossInBaseCurrency: Double
+                 , usedStocks: StockContainer
+                 , stocks: StockContainer
                  ) extends Processed {
 
     override def headerToHTML: HTML =
@@ -225,7 +224,7 @@ object Processed {
         <span class='operationNumber'>{operationNumber}</span>
         , loss.date.format(df)
         , <span> Loss of
-          {asMarket(loss.amount, loss.market, decimals = headerDecimals)}
+          {asCurrency(loss.amount, loss.currency, decimals = headerDecimals)}
         </span>
         , <span class='exchanger'>{loss.exchanger}</span>
       )
@@ -239,8 +238,8 @@ object Processed {
         }
         <div>
           <span class='embold'>Loss:</span>
-          {asMarket(loss.amount, loss.market)}
-          {if(loss.market != baseMarket)
+          {asCurrency(loss.amount, loss.currency)}
+          {if(loss.currency != baseCurrency)
           <span>
             {if(Config.verbosity(Verbosity.showRates))
             <span class='small2'>
@@ -254,7 +253,7 @@ object Processed {
               })
             </span>
             }
-            = {asMarket(lossInBaseCoin, baseMarket)}
+            = {asCurrency(lossInBaseCurrency, baseCurrency)}
           </span>
           }
         </div>
@@ -268,11 +267,11 @@ object Processed {
   }
 
 
-  case class Fee(operationNumber: Int
-                  , fee: taxes.Fee
-                  , feeInBaseCoin: Double
-                  , usedStocks: StockContainer
-                  , stocks: StockContainer
+  case class Fee( operationNumber: Int
+                , fee: taxes.Fee
+                , feeInBaseCurrency: Double
+                , usedStocks: StockContainer
+                , stocks: StockContainer
                 ) extends Processed {
 
     override def headerToHTML: HTML =
@@ -281,8 +280,8 @@ object Processed {
         , fee.date.format(df)
         , <span> Fee of
           {fee.alt match {
-            case None => asMarket(fee.amount, fee.market, decimals = headerDecimals)
-            case Some((amount, market)) => asMarket(amount, market, decimals = headerDecimals)
+            case None => asCurrency(fee.amount, fee.currency, decimals = headerDecimals)
+            case Some((amount, currency)) => asCurrency(amount, currency, decimals = headerDecimals)
           }
           }
         </span>
@@ -300,14 +299,14 @@ object Processed {
           <span class='embold'>Fee:</span>
           {fee.alt match {
           case None => ;
-          case Some((amount, market)) =>
-            <span>{asMarket(amount, market)}=</span>
+          case Some((amount, currency)) =>
+            <span>{asCurrency(amount, currency)}=</span>
         }
           }
-          {asMarket(fee.amount, fee.market)}
-          {if(fee.market != baseMarket)
+          {asCurrency(fee.amount, fee.currency)}
+          {if(fee.currency != baseCurrency)
           <span>
-            {if(fee.market != baseMarket && Config.verbosity(Verbosity.showRates))
+            {if(fee.currency != baseCurrency && Config.verbosity(Verbosity.showRates))
             <span class='small2'>
               ({if(usedStocks.nonEmpty)
               <span>
@@ -319,7 +318,7 @@ object Processed {
               })
             </span>
             }
-            = {asMarket(feeInBaseCoin, baseMarket)}
+            = {asCurrency(feeInBaseCurrency, baseCurrency)}
           </span>
           }
         </div>
@@ -333,35 +332,35 @@ object Processed {
   }
 
 
-  case class Margin(operationNumber: Int
-                    , date: LocalDateTime
-                    , exchanger: Exchanger
-                    , what: String
-                    , fromAmount: Double, fromMarket: Market
-                    , toAmount: Double, toMarket: Market
-                    , exchangeRate: Double
-                    , description: String
-                    , usedStocksOpt: Option[StockContainer]
-                    , marginLongs: StockContainer
-                    , marginShorts: StockContainer
+  case class Margin( operationNumber: Int
+                   , date: LocalDateTime
+                   , exchanger: Exchanger
+                   , what: String
+                   , fromAmount: Double, fromCurrency: Currency
+                   , toAmount: Double, toCurrency: Currency
+                   , exchangeRate: Double
+                   , description: String
+                   , usedStocksOpt: Option[StockContainer]
+                   , marginLongs: StockContainer
+                   , marginShorts: StockContainer
                    ) extends Processed {
 
     private val isLong = what.toLowerCase.contains("long")
     private val isOpen = what.toLowerCase.contains("open")
-    private val (amount2, market2, amount1, market1) =
+    private val (amount2, currency2, amount1, currency1) =
       if(isLong == isOpen)
-        (fromAmount, fromMarket, toAmount, toMarket)
+        (fromAmount, fromCurrency, toAmount, toCurrency)
       else
-        (toAmount, toMarket, fromAmount, fromMarket)
+        (toAmount, toCurrency, fromAmount, fromCurrency)
 
     override def headerToHTML: HTML =
       header4(
         <span class='operationNumber'>{operationNumber}</span>
         , date.format(df)
         , <span> {what}
-          {asMarket(amount1, market1, decimals = headerDecimals)}
+          {asCurrency(amount1, currency1, decimals = headerDecimals)}
           for
-          {asMarket(amount2, market2, decimals = headerDecimals)}
+          {asCurrency(amount2, currency2, decimals = headerDecimals)}
         </span>
         , <span class='exchanger'>{exchanger}</span>
       )
@@ -377,7 +376,7 @@ object Processed {
         <div class='rates'>
           <span class='embold'>Exchange rates:</span>
           <span class='noLineBreak'>
-            {asRate(exchangeRate, market2, market1)}
+            {asRate(exchangeRate, currency2, currency1)}
           </span>
         </div>
         }
@@ -385,7 +384,7 @@ object Processed {
         case Some(usedStocks) =>
           <div>
             <span class='embold'>Cost basis:</span>
-            <span>{asMarket(usedStocks.totalCost, usedStocks.baseMarket)}</span>
+            <span>{asCurrency(usedStocks.totalCost, usedStocks.baseCurrency)}</span>
             {if(Config.verbosity(Verbosity.showRates) && usedStocksOpt.nonEmpty)
             <span class='small2'>. Used
               {s"${if(usedStocksOpt.iterator.length > 1) "batches" else "batch"}:"}
@@ -414,14 +413,14 @@ object Processed {
   implicit val lossJson = jsonFormat5(Loss)
   implicit val feeJson = jsonFormat5(Fee)
   //implicit val marginJson: JsonFormat[Margin] = rootFormat((jsonFormat13(Margin)))
-  implicit val marginJson = jsonFormat(Margin,"operationNumber", "date", "exchanger", "what", "fromAmount", "fromMarket", "toAmount", "toMarket","exchangeRate","description", "usedStocksOpt", "marginBuys", "marginSells")
+  implicit val marginJson = jsonFormat(Margin,"operationNumber", "date", "exchanger", "what", "fromAmount", "fromCurrency", "toAmount", "toCurrency","exchangeRate","description", "usedStocksOpt", "marginBuys", "marginSells")
   implicit val processedJson = new RootJsonFormat[Processed] {
     val _Composed = "Composed"
     val _Exchange = "Exchange"
     val _Margin = "Margin"
     val _Fee = "Fee"
     val _Loss = "Loss"
-    val _Gain ="Gain"
+    val _Gain = "Gain"
 
     val _type = "type"
     val _operation = "operation"

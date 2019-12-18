@@ -42,33 +42,33 @@ object Binance extends Exchanger {
 
   private def operationsReader(xlsxFileName: String) =
     new BinanceReader(xlsxFileName) {
-      private val baseMarkets = List[Market]("BNB", "BTC", "ETH", "USDT")
+      private val baseCurrencies = List[Currency]("BNB", "BTC", "ETH", "USDT")
 
       override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
         val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Binance trade history xlsx file uses UTC time zone
         val pair = scLn.next("Market")
 
-        baseMarkets.find(pair.endsWith) match {
+        baseCurrencies.find(pair.endsWith) match {
           case None =>
             return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line. Base pair unknown.")
           case Some(suffix) =>
 
-            val baseMarket = Market.normalize(pair.take(pair.length - suffix.length))
-            val quoteMarket = Market.normalize(suffix)
+            val baseCurrency = Currency.normalize(pair.take(pair.length - suffix.length))
+            val quoteCurrency = Currency.normalize(suffix)
 
             val orderType = scLn.next("Type")
             val price = scLn.nextDouble("Price")
             val amount = scLn.nextDouble("Amount")
             val total = scLn.nextDouble("Total")
             val feeAmount = scLn.nextDouble("Fee")
-            val feeCoin = Market.normalize(scLn.next("Fee Coin"))
+            val feeCurrency = Currency.normalize(scLn.next("Fee Coin"))
 
             val desc = ""
 
             // Fee is 0.1% but can get deduced if BNB is used for paying fees.
-            // It's applied over toMarket
+            // It's applied over toCurrency
 
-            // If feeCoin is toMarket (even if it is BNB) you really get
+            // If feeCurrency is toCurrency (even if it is BNB) you really get
             // `amount' - `feeAmount'
             // Else you get `amount' but you additionally pay a BNB fee
 
@@ -76,24 +76,24 @@ object Binance extends Exchanger {
               // toDo check this further
               // This has to be the first case as if you're buying BNB and you pay
               // your fee with BNB, you get `amount` - `feeAmount'
-              if(feeCoin == baseMarket) {
+              if(feeCurrency == baseCurrency) {
                 val exchange = Exchange(
                   date = date
                   , id = ""
-                  , fromAmount = total, fromMarket = quoteMarket
-                  , toAmount = amount - feeAmount, toMarket = baseMarket
-                  , fees = List(FeePair(feeAmount, feeCoin))
+                  , fromAmount = total, fromCurrency = quoteCurrency
+                  , toAmount = amount - feeAmount, toCurrency = baseCurrency
+                  , fees = List(FeePair(feeAmount, feeCurrency))
                   , exchanger = Binance
                   , description = desc
                 )
                 return CSVReader.Ok(exchange)
-              } else if(feeCoin == Market.normalize("BNB")) {
+              } else if(feeCurrency == Currency.normalize("BNB")) {
                 val exchange = Exchange(
                   date = date
                   , id = ""
-                  , fromAmount = total, fromMarket = quoteMarket
-                  , toAmount = amount, toMarket = baseMarket
-                  , fees = List(FeePair(feeAmount, feeCoin))
+                  , fromAmount = total, fromCurrency = quoteCurrency
+                  , toAmount = amount, toCurrency = baseCurrency
+                  , fees = List(FeePair(feeAmount, feeCurrency))
                   , exchanger = Binance
                   , description = desc
                 )
@@ -101,24 +101,24 @@ object Binance extends Exchanger {
               } else
                 return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
             } else if(orderType == "SELL") {
-              if(feeCoin == quoteMarket) {
+              if(feeCurrency == quoteCurrency) {
                 val exchange = Exchange(
                   date = date
                   , id = ""
-                  , fromAmount = amount, fromMarket = baseMarket
-                  , toAmount = total - feeAmount, toMarket = quoteMarket // toDo the fact that we don't get total but total - feeAmount whe selling needs to be confirmed
-                  , fees = List(FeePair(feeAmount, feeCoin))
+                  , fromAmount = amount, fromCurrency = baseCurrency
+                  , toAmount = total - feeAmount, toCurrency = quoteCurrency // toDo the fact that we don't get total but total - feeAmount whe selling needs to be confirmed
+                  , fees = List(FeePair(feeAmount, feeCurrency))
                   , exchanger = Binance
                   , description = desc
                 )
                 return CSVReader.Ok(exchange)
-              } else if(feeCoin == Market.normalize("BNB")) {
+              } else if(feeCurrency == Currency.normalize("BNB")) {
                 val exchange = Exchange(
                   date = date
                   , id = ""
-                  , fromAmount = amount, fromMarket = baseMarket
-                  , toAmount = total, toMarket = quoteMarket
-                  , fees = List(FeePair(feeAmount, feeCoin))
+                  , fromAmount = amount, fromCurrency = baseCurrency
+                  , toAmount = total, toCurrency = quoteCurrency
+                  , fees = List(FeePair(feeAmount, feeCurrency))
                   , exchanger = Binance
                   , description = desc
                 )
@@ -135,7 +135,7 @@ object Binance extends Exchanger {
     new BinanceReader(xlsxFileName) {
       override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
         val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Binance uses UTC time zone
-        val coin = Market.normalize(scLn.next("Coin"))
+        val currency = Currency.normalize(scLn.next("Coin"))
         val amount = scLn.nextDouble("Amount")
         val address = scLn.next("Address")
         val txid = scLn.next("TXID")
@@ -147,7 +147,7 @@ object Binance extends Exchanger {
             date = date
             , id = address
             , amount = amount
-            , market = coin
+            , currency = currency
             , exchanger = Binance
             , description = desc
           )
@@ -161,7 +161,7 @@ object Binance extends Exchanger {
     new BinanceReader(xlsxFileName) {
       override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
         val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Binance uses UTC time zone
-        val coin = Market.normalize(scLn.next("Coin"))
+        val currency = Currency.normalize(scLn.next("Coin"))
         val amount = scLn.nextDouble("Amount")
         val address = scLn.next("Address")
         val txid = scLn.next("TXID")
@@ -173,7 +173,7 @@ object Binance extends Exchanger {
             date = date
             , id = address
             , amount = amount
-            , market = coin
+            , currency = currency
             , exchanger = Binance
             , description = desc
           )

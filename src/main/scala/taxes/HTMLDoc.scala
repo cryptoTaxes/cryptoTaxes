@@ -15,19 +15,19 @@ trait ToHTML {
 object HTMLDoc {
   val df = Format.shortDf
 
-  lazy val baseMarket = Config.config.baseCoin.market
+  lazy val baseCurrency = Config.config.baseCurrency.currency
 
-  def asMarket(amount: Double, marketUnit: Market, decimals: Int = Config.config.decimalPlaces): HTML =
+  def asCurrency(amount: Double, currencyUnit: Currency, decimals: Int = Config.config.decimalPlaces): HTML =
     <span class='noLineBreak'>
       {Format.formatDecimal(amount, decimals)}
-      <span class='market'>{marketUnit}</span>
+      <span class='currency'>{currencyUnit}</span>
     </span>
 
 
-  def asRate(rate: Double, marketUnit0: Market, marketUnit1: Market, decimals: Int = Config.config.decimalPlaces): HTML =
+  def asRate(rate: Double, currencyUnit0: Currency, currencyUnit1: Currency, decimals: Int = Config.config.decimalPlaces): HTML =
     <span class='noLineBreak'>
-      {asMarket(rate, marketUnit0, decimals)}
-      / <span class="market">{marketUnit1}</span>
+      {asCurrency(rate, currencyUnit0, decimals)}
+      / <span class="currency">{currencyUnit1}</span>
     </span>
 
 
@@ -72,7 +72,7 @@ object HTMLDoc {
   def reportResults(year: Int, realized: Report.Realized): HTML = {
     val proceeds = realized.proceeds.sum
     val costs = realized.costBasis.sum
-    val fees = realized.perMarketPaidFees.sum
+    val fees = realized.perCurrencyPaidFees.sum
 
     val net = proceeds - costs - fees
     val netMsg = s"Net ${if(net > 0) "gain" else "loss"}:"
@@ -80,19 +80,19 @@ object HTMLDoc {
       <caption>{s"$year Resume"}</caption>
       <tr>
         <td><span class='embold'>Total proceeds:</span></td>
-        <td>{asMarket(proceeds, baseMarket)}</td>
+        <td>{asCurrency(proceeds, baseCurrency)}</td>
       </tr>
       <tr>
         <td><span class='embold'>Total cost bases:</span></td>
-        <td>{asMarket(costs, baseMarket)}</td>
+        <td>{asCurrency(costs, baseCurrency)}</td>
       </tr>
       <tr>
         <td><span class='embold'>Total fees:</span></td>
-        <td>{asMarket(fees, baseMarket)}</td>
+        <td>{asCurrency(fees, baseCurrency)}</td>
       </tr>
       <tr>
         <td><span class='embold'>{netMsg}</span></td>
-        <td>{asMarket(net, baseMarket)}</td>
+        <td>{asCurrency(net, baseCurrency)}</td>
       </tr>
     </table>
   }
@@ -100,30 +100,30 @@ object HTMLDoc {
 
   def reportYear(year: Int, realized: Report.Realized): HTML = {
     <div>
-      <div>{realized.perMarketGains.toHTML("Gains per market")}</div>
-      <div>{realized.perMarketLooses.toHTML("Looses per market")}</div>
-      <div>{realized.perMarketPaidFees.toHTML("Paid fees per market")}</div>
+      <div>{realized.perCurrencyGains.toHTML("Gains per currency")}</div>
+      <div>{realized.perCurrencyLooses.toHTML("Looses per currency")}</div>
+      <div>{realized.perCurrencyPaidFees.toHTML("Paid fees per currency")}</div>
       <div class='marginTopBottom20'>
         <span class='embold'>Net result:</span>
-        {asMarket(realized.perMarketGains.sum - realized.perMarketLooses.sum - realized.perMarketPaidFees.sum, baseMarket)}
+        {asCurrency(realized.perCurrencyGains.sum - realized.perCurrencyLooses.sum - realized.perCurrencyPaidFees.sum, baseCurrency)}
       </div>
 
-      <div>{realized.costBasis.toHTML("Cost bases per market")}</div>
-      <div>{realized.proceeds.toHTML("Proceeds per market")}</div>
+      <div>{realized.costBasis.toHTML("Cost bases per currency")}</div>
+      <div>{realized.proceeds.toHTML("Proceeds per currency")}</div>
       {val realizedGains = {
          val keys = realized.costBasis.keys.toSet union realized.proceeds.keys.toSet
          val list = keys.map(k => (k, realized.proceeds(k) - realized.costBasis(k)))
-         val valueTracker = ValueTracker(baseMarket)
+         val valueTracker = ValueTracker(baseCurrency)
          for((k,v) <- list)
            valueTracker.record(k,v)
          valueTracker
          }
-       <div>{realizedGains.toHTML("Realized Gains per market")}</div>
+       <div>{realizedGains.toHTML("Realized Gains per currency")}</div>
       }
 
       <div class='marginTopBottom20'>
         <span class='embold'>Net result:</span>
-        {asMarket(realized.proceeds.sum - realized.costBasis.sum - realized.perMarketPaidFees.sum, baseMarket)}
+        {asCurrency(realized.proceeds.sum - realized.costBasis.sum - realized.perCurrencyPaidFees.sum, baseCurrency)}
       </div>
     </div>
   }
@@ -192,7 +192,7 @@ case class HTMLDoc(fileName: String, title: String) {
       | .header1 { width: 15%; display: inline-block; }
       | .header2 { width: 65%; display: inline-block; }
       | .header3 { width: 10%; display: inline-block; text-align: right; }
-      | .market { color: blue; }
+      | .currency { color: blue; }
       | .exchanger { color: green; }
       | .operationNumber { color: navy; }
       | .boxBody { background-color: White;}

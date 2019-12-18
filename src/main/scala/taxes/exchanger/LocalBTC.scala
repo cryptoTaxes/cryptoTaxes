@@ -25,53 +25,56 @@ object LocalBTC extends Exchanger {
       SeparatedScanner(line, "[,]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val orderId = scLn.next("Order ID")
-      val date = scLn.next("Date")
-      val buyer = scLn.next("Buyer")
-      val seller = scLn.next("Seller")
-      val tradeType = scLn.next("Trade Type")
-      val btc_amount = scLn.nextDouble("BTC Amount")
-      val btc_traded = scLn.nextDouble("BTC Traded")
-      val fee_btc =  scLn.nextDouble("Fee BTC")
-      val btc_amount_less_fee = scLn.nextDouble("BTC Less Fee")
-      val btc_final = scLn.nextDouble("BTC Final")
-      val fiat_amount = scLn.nextDouble("FIAT Amount")
-      val fiat_fee = scLn.nextDouble("FIAT Fee")
-      val fiat_per_btc = scLn.nextDouble("FIAT Per BTC")
-      val currency = scLn.next("Currency")
-      val exchange_rate = scLn.nextDouble("Exchange Rate")
+      val orderId = scLn.next("id")
+      val date = LocalDateTime.parseAsUTC(
+        scLn.next("created_at")
+        , "yyyy-MM-dd HH:mm:ssXXX"
+      )
+      val buyer = scLn.next("buyer")
+      val seller = scLn.next("seller")
+      val tradeType = scLn.next("trade_type")
+      val btc_amount = scLn.nextDouble("btc_amount")
+      val btc_traded = scLn.nextDouble("btc_traded")
+      val fee_btc =  scLn.nextDouble("fee_btc")
+      val btc_amount_less_fee = scLn.nextDouble("btc_amount_less_fee")
+      val btc_final = scLn.nextDouble("btc_final")
+      val fiat_amount = scLn.nextDouble("fiat_amount")
+      val fiat_fee = scLn.nextDouble("fiat_fee")
+      val fiat_per_btc = scLn.nextDouble("fiat_per_btc")
+      val currency = Currency.normalize(scLn.next("currency"))
+      val exchange_rate = scLn.nextDouble("exchange_rate")
       val transaction_released_at = LocalDateTime.parseAsUTC(
-        scLn.next("Transaction Released At")
+        scLn.next("transaction_released_at")
         , "yyyy-MM-dd HH:mm:ssXXX"
         )
-      val online_provider = scLn.next("Online Provider")
-      val reference = scLn.next("Reference")
+      val online_provider = scLn.next("online_provider")
+      val reference = scLn.next("reference")
 
       val desc = "Order: " + orderId + "/" + reference
       if(tradeType=="ONLINE_SELL") { // ONLINE_SELL is really a buy
+        val deposit = Deposit(  // FIAT deposit for buying
+          date = date
+          , id = orderId
+          , amount = fiat_amount
+          , currency = currency
+          , exchanger = LocalBTC
+          , description = "Deposit: " + orderId + "/" + reference
+        )
+
         val exchange = Exchange(
           date = transaction_released_at
           , id = orderId
-          , fromAmount = fiat_amount, fromMarket = Market.normalize(currency)
-          , toAmount = btc_amount_less_fee, toMarket = Market.bitcoin
-          , fees = List(FeePair(fee_btc, Market.bitcoin))
+          , fromAmount = fiat_amount, fromCurrency = currency
+          , toAmount = btc_amount_less_fee, toCurrency = Currency.bitcoin
+          , fees = List(FeePair(fee_btc, Currency.bitcoin))
           , exchanger = LocalBTC
-          , description = desc
+          , description = "Order: " + orderId + "/" + reference
         )
 
-        return CSVReader.Ok(exchange)
+        return CSVReader.Ok(List(deposit,exchange))
       } else
         // toDo support sells at LocalBTC
         return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
-      /*
-          Exchange(
-            date = date
-            , fromAmount = btc_amount, fromMarket = Market.bitcoin
-            , toAmount = fiat_amount, toMarket = Market.normalize(currency)
-            , fee = fiat_fee, feeMarket = Market.normalize(currency)
-            , description = desc
-          )
-       */
     }
   }
 
@@ -96,7 +99,7 @@ object LocalBTC extends Exchanger {
           date = created
           , id = ""
           , amount = util.parse.Parse.asDouble(sentStr)
-          , market = Market.bitcoin
+          , currency = Currency.bitcoin
           , exchanger = LocalBTC
           , description = desc
         )

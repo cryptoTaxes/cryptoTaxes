@@ -14,12 +14,12 @@ object Ledger {
   implicit val entryJson = jsonFormat4(Entry)
 
   implicit object LedgerJson extends RootJsonFormat[Ledger] {
-    val _market = "market"
+    val _currency = "currency"
     val _initialBalance = "initialBalance"
     val _entries = "entries"
     def write(ledger: Ledger) = {
       JsObject(
-        _market -> JsString(ledger.market)
+        _currency -> JsString(ledger.currency)
         , _initialBalance -> JsNumber(ledger._initialBalance)
         , _entries -> {
           val builder = new scala.collection.immutable.VectorBuilder[JsValue]()
@@ -32,9 +32,9 @@ object Ledger {
 
     def read(value: JsValue) =
       try {
-        value.asJsObject.getFields(_market, _initialBalance, _entries) match {
-          case Seq(JsString(market), JsNumber(initialBalance), JsArray(entries)) =>
-            val ledger = Ledger(market, initialBalance.doubleValue())
+        value.asJsObject.getFields(_currency, _initialBalance, _entries) match {
+          case Seq(JsString(currency), JsNumber(initialBalance), JsArray(entries)) =>
+            val ledger = Ledger(currency, initialBalance.doubleValue())
             entries.foreach(x => ledger.entries += x.convertTo[Entry])
             ledger
         }
@@ -55,7 +55,7 @@ object Ledger {
     if(balance.abs < Config.config.epsilon) 0 else balance
 }
 
-case class Ledger(market: Market, private var _initialBalance: Double = 0) {
+case class Ledger(currency: Currency, private var _initialBalance: Double = 0) {
   private val entries = ListBuffer[Ledger.Entry]()
 
   def isEmpty: Boolean = entries.isEmpty
@@ -65,7 +65,7 @@ case class Ledger(market: Market, private var _initialBalance: Double = 0) {
   }
 
   def copy: Ledger = {
-    val clone = Ledger(market, _initialBalance)
+    val clone = Ledger(currency, _initialBalance)
     for(entry <- entries)
       clone += entry
     return clone
@@ -99,7 +99,7 @@ case class Ledger(market: Market, private var _initialBalance: Double = 0) {
           <th class='alignL paddingL'>Exchanger</th>
           <th class='alignL'>Description</th>
         </tr>
-        <caption>{market}</caption>
+        <caption>{currency}</caption>
         <tr>
           <th></th>
           <th>Initial balance:</th>
@@ -116,7 +116,7 @@ case class Ledger(market: Market, private var _initialBalance: Double = 0) {
               <td class='alignR'>{numEntries}</td>
               <td class='paddingL'>{Format.df.format(entry.date)}</td>
               <td class={s"paddingL ${if(entry.amount < 0) "darkRed" else "darkBlue"}"}>
-                {Format.formatDecimal(entry.amount, Ledger.decimalPlaces)}
+                {(if(entry.amount > 0) "+" else "") + Format.formatDecimal(entry.amount, Ledger.decimalPlaces)}
               </td>
               {val bal = Ledger.showBalance(balance)
                <td class={s"paddingL ${
@@ -167,7 +167,7 @@ object LedgerPool {
         _id -> JsString(ledgerPool.id)
         , _ledgers -> {
           val builder = new scala.collection.immutable.VectorBuilder[JsValue]()
-          for ((market, ledger) <- ledgerPool.ledgers)
+          for ((currency, ledger) <- ledgerPool.ledgers)
             builder += ledger.toJson
           JsArray(builder.result())
         }
@@ -181,7 +181,7 @@ object LedgerPool {
             val ledgerPool = LedgerPool(id)
             for(json <- ledgers) {
               val ledger = json.convertTo[Ledger]
-              ledgerPool.ledgers(ledger.market) = ledger
+              ledgerPool.ledgers(ledger.currency) = ledger
             }
             ledgerPool
         }
@@ -198,19 +198,19 @@ object LedgerPool {
 }
 
 case class LedgerPool(id: String) extends Iterable[Ledger] {
-  private val ledgers = scala.collection.mutable.Map[Market, Ledger]()
+  private val ledgers = scala.collection.mutable.Map[Currency, Ledger]()
 
   def iterator: Iterator[Ledger] =
     ledgers.iterator.map(_._2)
 
-  def delete(market: Market): Unit = {
-    ledgers -= market
+  def delete(currency: Currency): Unit = {
+    ledgers -= currency
   }
 
-  def record(market: Market)(date: LocalDateTime, amount: Double, exchanger: Exchanger, description: String): Unit = {
-    val ledger = ledgers.getOrElse(market, Ledger(market))
+  def record(currency: Currency)(date: LocalDateTime, amount: Double, exchanger: Exchanger, description: String): Unit = {
+    val ledger = ledgers.getOrElse(currency, Ledger(currency))
     ledger += Ledger.Entry(date, amount, exchanger, description)
-    ledgers(market) = ledger
+    ledgers(currency) = ledger
   }
 
   def saveToDisk(path: String): Unit = {
@@ -220,7 +220,7 @@ case class LedgerPool(id: String) extends Iterable[Ledger] {
   }
 
   def prune(): Unit = {
-    for((market, ledger) <- ledgers)
+    for((currency, ledger) <- ledgers)
       ledger.prune()
   }
 
@@ -230,19 +230,19 @@ case class LedgerPool(id: String) extends Iterable[Ledger] {
     ledgers.clear()
     if(FileSystem.File(filePath).exists()) {
       val ledgerPool = LedgerPool.fromFile(filePath)
-      for((market, ledger) <- ledgerPool.ledgers)
-        ledgers(market) = ledger
+      for((currency, ledger) <- ledgerPool.ledgers)
+        ledgers(currency) = ledger
     }
   }
 
   def toHTML(year: Int): Option[HTML] =
-    if(ledgers.isEmpty || ledgers.forall{case (market, ledger) => ledger.isEmpty})
+    if(ledgers.isEmpty || ledgers.forall{case (currency, ledger) => ledger.isEmpty})
       None
     else
       Some {
         <div>{
           ledgers.toList.sortBy(_._1).map{
-            case (market, ledger) =>
+            case (currency, ledger) =>
               ledger.toHTML(year) match {
                 case None => <div></div>
                 case Some(html) => html
@@ -262,16 +262,16 @@ case class LedgerPool(id: String) extends Iterable[Ledger] {
           <br></br>
           <table id='tableStyle1'>
             <tr>
-              <th>Market</th>
+              <th>Currency</th>
               <th>Balance</th>
             </tr>
             <caption>
               {id}
-            </caption>{this.toList.filter(balance(_) != 0).sortBy(_.market).map { ledger: Ledger =>
+            </caption>{this.toList.filter(balance(_) != 0).sortBy(_.currency).map { ledger: Ledger =>
             <tr>
               <td>
-                <span class='market'>
-                  {ledger.market}
+                <span class='currency'>
+                  {ledger.currency}
                 </span>
               </td>
               <td>

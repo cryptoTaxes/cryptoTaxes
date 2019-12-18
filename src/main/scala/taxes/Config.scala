@@ -1,6 +1,6 @@
 package taxes
 
-import taxes.BaseCoin._
+import taxes.BaseCurrency._
 import taxes.date._
 import taxes.io.FileSystem
 
@@ -62,7 +62,7 @@ object Config {
 
 case class Config( user: String
                  , verbosityLevel: Verbosity.Level
-                 , baseCoin: BaseCoin
+                 , baseCurrency: BaseCurrency
                  , downloadPrices: Boolean
                  , priceCalculation: PriceCalculation.Method
                  , accountingMethod: Accounting.Method
@@ -85,7 +85,7 @@ case class Config( user: String
 
 object DefaultConfig extends Config( user = "demo"
                                    , verbosityLevel = Verbosity.none
-                                   , baseCoin = EuroBaseCoin
+                                   , baseCurrency = EuroBaseCurrency
                                    , downloadPrices = false
                                    , priceCalculation = PriceCalculation.open
                                    , accountingMethod = Accounting.FIFO

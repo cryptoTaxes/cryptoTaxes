@@ -13,17 +13,17 @@ object Stock {
 
 
 // basis is expressed in base unit. exchanger is where it was bought
-case class Stock(var amount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeMarket: Market) {
+case class Stock(var amount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeCurrency: Currency) {
   override def toString: String =
-    f"Stock($amount%.4f, $costBasis%.8f, $exchanger, $exchangeRate%.8f, $exchangeMarket, ${Format.df.format(date)})"
+    f"Stock($amount%.4f, $costBasis%.8f, $exchanger, $exchangeRate%.8f, $exchangeCurrency, ${Format.df.format(date)})"
 }
 
 object StockContainer {
   implicit object stockContainerJson extends RootJsonFormat[StockContainer] {
     val _containerType = "containerType"
     val _id = "id"
-    val _market = "market"
-    val _baseMarket = "baseMarket"
+    val _currency = "currency"
+    val _baseCurrency = "baseCurrency"
     val _stocks = "stocks"
     val _ledger = "ledger"
 
@@ -42,8 +42,8 @@ object StockContainer {
       JsObject(
         _containerType -> JsString(containerType),
         _id -> JsString(container.id),
-        _market -> JsString(container.market),
-        _baseMarket -> JsString(container.baseMarket),
+        _currency -> JsString(container.currency),
+        _baseCurrency -> JsString(container.baseCurrency),
         _stocks -> {
           val builder = new scala.collection.immutable.VectorBuilder[JsValue]()
           for(stock <- container.doubleEndedContainer)
@@ -56,16 +56,16 @@ object StockContainer {
 
     def read(value: JsValue) =
       try {
-        value.asJsObject.getFields(_containerType, _id, _market, _baseMarket, _stocks, _ledger) match {
-          case Seq(JsString(containerType), JsString(id), JsString(market), JsString(baseMarket), JsArray(stocks), jsLedger) =>
+        value.asJsObject.getFields(_containerType, _id, _currency, _baseCurrency, _stocks, _ledger) match {
+          case Seq(JsString(containerType), JsString(id), JsString(currency), JsString(baseCurrency), JsArray(stocks), jsLedger) =>
             val ledger: Ledger = jsLedger.convertTo[Ledger]
             var isStack = false
             val container: StockContainer = containerType match {
               case `_stack` =>
                 isStack = true
-                StockStack(id, market, baseMarket, ledger)
+                StockStack(id, currency, baseCurrency, ledger)
               case `_queue` =>
-                StockQueue(id, market, baseMarket, ledger)
+                StockQueue(id, currency, baseCurrency, ledger)
               case _ =>
                 Logger.fatal(s"StockContainer.read: expecting a stack or a queue $containerType.")
             }
@@ -87,9 +87,9 @@ object StockContainer {
 sealed trait StockContainer extends Container[Stock] with ToHTML {
   val id: String
 
-  val market: Market  // what do we store
+  val currency: Currency  // what do we store
 
-  val baseMarket: Market // what are prices expressed in
+  val baseCurrency: Currency // what are prices expressed in
 
   val ledger: Ledger
 
@@ -98,12 +98,12 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
   val eps: Double =
     if(Config.config.deprecatedUp2017Version) {
       // this is really a bug, fixed below for non-deprecated version
-      if(baseMarket == Market.euro || baseMarket == Market.usd)
+      if(baseCurrency == Currency.euro || baseCurrency == Currency.usd)
         0.00001
       else
         Config.config.epsilon
     } else {
-      if(market == Market.euro || market == Market.usd)
+      if(currency == Currency.euro || currency == Currency.usd)
         0.00001
       else
         Config.config.epsilon
@@ -123,7 +123,7 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
     var toRemove = amount
     var basis = 0.0
     var done = false
-    val usedStocks = new StockQueue(id, market, baseMarket)
+    val usedStocks = new StockQueue(id, currency, baseCurrency)
     while(!this.isEmpty && !done) {
       val stock = this.first
       if(stock.amount >= toRemove) {
@@ -158,8 +158,8 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
     <span>
       {if(showTotal) {
         <span>
-          {HTMLDoc.asMarket(totalAmount, market)}.
-          {HTMLDoc.asMarket(totalCost, baseMarket)}.
+          {HTMLDoc.asCurrency(totalAmount, currency)}.
+          {HTMLDoc.asCurrency(totalCost, baseCurrency)}.
         </span>
        }
       }
@@ -172,14 +172,14 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
         <span class='exchanger'>
           {stock.exchanger}
         </span>
-        {if(showExchangeRates && stock.exchangeMarket != baseMarket)
+        {if(showExchangeRates && stock.exchangeCurrency != baseCurrency)
           <span>
             {if(showAmounts)
               s"${Format.formatDecimal(stock.amount)} x"
              else
               ""
             }
-            {HTMLDoc.asRate(stock.exchangeRate, stock.exchangeMarket, market)}
+            {HTMLDoc.asRate(stock.exchangeRate, stock.exchangeCurrency, currency)}
             =
           </span>
         }
@@ -189,7 +189,7 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
            else
             ""
           }
-          {HTMLDoc.asRate(stock.costBasis, baseMarket, market)}
+          {HTMLDoc.asRate(stock.costBasis, baseCurrency, currency)}
             {if(i < size - 1) "," else ""}
         </span>
       </span>
@@ -209,13 +209,13 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
   }
 }
 
-case class StockQueue(id: String, market: Market, baseMarket: Market, ledger: Ledger) extends Queue[Stock] with StockContainer {
-  def this(id: String, market: Market, baseMarket: Market) {
-    this(id, market, baseMarket, Ledger(id, 0))
+case class StockQueue(id: String, currency: Currency, baseCurrency: Currency, ledger: Ledger) extends Queue[Stock] with StockContainer {
+  def this(id: String, currency: Currency, baseCurrency: Currency) {
+    this(id, currency, baseCurrency, Ledger(id, 0))
   }
 
   override def copy: StockQueue = {
-    val clone = StockQueue(id, market, baseMarket, ledger.copy)
+    val clone = StockQueue(id, currency, baseCurrency, ledger.copy)
     for(x <- this)
       clone.insert(x.copy())
     return clone
@@ -223,13 +223,13 @@ case class StockQueue(id: String, market: Market, baseMarket: Market, ledger: Le
 }
 
 
-case class StockStack(id: String, market: Market, baseMarket: Market, ledger: Ledger) extends Stack[Stock] with StockContainer {
-  def this(id: String, market: Market, baseMarket: Market) {
-    this(id, market, baseMarket, Ledger(id, 0))
+case class StockStack(id: String, currency: Currency, baseCurrency: Currency, ledger: Ledger) extends Stack[Stock] with StockContainer {
+  def this(id: String, currency: Currency, baseCurrency: Currency) {
+    this(id, currency, baseCurrency, Ledger(id, 0))
   }
 
   override def copy: StockStack = {
-    val clone = StockStack(id, market, baseMarket, ledger.copy)
+    val clone = StockStack(id, currency, baseCurrency, ledger.copy)
     for(x <- this.reversed)
       clone.insert(x.copy())
     return clone
@@ -238,41 +238,41 @@ case class StockStack(id: String, market: Market, baseMarket: Market, ledger: Le
 
 
 trait StockPool extends Iterable[StockContainer] with ToHTML{
-  protected def newContainer(id: String, market: Market, baseMarket: Market): StockContainer
+  protected def newContainer(id: String, currency: Currency, baseCurrency: Currency): StockContainer
 
-  protected val containers = scala.collection.mutable.Map[Market, StockContainer]()
+  protected val containers = scala.collection.mutable.Map[Currency, StockContainer]()
 
   def delete(id: String): Unit = {
     containers -= id
   }
 
-  def apply(id: String)(baseMarket: Market): StockContainer =
-    containers.getOrElse(id, newContainer(id, id, baseMarket))
+  def apply(id: String)(baseCurrency: Currency): StockContainer =
+    containers.getOrElse(id, newContainer(id, id, baseCurrency))
 
   def iterator: Iterator[StockContainer] =
     containers.iterator.map(_._2)
 
-  def add(id: String, boughtMarket: Market, boughtAmount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeMarket: Market, desc: String)(baseMarket: Market): Unit = {
-    val container = containers.getOrElse(id, newContainer(id, boughtMarket, baseMarket))
+  def add(id: String, boughtCurrency: Currency, boughtAmount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeCurrency: Currency, desc: String)(baseCurrency: Currency): Unit = {
+    val container = containers.getOrElse(id, newContainer(id, boughtCurrency, baseCurrency))
 
     container.insert(
-      Stock(boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeMarket)
+      Stock(boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeCurrency)
       , (x: Stock, y: Stock) => (x.costBasis - y.costBasis).abs < container.eps && x.exchanger == y.exchanger
           && x.date.sameDayAs(y.date)
-          && x.exchangeMarket == y.exchangeMarket && (x.exchangeRate - y.exchangeRate).abs < container.eps
+          && x.exchangeCurrency == y.exchangeCurrency && (x.exchangeRate - y.exchangeRate).abs < container.eps
       , (x: Stock, y: Stock) => x.copy(amount = x.amount + y.amount)
       , desc
     )
     containers(id) = container
   }
 
-  // Assumes id = boughtMarket. Useful for non-margin markets where ids are markets themselves
-  def add(boughtMarket: Market, boughtAmount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeMarket: Market, desc: String)(baseMarket: Market): Unit = {
-    add(boughtMarket, boughtMarket, boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeMarket, desc)(baseMarket)
+  // Assumes id = boughtCurrency. Useful for non-margin currencies where ids are currencies themselves
+  def add(boughtCurrency: Currency, boughtAmount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeCurrency: Currency, desc: String)(baseCurrency: Currency): Unit = {
+    add(boughtCurrency, boughtCurrency, boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeCurrency, desc)(baseCurrency)
   }
 
-  def remove(id: String, soldAmount: Double)(baseMarket: Market)(date: LocalDateTime, exchanger: Exchanger, desc: String): (Price, Price, StockContainer) = {
-    val container = apply(id)(baseMarket)
+  def remove(id: String, soldAmount: Double)(baseCurrency: Currency)(date: LocalDateTime, exchanger: Exchanger, desc: String): (Price, Price, StockContainer) = {
+    val container = apply(id)(baseCurrency)
     return container.removeAndGetBasis(soldAmount)(date: LocalDateTime, exchanger: Exchanger, desc)
   }
 
@@ -283,7 +283,7 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
     var totalCost = 0.0
     <table id='tableStyle1'>
       <tr>
-        <th>Market</th>
+        <th>Currency</th>
         <th>Units</th>
         <th>Total cost</th>
         <th>Average cost</th>
@@ -292,7 +292,7 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
       {if(caption.nonEmpty)
         <caption>{caption}</caption>
       }
-      {toList.sortBy(_.market).map{ stockContainer =>
+      {toList.sortBy(_.currency).map{ stockContainer =>
         var amount = 0.0
         var cost = 0.0
         for(stock: Stock <- stockContainer) {
@@ -302,22 +302,22 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
         totalCost += cost
         if(totalCost > 0) {
           <tr>
-            <td ><span class='market'>{stockContainer.market}</span></td>
-            <td>{HTMLDoc.asMarket(amount, stockContainer.market, decimals = 4.max(Config.config.decimalPlaces))}</td>
-            <td>{HTMLDoc.asMarket(cost, stockContainer.baseMarket)}</td>
-            <td class='noLineBreak'>{HTMLDoc.asMarket(cost / amount, stockContainer.baseMarket)} / <span class='market'>{stockContainer.market}</span></td>
+            <td ><span class='currency'>{stockContainer.currency}</span></td>
+            <td>{HTMLDoc.asCurrency(amount, stockContainer.currency, decimals = 4.max(Config.config.decimalPlaces))}</td>
+            <td>{HTMLDoc.asCurrency(cost, stockContainer.baseCurrency)}</td>
+            <td class='noLineBreak'>{HTMLDoc.asCurrency(cost / amount, stockContainer.baseCurrency)} / <span class='currency'>{stockContainer.currency}</span></td>
             <td class='small2'>{stockContainer.toHTML(showTotal = false, showExchangeRates = true)}</td>
           </tr>
         }
        }
     }
-    {val baseMarkets = this.map(_.baseMarket)
-     val sameBaseMarkets = baseMarkets.nonEmpty && baseMarkets.tail.forall(_ == baseMarkets.head)
-     if(sameBaseMarkets)
+    {val baseCurrencies = this.map(_.baseCurrency)
+     val sameBaseCurrencies = baseCurrencies.nonEmpty && baseCurrencies.tail.forall(_ == baseCurrencies.head)
+     if(sameBaseCurrencies)
         <tr>
           <th>Total:</th>
           <th></th>
-          <th>{HTMLDoc.asMarket(totalCost, baseMarkets.head)}</th>
+          <th>{HTMLDoc.asCurrency(totalCost, baseCurrencies.head)}</th>
           <th></th>
           <th></th>
         </tr>
@@ -334,10 +334,10 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
       val sep = ";"
       val decimals = 8
 
-      toList.filter(_.nonEmpty).sortBy(_.market).foreach { stockContainer =>
-        val baseMarket = stockContainer.baseMarket
-        val header = List("date", "exchanger", "amount", s"cost basis ($baseMarket)", s"subtotal ($baseMarket)", "total amount", s"total cost ($baseMarket)", s"average cost ($baseMarket)")
-        ps.println(stockContainer.market)
+      toList.filter(_.nonEmpty).sortBy(_.currency).foreach { stockContainer =>
+        val baseCurrency = stockContainer.baseCurrency
+        val header = List("date", "exchanger", "amount", s"cost basis ($baseCurrency)", s"subtotal ($baseCurrency)", "total amount", s"total cost ($baseCurrency)", s"average cost ($baseCurrency)")
+        ps.println(stockContainer.currency)
         ps.println(header.mkString(sep))
 
         var amount = 0.0
@@ -391,12 +391,12 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
 
 
 case class QueueStockPool() extends StockPool {
-  def newContainer(id: String, market: Market, baseMarket: Market) =
-    new StockQueue(id, market, baseMarket)
+  def newContainer(id: String, currency: Currency, baseCurrency: Currency) =
+    new StockQueue(id, currency, baseCurrency)
 }
 
 
 case class StackStockPool() extends StockPool {
-  def newContainer(id: String, market: Market, baseMarket: Market) =
-    new StockStack(id, market, baseMarket)
+  def newContainer(id: String, currency: Currency, baseCurrency: Currency) =
+    new StockStack(id, currency, baseCurrency)
 }

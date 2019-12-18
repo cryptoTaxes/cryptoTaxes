@@ -12,9 +12,9 @@ object Format {
   val decimalSep: Char =
     java.text.NumberFormat.getInstance().asInstanceOf[DecimalFormat].getDecimalFormatSymbols.getDecimalSeparator
 
-  def trimZeros(str0: String): String = {
-    var str = str0.reverse
-    if(str0.contains(decimalSep)) {
+  def trimZeros(_str: String): String = {
+    var str = _str.reverse
+    if(_str.contains(decimalSep)) {
       str = str.dropWhile(_ == '0')
       if(str.nonEmpty && str.head == decimalSep)
         str = str.tail
@@ -54,6 +54,6 @@ object Format {
     return trimZeros(df.format(x))
   }
 
-  def asMarket(amount: Double, marketUnit: Market, decimals: Int = Config.config.decimalPlaces): String =
-    Format.formatDecimal(amount, decimals) + " " + marketUnit
+  def asCurrency(amount: Double, currencyUnit: Currency, decimals: Int = Config.config.decimalPlaces): String =
+    Format.formatDecimal(amount, decimals) + " " + currencyUnit
 }

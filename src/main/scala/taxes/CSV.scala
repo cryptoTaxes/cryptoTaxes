@@ -22,7 +22,7 @@ case class CSV() {
 
   private val sep = ";"
 
-  case class Entry(date: Option[LocalDateTime] = None, sold: Option[Market] = None, soldAmount: Option[Double] = None, bought: Option[Market] = None, boughtAmount: Option[Double] = None, costBasis: Option[Double] = None, sellValue: Option[Double] = None, fee: Option[Double] = None, exchanger: Exchanger) {
+  case class Entry(date: Option[LocalDateTime] = None, sold: Option[Currency] = None, soldAmount: Option[Double] = None, bought: Option[Currency] = None, boughtAmount: Option[Double] = None, costBasis: Option[Double] = None, sellValue: Option[Double] = None, fee: Option[Double] = None, exchanger: Exchanger) {
 
     private def doFormat[A](opt: Option[A], f: A => String): String = opt match {
       case None => ""

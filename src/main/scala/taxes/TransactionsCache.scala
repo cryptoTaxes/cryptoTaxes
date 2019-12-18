@@ -8,7 +8,7 @@ import spray.json._
 import spray.json.JsonProtocol._
 
 object TransactionsCache extends Initializable with Finalizable {
-  case class TxKey(market: Market, txid: String, address: String)
+  case class TxKey(currency: Currency, txid: String, address: String)
   implicit val txKeyJson = jsonFormat3(TxKey)
 
   case class TxInfo(amount: Double, fee: Double, localDate: LocalDateTime)
@@ -38,20 +38,20 @@ object TransactionsCache extends Initializable with Finalizable {
       map += pair
   }
 
-  def lookup(market: Market, txid: String, address: String): TxInfo = {
-    map.get(TxKey(market, txid, address)) match {
+  def lookup(currency: Currency, txid: String, address: String): TxInfo = {
+    map.get(TxKey(currency, txid, address)) match {
       case Some(txInfo) => txInfo
       case None =>
-        val searcher = BlockExplorerSearcher(market, txid, address)
+        val searcher = BlockExplorerSearcher(currency, txid, address)
         searcher.search match {
           case Some(_) =>
-            val key = TxKey(market, txid, address)
+            val key = TxKey(currency, txid, address)
             val info = TxInfo(searcher.amount, searcher.fee, searcher.date)
             map += (key -> info)
             modified = true
             return info
           case None =>
-            Logger.fatal(s"TransactionCache not implemented yet for $market. $txid.")
+            Logger.fatal(s"TransactionCache not implemented yet for $currency. $txid.")
         }
     }
   }

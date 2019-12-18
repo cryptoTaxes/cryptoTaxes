@@ -44,21 +44,21 @@ object Yobit extends Exchanger {
 
       val desc = ""
 
-      val (m1,m2) = Parse.split(pair, "/")
-      val isShort = orderType == "SELL"
+      val (currency1, currency2) = Parse.split(pair, "/")
+      val isSell = orderType == "SELL"
 
-      val baseMarket = Market.normalize(m1)
-      val quoteMarket = Market.normalize(m2)
+      val baseCurrency = Currency.normalize(currency1)
+      val quoteCurrency = Currency.normalize(currency2)
 
       if(completed>0) {
-        // quoteMarket is usually BTC
+        // quoteCurrency is usually BTC
         val exchange =
-          if(isShort)
+          if(isSell)
             Exchange(
               date = date
               , id = ""
-              , fromAmount = completed, fromMarket = baseMarket
-              , toAmount = completed * price, toMarket = quoteMarket
+              , fromAmount = completed, fromCurrency = baseCurrency
+              , toAmount = completed * price, toCurrency = quoteCurrency
               , fees = List()
               , exchanger = Yobit
               , description = desc
@@ -67,8 +67,8 @@ object Yobit extends Exchanger {
             Exchange(
               date = date
               , id = ""
-              , fromAmount = completed * price, fromMarket = quoteMarket
-              , toAmount = completed, toMarket = baseMarket
+              , fromAmount = completed * price, fromCurrency = quoteCurrency
+              , toAmount = completed, toCurrency = baseCurrency
               , fees = List()
               , exchanger = Yobit
               , description = desc
@@ -91,7 +91,7 @@ object Yobit extends Exchanger {
 
       val date = LocalDateTime.parseAsUTC(s"$date1 $date2", "yyyy-MM-dd HH:mm:ss")
 
-      val currency = Market.normalize(scLn.next("Currency"))
+      val currency = Currency.normalize(scLn.next("Currency"))
       val amount = scLn.nextDouble("Amount")
       val accepted = scLn.next("Status") == "Accepted"
 
@@ -100,7 +100,7 @@ object Yobit extends Exchanger {
           date = date
           , id = ""
           , amount = amount
-          , market = currency
+          , currency = currency
           , exchanger = Yobit
           , description = "Deposit into Yobit"
         )
@@ -122,7 +122,7 @@ object Yobit extends Exchanger {
 
       val date = LocalDateTime.parseAsUTC(s"$date1 $date2", "yyyy-MM-dd HH:mm:ss")
 
-      val currency = Market.normalize(scLn.next("Currency"))
+      val currency = Currency.normalize(scLn.next("Currency"))
       val amount = scLn.nextDouble("Amount")
       val completed = scLn.next("Status") == "Completed"
 
@@ -131,7 +131,7 @@ object Yobit extends Exchanger {
           date = date
           , id = ""
           , amount = amount
-          , market = currency
+          , currency = currency
           , exchanger = Yobit
           , description = "Withdrawal from Yobit"
         )

@@ -89,13 +89,13 @@ object ParseCommandLine {
                 }
               config = config.copy(verbosityLevel = level)
             } else if(flag == "currency") {
-              val baseCoin = value match {
-                case "euro" => EuroBaseCoin
-                case "usd"  => USDBaseCoin
-                case "btc"  => BTCBaseCoin
+              val baseCurrency = value match {
+                case "euro" => EuroBaseCurrency
+                case "usd"  => USDBaseCurrency
+                case "btc"  => BTCBaseCurrency
                 case _      => Logger.fatal(s"Unknown currency: $value")
               }
-              config = config.copy(baseCoin = baseCoin)
+              config = config.copy(baseCurrency = baseCurrency)
             } else if(flag == "download-prices") {
               val download = toBool("download prices flag", value)
               config = config.copy(downloadPrices = download)

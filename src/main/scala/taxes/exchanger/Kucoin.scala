@@ -31,9 +31,9 @@ object Kucoin extends Exchanger {
 
       val createdDate = LocalDateTime.parseAsUTC(scLn.next("createdDate"), "+0800", "yyyy-MM-dd HH:mm:ss.S") // Kucoin trade history file seems to use UTC+8 time zone
 
-      val (baseMarket_0, quoteMarket_0) = Parse.split(symbol, "-")
-      val baseMarket = Market.normalize(baseMarket_0)
-      val quoteMarket = Market.normalize(quoteMarket_0)
+      val (_baseCurrency, _quoteCurrency) = Parse.split(symbol, "-")
+      val baseCurrency = Currency.normalize(_baseCurrency)
+      val quoteCurrency = Currency.normalize(_quoteCurrency)
 
       val desc = "Order: " + oid
 
@@ -52,9 +52,9 @@ object Kucoin extends Exchanger {
         val exchange = Exchange(
           date = createdDate
           , id = oid
-          , fromAmount = dealValue, fromMarket = quoteMarket
-          , toAmount = amount - fee, toMarket = baseMarket
-          , fees = List(FeePair(fee, baseMarket))
+          , fromAmount = dealValue, fromCurrency = quoteCurrency
+          , toAmount = amount - fee, toCurrency = baseCurrency
+          , fees = List(FeePair(fee, baseCurrency))
           , exchanger = Kucoin
           , description = desc
         )
@@ -64,9 +64,9 @@ object Kucoin extends Exchanger {
         val exchange = Exchange(
           date = createdDate
           , id = oid
-          , fromAmount = amount - fee, fromMarket = baseMarket
-          , toAmount = dealValue, toMarket = quoteMarket
-          , fees = List(FeePair(fee, baseMarket))
+          , fromAmount = amount - fee, fromCurrency = baseCurrency
+          , toAmount = dealValue, toCurrency = quoteCurrency
+          , fees = List(FeePair(fee, baseCurrency))
           , exchanger = Kucoin
           , description = desc
         )

@@ -1,25 +1,25 @@
 package taxes
 
-case class ValueTracker(baseMarket: Market) extends Iterable[(Market, Double)] with ToHTML {
-  private val map = scala.collection.mutable.Map[Market,Double]()
+case class ValueTracker(baseCurrency: Currency) extends Iterable[(Currency, Double)] with ToHTML {
+  private val map = scala.collection.mutable.Map[Currency,Double]()
 
   def clear(): Unit =
     map.clear()
 
-  def record(market: Market, amount: Double): Unit =
-    map += (market -> (amount + map.getOrElse(market, 0.0)))
+  def record(currency: Currency, amount: Double): Unit =
+    map += (currency -> (amount + map.getOrElse(currency, 0.0)))
 
   def sum: Double =
     map.values.sum
 
-  def keys: Iterable[Market] =
+  def keys: Iterable[Currency] =
     map.keys
 
-  def iterator: Iterator[(Market, Double)] =
+  def iterator: Iterator[(Currency, Double)] =
     map.iterator
 
-  def apply(market: Market): Double =
-    map.getOrElse(market, 0.0)
+  def apply(currency: Currency): Double =
+    map.getOrElse(currency, 0.0)
 
   override def toHTML: HTML =
     toHTML()
@@ -27,7 +27,7 @@ case class ValueTracker(baseMarket: Market) extends Iterable[(Market, Double)] w
   def toHTML(caption: String = ""): HTML =
     <table id='tableStyle1'>
       <tr>
-        <th>Market</th>
+        <th>Currency</th>
         <th>Amount</th>
         <th>Accumulated</th>
       </tr>
@@ -38,14 +38,14 @@ case class ValueTracker(baseMarket: Market) extends Iterable[(Market, Double)] w
     map.toList.sortBy(_._2).map { case (label,total) =>
       sum += total
       <tr>
-        <td ><span class='market'>{label}</span></td>
-        <td>{HTMLDoc.asMarket(total, baseMarket)}</td>
-        <td>{HTMLDoc.asMarket(sum, baseMarket)}</td>
+        <td ><span class='currency'>{label}</span></td>
+        <td>{HTMLDoc.asCurrency(total, baseCurrency)}</td>
+        <td>{HTMLDoc.asCurrency(sum, baseCurrency)}</td>
       </tr>
     }
       }
       <td class='embold'>Total:</td>
       <td></td>
-      <td>{HTMLDoc.asMarket(map.values.sum, baseMarket)}</td>
+      <td>{HTMLDoc.asCurrency(map.values.sum, baseCurrency)}</td>
     </table>
 }

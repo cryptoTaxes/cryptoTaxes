@@ -25,7 +25,7 @@ object RippleTrade extends Exchanger {
 
   )
 
-  private case class Entry(hash: String, amount: Double, currency: Market, date: LocalDateTime)
+  private case class Entry(hash: String, amount: Double, currency: Currency, date: LocalDateTime)
 
   private def readFile(fileName: String): List[Exchange] = {
     val contents = FileSystem.withSource(fileName){ src =>
@@ -66,9 +66,9 @@ object RippleTrade extends Exchanger {
                   Exchange(
                     date = entryXRP.date
                     , id = hash
-                    , fromAmount = entryXRP.amount.abs, fromMarket = Market.ripple
-                    , toAmount = entryBTC.amount.abs, toMarket = Market.bitcoin
-                    , fees = List(FeePair(0.012, Market.ripple))
+                    , fromAmount = entryXRP.amount.abs, fromCurrency = Currency.ripple
+                    , toAmount = entryBTC.amount.abs, toCurrency = Currency.bitcoin
+                    , fees = List(FeePair(0.012, Currency.ripple))
                     , exchanger = RippleTrade
                     , description = desc
                   )
@@ -76,9 +76,9 @@ object RippleTrade extends Exchanger {
                   Exchange(
                     date = entryXRP.date
                     , id = hash
-                    , fromAmount = entryBTC.amount.abs, fromMarket = Market.bitcoin
-                    , toAmount = entryXRP.amount.abs, toMarket = Market.ripple
-                    , fees = List(FeePair(0.012, Market.ripple))
+                    , fromAmount = entryBTC.amount.abs, fromCurrency = Currency.bitcoin
+                    , toAmount = entryXRP.amount.abs, toCurrency = Currency.ripple
+                    , fees = List(FeePair(0.012, Currency.ripple))
                     , exchanger = RippleTrade
                     , description = desc
                   )
@@ -111,7 +111,7 @@ object RippleTrade extends Exchanger {
       val what = scLn.next("What")
       val to = scLn.next("To")
       val amount = scLn.nextDouble("Amount")
-      val market = Market.normalize(scLn.next("Market"))
+      val currency = Currency.normalize(scLn.next("Currency"))
 
 
       if(what=="ACTIVATED" || what=="IN") {
@@ -120,7 +120,7 @@ object RippleTrade extends Exchanger {
           date = date
           , id = txHash
           , amount = amount
-          , market = market
+          , currency = currency
           , exchanger = RippleTrade
           , description = desc
         )
@@ -131,7 +131,7 @@ object RippleTrade extends Exchanger {
           date = date
           , id = txHash
           , amount = amount
-          , market = market
+          , currency = currency
           , exchanger = RippleTrade
           , description = desc
         )

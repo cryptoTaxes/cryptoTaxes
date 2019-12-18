@@ -38,24 +38,24 @@ object GDAX extends Exchanger {
       val desc = "Order: " + tradeID
       val date = LocalDateTime.parse(createdAt, "yyyy-MM-dd'T'HH:mm:ss.SSSX") // GDAX includes a zone-offset 'Z' at the end
 
-      val (baseMarket_0, quoteMarket_0) = Parse.split(product, "-")
-      val baseMarket = Market.normalize(baseMarket_0)
-      val quoteMarket = Market.normalize(quoteMarket_0)
+      val (_baseCurrency, _quoteCurrency) = Parse.split(product, "-")
+      val baseCurrency = Currency.normalize(_baseCurrency)
+      val quoteCurrency = Currency.normalize(_quoteCurrency)
 
-      val sizeMarket = Market.normalize(sizeUnit)
-      val priceFeeTotalMarket = Market.normalize(priceFeeTotalUnit)
+      val sizeCurrency = Currency.normalize(sizeUnit)
+      val priceFeeTotalCurrency = Currency.normalize(priceFeeTotalUnit)
 
-      if(sizeMarket != baseMarket)
-        return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line as sizeMarket($sizeMarket) and quoteMarket($quoteMarket) are different.")
+      if(sizeCurrency != baseCurrency)
+        return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line as sizeCurrency($sizeCurrency) and quoteCurrency($quoteCurrency) are different.")
 
       if(side == "SELL") {
         val exchange =
           Exchange(
             date = date
             , id = tradeID
-            , fromAmount = size, fromMarket = baseMarket
-            , toAmount = total, toMarket = quoteMarket
-            , fees = List(FeePair(fee, priceFeeTotalMarket))
+            , fromAmount = size, fromCurrency = baseCurrency
+            , toAmount = total, toCurrency = quoteCurrency
+            , fees = List(FeePair(fee, priceFeeTotalCurrency))
             , exchanger = GDAX
             , description = desc
           )
@@ -65,9 +65,9 @@ object GDAX extends Exchanger {
           Exchange(
             date = date
             , id = tradeID
-            , fromAmount = total.abs, fromMarket = quoteMarket
-            , toAmount = size, toMarket = baseMarket
-            , fees = List(FeePair(fee, priceFeeTotalMarket))
+            , fromAmount = total.abs, fromCurrency = quoteCurrency
+            , toAmount = size, toCurrency = baseCurrency
+            , fees = List(FeePair(fee, priceFeeTotalCurrency))
             , exchanger = GDAX
             , description = desc
           )
@@ -89,7 +89,7 @@ object GDAX extends Exchanger {
       val time = LocalDateTime.parse(scLn.next("time"), "yyyy-MM-dd'T'HH:mm:ss.SSSX") // GDAX includes a zone-offset 'Z' at the end
       val amount = scLn.nextDouble("amount")
       val balance = scLn.nextDouble("balance")
-      val unit = Market.normalize(scLn.next("amount/balance unit"))
+      val unit = Currency.normalize(scLn.next("amount/balance unit"))
       val id = scLn.next("transfer id,trade id,order id")
 
       if(what=="deposit") {
@@ -97,7 +97,7 @@ object GDAX extends Exchanger {
           date = time
           , id = id
           , amount = amount
-          , market = unit
+          , currency = unit
           , exchanger = GDAX
           , description = "Deposit " + id
         )
@@ -107,7 +107,7 @@ object GDAX extends Exchanger {
           date = time
           , id = id
           , amount = amount.abs
-          , market = unit
+          , currency = unit
           , exchanger = GDAX
           , description = "Withdrawal " + id
         )

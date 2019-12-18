@@ -1,5 +1,5 @@
-// Different names for markets at coinmarketcap.com
-// One line for each market. 
+// Different names for currencies at coinmarketcap.com
+// One line for each currency.
 // Used to download historical prices.
 
 BCH   -> bitcoin-cash

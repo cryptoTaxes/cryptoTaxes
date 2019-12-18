@@ -1,0 +1,18 @@
+// Normalizations for different names for same currency
+// One line for each currency.
+// Alternative currency names on the left (separated by commas) .
+// Normalized currency name on the right.
+
+BITCOIN       -> BTC
+EURO          -> EUR
+DOLAR, DOLLAR -> USD
+DOGES         -> DOGE
+MYR           -> XMY
+VNL           -> XVC
+STR           -> XLM
+BCC           -> BCH
+XG            -> GOAL
+CSD           -> NIRO
+
+
+

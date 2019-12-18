@@ -4,9 +4,9 @@
 // Priority on the right.
 
 EURO    -> 1000
-BITCOIN -> 900
-USD     -> 800
-USDT    -> 700
+USD     -> 900
+USDT    -> 800
+BITCOIN -> 700
 ETH     -> 600
 LTC     -> 500
 BNB     -> 400

@@ -1,7 +1,7 @@
 package object taxes {
   type HTML = scala.xml.Elem
 
-  type Market = String
+  type Currency = String
 
   type Price = Double
 }

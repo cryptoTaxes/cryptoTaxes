@@ -33,11 +33,10 @@ object CCEX extends Exchanger {
           LocalDateTime.parseAsUTC(s"$token1 $token2", "yyyy-MM-dd HH:mm:ss") // C-CEX uses UTC
 
       if(orderType=="Transaction") {
-
         val toAmount = scLn.nextDouble("To Amount")
-        val toMarket = Market.normalize(scLn.next("To Market"))
+        val toCurrency = Currency.normalize(scLn.next("To Currency"))
         val fromAmount = scLn.nextDouble("From Amount")
-        val fromMarket = Market.normalize(scLn.next("From Market"))
+        val fromCurrency = Currency.normalize(scLn.next("From Currency"))
 
         val feePercent = 0.2
 
@@ -47,9 +46,9 @@ object CCEX extends Exchanger {
           Exchange(
             date = date
             , id = ""
-            , fromAmount = fromAmount, fromMarket = fromMarket
-            , toAmount = toAmount, toMarket = toMarket  // toAmount in csv doesn't include fee
-            , fees = List(FeePair(fee, toMarket))
+            , fromAmount = fromAmount, fromCurrency = fromCurrency
+            , toAmount = toAmount, toCurrency = toCurrency  // toAmount in csv doesn't include fee
+            , fees = List(FeePair(fee, toCurrency))
             , exchanger = CCEX
             , description = ""
           )
@@ -57,7 +56,7 @@ object CCEX extends Exchanger {
         return CSVReader.Ok(exchange)
       } else if(orderType=="Deposit") {
         val amount = scLn.nextDouble("Amount")
-        val market = Market.normalize(scLn.next("Market"))
+        val currency = Currency.normalize(scLn.next("Currency"))
 
         val skip1 = scLn.next("skip1")
         val skip2 = scLn.next("skip1")
@@ -71,7 +70,7 @@ object CCEX extends Exchanger {
           date = date
           , id = txid
           , amount = amount
-          , market = market
+          , currency = currency
           , exchanger = CCEX
           , description = desc
         )
@@ -80,7 +79,7 @@ object CCEX extends Exchanger {
         val skip1 = scLn.next("skip1")
 
         val amount = scLn.nextDouble("Amount")
-        val market = Market.normalize(scLn.next("Market"))
+        val currency = Currency.normalize(scLn.next("Currency"))
 
         val skip2 = scLn.next("skip2")
         val skip3 = scLn.next("skip3")
@@ -94,7 +93,7 @@ object CCEX extends Exchanger {
           date = date
           , id = txid
           , amount = amount
-          , market = market
+          , currency = currency
           , exchanger = CCEX
           , description = desc
         )

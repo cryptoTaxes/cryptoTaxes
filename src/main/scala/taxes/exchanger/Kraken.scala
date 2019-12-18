@@ -10,47 +10,47 @@ import taxes.util.parse._
 object Kraken extends Exchanger {
   override val id: String = "Kraken"
 
-  private val configFileName = FileSystem.readConfigFile("krakenMarkets.txt")
+  private val configFileName = FileSystem.readConfigFile("krakenCurrencies.txt")
 
-  private val conversions: Map[Market, Market] =
-    Parse.readKeysValue(configFileName, "Reading Kraken markets").map{
-      case (krakenMarket, market) => (krakenMarket.toUpperCase, Market.normalize(market))
+  private val conversions: Map[Currency, Currency] =
+    Parse.readKeysValue(configFileName, "Reading Kraken currencies").map{
+      case (krakenCurrency, currency) => (krakenCurrency.toUpperCase, Currency.normalize(currency))
     }
 
-  def parsePair(pair: String): (Market, Market) = {
+  def parsePair(pair: String): (Currency, Currency) = {
     var found = false
 
-    var baseMarket0 = ""
-    var baseMarket = ""
+    var _baseCurrency = ""
+    var baseCurrency = ""
 
     val it = conversions.keys.iterator
     while(!found && it.hasNext) {
-      baseMarket0 = it.next()
+      _baseCurrency = it.next()
 
-      if(pair.startsWith(baseMarket0)) {
+      if(pair.startsWith(_baseCurrency)) {
         found = true
-        baseMarket = conversions(baseMarket0)
+        baseCurrency = conversions(_baseCurrency)
       }
     }
 
     if(!found)
       Logger.fatal(s"Could not parse Kraken pair $pair. Check file $configFileName.")
 
-    val quoteMarket0 = pair.drop(baseMarket0.length)
+    val _quoteCurrency = pair.drop(_baseCurrency.length)
 
-    val quoteMarket = conversions.get(quoteMarket0) match {
-      case None => Logger.fatal(s"Could not parse Kraken market $quoteMarket0. Check file $configFileName.")
-      case Some(market) => market
+    val quoteCurrency = conversions.get(_quoteCurrency) match {
+      case None => Logger.fatal(s"Could not parse Kraken currency ${_quoteCurrency}. Check file $configFileName.")
+      case Some(currency) => currency
     }
 
     return (
-        Market.normalize(baseMarket)
-      , Market.normalize(quoteMarket)
+        Currency.normalize(baseCurrency)
+      , Currency.normalize(quoteCurrency)
     )
   }
 
   private type TxID = String
-  private case class Ledger(txType: String, market: Market, amount: Double, fee: Double)
+  private case class Ledger(txType: String, currency: Currency, amount: Double, fee: Double)
   private val ledgersCache = scala.collection.mutable.Map[TxID, Ledger]()
 
   private type OrderID = String
@@ -97,13 +97,13 @@ object Kraken extends Exchanger {
       val ledgers = scLn.next("Ledgers")
 
       val date = LocalDateTime.parseAsUTC(time, "yyyy-MM-dd HH:mm:ss.[SSSS][SSS][SS][S]") // kraken trades.csv uses UTC time zone
-      val (baseMarket, quoteMarket) = parsePair(pair) // already normalized
+      val (baseCurrency, quoteCurrency) = parsePair(pair) // already normalized
 
       val id = txid + "/" + ordertxid
       val desc = "Order: " + id
 
-      val isShort = sellBuy == "sell"
-      val isLong = sellBuy == "buy"
+      val isSell = sellBuy == "sell"
+      val isBuy = sellBuy == "buy"
       val isMargin = isMarginCache(ordertxid)
 
       val ledgersTxids = Parse.sepBy(ledgers, ",")
@@ -113,45 +113,49 @@ object Kraken extends Exchanger {
       val feeLedgers =
         ledgersTxids.flatMap(ledgersCache.get).filter(ledger => deductibleFees.contains(ledger.txType) && ledger.fee > 0)
 
-      val (fee1, fee1Market, fee2, fee2Market) = feeLedgers match {
+      val (fee1, fee1Currency, fee2, fee2Currency) = feeLedgers match {
         case List() =>
-          (0.0, baseMarket, 0.0, quoteMarket)   // no fees for this operation
-        case List(feeLedger) =>                 // a single fee1
-          (feeLedger.fee, feeLedger.market, 0.0, quoteMarket)
+          (0.0, baseCurrency, 0.0, quoteCurrency)   // no fees for this operation
+        case List(feeLedger) =>                     // a single fee1
+          (feeLedger.fee, feeLedger.currency, 0.0, quoteCurrency)
         case List(feeLedger1, feeLedger2) =>  // two fees for this operation
-          // We assume feeLedger1.market != feeLedger2.market
-          if(feeLedger1.market == feeLedger2.market)
-            Logger.fatal(s"${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as fee1 market is the same as fee2 market: $line.\n$feeLedger1\n$feeLedger2")
-          (feeLedger1.fee, feeLedger1.market, feeLedger2.fee, feeLedger2.market)
+          // We assume feeLedger1.currency != feeLedger2.currency
+          if(feeLedger1.currency == feeLedger2.currency)
+            Logger.fatal(s"${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as fee1 currency is the same as fee2 currency: $line.\n$feeLedger1\n$feeLedger2")
+          (feeLedger1.fee, feeLedger1.currency, feeLedger2.fee, feeLedger2.currency)
         case ls =>
           Logger.fatal(s"${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as it has more than two fees: $line.\n$ls")
       }
 
       if(isMargin) { // margin trade
-        if(isShort) {
+        if(isSell) {
           val margin =
             Margin(
               date = date
               , id = id
-              , fromAmount = vol, fromMarket = baseMarket
-              , toAmount = cost /* + (if(fee1Market==quoteMarket) fee1 else -fee1 * price) */, toMarket = quoteMarket
-              , fees = List(FeePair(fee1, fee1Market), FeePair(fee2, fee2Market))
+              , fromAmount = vol
+              , fromCurrency = baseCurrency
+              , toAmount = cost /* + (if(fee1Currency==quoteCurrency) fee1 else -fee1 * price) */
+              , toCurrency = quoteCurrency
+              , fees = List(FeePair(fee1, fee1Currency), FeePair(fee2, fee2Currency))
               , orderType = Operation.OrderType.Sell
-              , pair = (baseMarket, quoteMarket)
+              , pair = (baseCurrency, quoteCurrency)
               , exchanger = Kraken
               , description = desc
             )
           return CSVReader.Ok(margin)
-        } else if(isLong) {
+        } else if(isBuy) {
           val margin =
             Margin(
               date = date
               , id = id
-              , fromAmount = cost /* + (if(fee1Market==quoteMarket) fee1 else -fee1 * price) */, fromMarket = quoteMarket
-              , toAmount = vol, toMarket = baseMarket
-              , fees = List(FeePair(fee1, fee1Market), FeePair(fee2, fee2Market))
+              , fromAmount = cost /* + (if(fee1Currency==quoteCurrency) fee1 else -fee1 * price) */
+              , fromCurrency = quoteCurrency
+              , toAmount = vol
+              , toCurrency = baseCurrency
+              , fees = List(FeePair(fee1, fee1Currency), FeePair(fee2, fee2Currency))
               , orderType = Operation.OrderType.Buy
-              , pair = (baseMarket, quoteMarket)
+              , pair = (baseCurrency, quoteCurrency)
               , exchanger = Kraken
               , description = desc
             )
@@ -159,27 +163,27 @@ object Kraken extends Exchanger {
         } else
           return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
     } else { // spot exchange
-        if(isShort) {
-            // If fee1Market==fromMarket, vol is just what we are exchanging
+        if(isSell) {
+            // If fee1Currency==fromCurrency, vol is just what we are exchanging
             // (hence it corresponds to fromAmount). As vol does not include
             // fee1, we don't have to subtract fee1 to define fromAmount.
             // cost doesn't include fee1 and stands directly for toAmount.
 
-            // If fee1Market==toMarket, cost is what we are exchanging plus the fee1
+            // If fee1Currency==toCurrency, cost is what we are exchanging plus the fee1
             // hence cost - fee1 is what we are exchanging, so we have to compute the
             // subtraction to define toAmount.
             // vol doesn't include fee1 and stands directly for fromAmount.
 
             val toAmount =
               if(Config.config.deprecatedUp2017Version)
-                cost - (if(fee1Market == quoteMarket) fee1 else 0)
+                cost - (if(fee1Currency == quoteCurrency) fee1 else 0)
               else
                 cost - {
-                  if(fee1Market == quoteMarket && fee2Market == quoteMarket)
+                  if(fee1Currency == quoteCurrency && fee2Currency == quoteCurrency)
                     fee1 + fee2
-                  else if(fee2Market == quoteMarket)
+                  else if(fee2Currency == quoteCurrency)
                     fee2 // we end up getting cost - fee2
-                  else if(fee1Market == quoteMarket)
+                  else if(fee1Currency == quoteCurrency)
                     fee1 // we end up getting cost - fee1
                   else 0
                 }
@@ -189,35 +193,35 @@ object Kraken extends Exchanger {
                 date = date
                 , id = id
                 , fromAmount = vol
-                , fromMarket = baseMarket
+                , fromCurrency = baseCurrency
                 , toAmount = toAmount
-                , toMarket = quoteMarket
-                , fees = List(FeePair(fee1, fee1Market), FeePair(fee2, fee2Market))
+                , toCurrency = quoteCurrency
+                , fees = List(FeePair(fee1, fee1Currency), FeePair(fee2, fee2Currency))
                 , exchanger = Kraken
                 , description = desc
               )
             return CSVReader.Ok(exchange)
-        } else if(isLong) {
-            // If fee1Market==fromMarket, cost is just what we are exchanging
+        } else if(isBuy) {
+            // If fee1Currency==fromCurrency, cost is just what we are exchanging
             // (hence it corresponds to fromAmount). As cost does not include
             // fee1, we don't have to subtract fee1 to define fromAmount.
             // Same goes for vol, which corresponds directly to toAmount.
 
-            // If fee1Market== toMarket, vol is what we are exchanging plus the fee1
+            // If fee1Currency== toCurrency, vol is what we are exchanging plus the fee1
             // hence vol - fee1 is what we are exchanging, so we have to compute the
             // subtraction to define toAmount.
             // cost stands directly for fromAmount.
 
           val toAmount =
             if(Config.config.deprecatedUp2017Version)
-              vol - (if(fee1Market == quoteMarket) fee1 else 0)
+              vol - (if(fee1Currency == quoteCurrency) fee1 else 0)
             else
               vol - {
-                if(fee1Market == baseMarket && fee2Market == baseMarket)
+                if(fee1Currency == baseCurrency && fee2Currency == baseCurrency)
                   fee1 + fee2
-                else if(fee1Market == baseMarket)
+                else if(fee1Currency == baseCurrency)
                   fee1 // we end up getting cost - fee1
-                else if(fee2Market == baseMarket)
+                else if(fee2Currency == baseCurrency)
                   fee2 // we end up getting cost - fee2
                 else 0
               }
@@ -227,10 +231,10 @@ object Kraken extends Exchanger {
                 date = date
                 , id = id
                 , fromAmount = cost
-                , fromMarket = quoteMarket
+                , fromCurrency = quoteCurrency
                 , toAmount = toAmount
-                , toMarket = baseMarket
-                , fees = List(FeePair(fee1, fee1Market), FeePair(fee2, fee2Market))
+                , toCurrency = baseCurrency
+                , fees = List(FeePair(fee1, fee1Currency), FeePair(fee2, fee2Currency))
                 , exchanger = Kraken
                 , description = desc
               )
@@ -258,7 +262,7 @@ object Kraken extends Exchanger {
       val feeAmount = scLn.nextDouble("Fee")
       val balance = scLn.next("Balance")
 
-      val currency = Market.normalize(conversions.getOrElse(asset, asset))
+      val currency = Currency.normalize(conversions.getOrElse(asset, asset))
 
       if(txType == "trade" || txType == "margin") {
         val ledger = Ledger(txType, currency, amount.abs, feeAmount)
@@ -275,18 +279,18 @@ object Kraken extends Exchanger {
           date = date
           , id = id
           , amount = amount.abs
-          , market = currency
+          , currency = currency
           , exchanger = Kraken
           , description = "Withdrawal " + currency + " " + id
         )
 
         var results = List[Operation](withdrawal)
-        if((currency == Market.bitcoin || currency == Market.euro) && !Config.config.deprecatedUp2017Version) {
+        if((currency == Currency.bitcoin || currency == Currency.euro) && !Config.config.deprecatedUp2017Version) {
           val fee = Fee(
             date = date
             , id = id
             , amount = feeAmount
-            , market = currency
+            , currency = currency
             , exchanger = Kraken
             , description = Kraken + " Withdrawal fee " + currency + " " + id
           )
@@ -296,7 +300,7 @@ object Kraken extends Exchanger {
             date = date
             , id = id
             , amount = feeAmount
-            , market = currency
+            , currency = currency
             , exchanger = Kraken
             , description = Kraken + " Withdrawal non taxable fee " + currency + " " + id
           )
@@ -312,18 +316,18 @@ object Kraken extends Exchanger {
           date = date
           , id = id
           , amount = amount
-          , market = currency
+          , currency = currency
           , exchanger = Kraken
           , description = "Deposit " + currency + " " + id
         )
         var results = List[Operation](deposit)
-        if((currency == Market.bitcoin || currency == Market.euro) && !Config.config.deprecatedUp2017Version) {
+        if((currency == Currency.bitcoin || currency == Currency.euro) && !Config.config.deprecatedUp2017Version) {
           if(feeAmount > 0) {
             val fee = Fee(
               date = date
               , id = id
               , amount = feeAmount
-              , market = currency
+              , currency = currency
               , exchanger = Kraken
               , description = Kraken + " Deposit fee " + currency + " " + id
             )
@@ -333,7 +337,7 @@ object Kraken extends Exchanger {
               date = date
               , id = id
               , amount = -feeAmount
-              , market = currency
+              , currency = currency
               , exchanger = Kraken
               , description = "Deposit " + currency + " " + id
             )
@@ -349,7 +353,7 @@ object Kraken extends Exchanger {
           date = date
           , id = id
           , amount = feeAmount
-          , market = currency
+          , currency = currency
           , exchanger = Kraken
           , description = "Non Taxable Fee " + currency + " " + id
         )
@@ -362,7 +366,7 @@ object Kraken extends Exchanger {
           date = date
           , id = id
           , amount = amount
-          , market = currency
+          , currency = currency
           , exchanger = Kraken
           , description = "Transfer " + currency + " " + id
         )

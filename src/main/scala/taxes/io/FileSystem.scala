@@ -4,7 +4,7 @@ import java.nio.charset._
 
 import taxes.exchanger.Exchanger
 import taxes.util.Logger
-import taxes.{Config, Market}
+import taxes.{Config, Currency}
 
 
 object FileSystem {
@@ -59,7 +59,7 @@ object FileSystem {
 
   val prices = s"$data/prices"
 
-  val coinMarketCap = s"$prices/coinmarketcap"
+  val coinCurrencyCap = s"$prices/coinmarketcap"
 
   val euroUSDFile = s"$prices/euroUSD/tc_1_1.csv"
 
@@ -67,11 +67,11 @@ object FileSystem {
 
   def coinMarketCapExtension(year: Int): String = s".$year$coinMarketCapExtension"
 
-  def coinMarketCapFolder(market: Market) =
-    s"$coinMarketCap/$market"
+  def coinMarketCapFolder(currency: Currency) =
+    s"$coinCurrencyCap/$currency"
 
-  def coinMarketCapFile(market: Market, year: Int) =
-    s"${coinMarketCapFolder(market)}/$market${coinMarketCapExtension(year)}"
+  def coinMarketCapFile(currency: Currency, year: Int) =
+    s"${coinMarketCapFolder(currency)}/$currency${coinMarketCapExtension(year)}"
 
   lazy val userPersistenceFolder = s"$usr/${Config.config.user}/persistence"
 
@@ -80,8 +80,8 @@ object FileSystem {
   def userPersistenceFolder(year: Int): String =
     s"$userPersistenceFolder/$year"
 
-  def marketFile(year: Int) =
-    s"${userPersistenceFolder(year)}/market.json"
+  def currencyFile(year: Int) =
+    s"${userPersistenceFolder(year)}/currency.json"
 
   def configFile(year: Int) = s"${userPersistenceFolder(year)}/config.json"
 

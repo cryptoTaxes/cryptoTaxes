@@ -1,7 +1,7 @@
-/// Different names for markets at kraken.com
-// One line for each market.
-// Kraken market names on the left (separated by commas).
-// Normalized market name on the right.
+// Different names for currencies at kraken.com
+// One line for each currency.
+// Kraken currency names on the left (separated by commas).
+// Normalized currency name on the right.
 
 ADA       -> ADA
 BCH       -> BCH
@@ -16,7 +16,7 @@ XMLN      -> MLN
 XNMC      -> NMC
 XREP      -> REP
 XTZ       -> XTZ
-XXDG      -> XDG
+XXDG      -> DOGE
 XXLM      -> XLM
 XXMR      -> XMR
 XXRP      -> XRP

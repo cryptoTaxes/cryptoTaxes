@@ -50,12 +50,12 @@ object General extends Exchanger {
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = parseDate(scLn.next())
-      val fromAmount = scLn.nextDouble("Sold Amount")
-      val fromMarket = scLn.next("Sold Market")
-      val toAmount = scLn.nextDouble("Bought Amount")
-      val toMarket = scLn.next("Bought Market")
+      val fromAmount = scLn.nextDouble("soldAmount")
+      val fromCurrency = scLn.next("soldCurrency")
+      val toAmount = scLn.nextDouble("boughtAmount")
+      val toCurrency = scLn.next("boughtCurrency")
       val fee = scLn.nextDouble("Fee")
-      val feeMarket = scLn.next("Fee Market")
+      val feeCurrency = scLn.next("feeCurrency")
       val exchangerName = scLn.next("Exchanger")
       val desc = scLn.next("Description")
 
@@ -63,9 +63,9 @@ object General extends Exchanger {
         Exchange(
           date = date
           , id = ""
-          , fromAmount = fromAmount, fromMarket = Market.normalize(fromMarket)
-          , toAmount = toAmount, toMarket = Market.normalize(toMarket)
-          , fees = List(FeePair(fee, Market.normalize(feeMarket)))
+          , fromAmount = fromAmount, fromCurrency = Currency.normalize(fromCurrency)
+          , toAmount = toAmount, toCurrency = Currency.normalize(toCurrency)
+          , fees = List(FeePair(fee, Currency.normalize(feeCurrency)))
           , exchanger = Exchanger.parse(exchangerName)
           , description = desc
         )
@@ -82,9 +82,9 @@ object General extends Exchanger {
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = parseDate(scLn.next())
       val amount = scLn.nextDouble("Amount")
-      val market = scLn.next("Market")
+      val currency = scLn.next("Currency")
       val fee = scLn.nextDouble("Fee")
-      val feeMarket = scLn.next("Fee Market")
+      val feeCurrency = scLn.next("feeCurrency")
       val exchangerName = scLn.next("Exchanger")
       val desc = scLn.next("Description")
 
@@ -94,7 +94,7 @@ object General extends Exchanger {
               date = date
             , id = ""
             , amount = amount
-            , market = market
+            , currency = currency
             , exchanger = Exchanger.parse(exchangerName)
             , description = desc
           )
@@ -103,7 +103,7 @@ object General extends Exchanger {
               date = date
             , id = ""
             , amount = amount.abs
-            , market = market
+            , currency = currency
             , exchanger = Exchanger.parse(exchangerName)
             , description = desc
           )
@@ -114,7 +114,7 @@ object General extends Exchanger {
             date = date
           , id = ""
           , amount = fee
-          , market = feeMarket
+          , currency = feeCurrency
           , exchanger = Exchanger.parse(exchangerName)
           , description = desc
         )

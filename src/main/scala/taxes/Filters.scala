@@ -6,7 +6,7 @@ object Filters extends Initializable {
 
   trait What
   case object All extends What
-  case class Market(market: taxes.Market) extends What
+  case class Currency(currency: taxes.Currency) extends What
 
   trait Filter { val year: Int }
   case class Stock(year: Int, what: What) extends Filter
@@ -22,9 +22,9 @@ object Filters extends Initializable {
     if(str==allToken)
       All
     else
-      Market(taxes.Market.normalize(str))
+      Currency(taxes.Currency.normalize(str))
 
-  private def parseLine(left: String, rights: Iterable[taxes.Market]): Iterable[Filter] = {
+  private def parseLine(left: String, rights: Iterable[taxes.Currency]): Iterable[Filter] = {
     import util.parse.Parse._
 
     val tokens = sepBy(left, sepToken).map(trimSpaces)
@@ -56,43 +56,43 @@ object Filters extends Initializable {
 
   private val filters: Map[Int, Iterable[Filter]] = // from year to filters
     util.parse.Parse.readKeyValues(io.FileSystem.filtersFile, "Reading filters list.").flatMap{
-      case (what, markets) => parseLine(what, markets)
+      case (what, currencies) => parseLine(what, currencies)
     }.groupBy(_.year)
 
   def applyFilters(year: Int, allStocks: StockPool): Unit = {
     for(filter <- filters.getOrElse(year, Seq())) {
       filter match {
         case Stock(year, what) =>
-          val markets = what match {
+          val currencies = what match {
             case All =>
-              allStocks.map(_.market)
-            case Market(market) =>
-              List(market)
+              allStocks.map(_.currency)
+            case Currency(currency) =>
+              List(currency)
           }
-          for(market <- markets)
-            allStocks.delete(market)
+          for(currency <- currencies)
+            allStocks.delete(currency)
           for(exchanger <- taxes.exchanger.Exchanger.allExchangers) {
-            for(market <- markets)
-              exchanger.ledgerPool.delete(market)
+            for(currency <- currencies)
+              exchanger.ledgerPool.delete(currency)
           }
 
         case Exchanger(year, exchanger, what) =>
-          val markets = what match {
+          val currencies = what match {
             case All =>
-              exchanger.ledgerPool.map(_.market)
-            case Market(market) =>
-              List(market)
+              exchanger.ledgerPool.map(_.currency)
+            case Currency(currency) =>
+              List(currency)
           }
-          for(market <- markets)
-            exchanger.ledgerPool.delete(market)
+          for(currency <- currencies)
+            exchanger.ledgerPool.delete(currency)
 
         case Margin(year, exchanger, what) =>
           val ids = what match {
             case All =>
               exchanger.marginLongs.map(_.id) ++
                 exchanger.marginShorts.map(_.id)
-            case Market(market) =>
-              List(market)
+            case Currency(id) =>
+              List(id)
           }
           for(id <- ids) {
             exchanger.marginLongs.delete(id)

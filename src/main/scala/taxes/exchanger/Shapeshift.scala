@@ -58,17 +58,17 @@ object Shapeshift extends Exchanger {
               Logger.warning(s"$id. ${FileSystem.pathFromData(fileName)} Line $lnNumber: Status should be complete.")
             else {
               val fromAmount = json.getDouble("incomingCoin")
-              val fromMarket = Market.normalize(json.getString("incomingType"))
+              val fromCurrency = Currency.normalize(json.getString("incomingType"))
 
               val toAmount = json.getDouble("outgoingCoin")
-              val toMarket = Market.normalize(json.getString("outgoingType"))
+              val toCurrency = Currency.normalize(json.getString("outgoingType"))
               val withdrawalAddress = json.getString("withdraw")
               val toTxId = json.getString("transaction")
 
               val ln3 = nextLine()
               val fromTxId = ln3
 
-              val fromTxInfo = TransactionsCache.lookup(fromMarket, fromTxId, depositAddress)
+              val fromTxInfo = TransactionsCache.lookup(fromCurrency, fromTxId, depositAddress)
 
               val date = fromTxInfo.localDate
 
@@ -76,7 +76,7 @@ object Shapeshift extends Exchanger {
                 date = date
                 , id = fromTxId
                 , amount = fromAmount + fromTxInfo.fee
-                , market = fromMarket
+                , currency = fromCurrency
                 , exchanger = Shapeshift
                 , description = "Deposit " + AddressBook.format(depositAddress) + "\n" + fromTxId
               )
@@ -85,9 +85,9 @@ object Shapeshift extends Exchanger {
                 Exchange(
                   date = date
                   , id = orderId
-                  , fromAmount = fromAmount, fromMarket = fromMarket
-                  , toAmount = toAmount, toMarket = toMarket
-                  , fees = List(FeePair(fromTxInfo.fee, fromMarket))
+                  , fromAmount = fromAmount, fromCurrency = fromCurrency
+                  , toAmount = toAmount, toCurrency = toCurrency
+                  , fees = List(FeePair(fromTxInfo.fee, fromCurrency))
                   , exchanger = Shapeshift
                   , description = desc
                 )
@@ -96,7 +96,7 @@ object Shapeshift extends Exchanger {
                 date = date
                 , id = orderId
                 , amount = toAmount
-                , market = toMarket
+                , currency = toCurrency
                 , exchanger = Shapeshift
                 , description = "Withdrawal " + AddressBook.format(withdrawalAddress) + "\n" + toTxId
               )

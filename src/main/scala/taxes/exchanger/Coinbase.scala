@@ -21,11 +21,11 @@ object Coinbase extends Exchanger {
     override def lineScanner(line: String): Scanner =
       QuotedScanner(line.replace('“', '\"').replace('”', '\"'), '\"', ',')
 
-    lazy val baseMarket = {
+    lazy val baseCurrency = {
       val sc = SeparatedScanner(skippedLines(2), "[,]")
       sc.next()
       sc.next()
-      Market.normalize(sc.next())
+      Currency.normalize(sc.next())
     }
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
@@ -43,7 +43,7 @@ object Coinbase extends Exchanger {
       val id = desc
       val date = LocalDateTime.parse(timeStamp, "yyyy-MM-dd HH:mm:ss Z")
 
-      val quoteMarket = Market.normalize(currency)
+      val quoteCurrency = Currency.normalize(currency)
 
       val feeAmount = total - subtotal
 
@@ -52,9 +52,9 @@ object Coinbase extends Exchanger {
           Exchange(
             date = date
             , id = id
-            , fromAmount = amount, fromMarket = baseMarket
-            , toAmount = subtotal.abs, toMarket = quoteMarket
-            , fees = List(FeePair(feeAmount, quoteMarket)) // todo detached Coinbase doesn't use fee to compute exchange rate so we add fee apart
+            , fromAmount = amount, fromCurrency = baseCurrency
+            , toAmount = subtotal.abs, toCurrency = quoteCurrency
+            , fees = List(FeePair(feeAmount, quoteCurrency)) // todo detached Coinbase doesn't use fee to compute exchange rate so we add fee apart
             , exchanger = Coinbase
             , description = desc
           )
@@ -64,9 +64,9 @@ object Coinbase extends Exchanger {
           Exchange(
             date = date
             , id = id
-            , fromAmount = subtotal.abs, fromMarket = quoteMarket
-            , toAmount = amount, toMarket = baseMarket
-            , fees = List(FeePair(feeAmount, quoteMarket)) // todo detached Coinbase doesn't use fee to compute exchange rate so we add fee apart
+            , fromAmount = subtotal.abs, fromCurrency = quoteCurrency
+            , toAmount = amount, toCurrency = baseCurrency
+            , fees = List(FeePair(feeAmount, quoteCurrency)) // todo detached Coinbase doesn't use fee to compute exchange rate so we add fee apart
             , exchanger = Coinbase
             , description = desc
           )

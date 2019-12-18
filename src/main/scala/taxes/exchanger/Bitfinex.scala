@@ -38,8 +38,8 @@ object Bitfinex extends Exchanger {
       val reference = scLn.next("Reference")
 
       val (aux1, aux2) = Parse.split(scLn.next("Pair"), "/")
-      val baseMarket = Market.normalize(aux1)
-      val quoteMarket = Market.normalize(aux2)
+      val baseCurrency = Currency.normalize(aux1)
+      val quoteCurrency = Currency.normalize(aux2)
 
       val amount = scLn.nextDouble("Amount")
 
@@ -47,8 +47,7 @@ object Bitfinex extends Exchanger {
 
       val fee = scLn.nextDouble("Fee")
 
-      val feeCurrency = scLn.next("feeCurrency")
-      val feeMarket = Market.normalize(feeCurrency)
+      val feeCurrency = Currency.normalize(scLn.next("FeeCurrency"))
 
       val date =
         if(Config.config.deprecatedUp2017Version)
@@ -66,9 +65,11 @@ object Bitfinex extends Exchanger {
             Exchange( // we are selling BTC for $. Fee can be in BTC or in $
               date = date
               , id = reference
-              , fromAmount = amount.abs - (if(feeMarket==baseMarket) fee.abs else 0), fromMarket = baseMarket
-              , toAmount = price * amount.abs - (if(feeMarket==quoteMarket) fee.abs else 0), toMarket = quoteMarket
-              , fees = List(FeePair(fee.abs, feeMarket))
+              , fromAmount = amount.abs - (if(feeCurrency==baseCurrency) fee.abs else 0)
+              , fromCurrency = baseCurrency
+              , toAmount = price * amount.abs - (if(feeCurrency==quoteCurrency) fee.abs else 0)
+              , toCurrency = quoteCurrency
+              , fees = List(FeePair(fee.abs, feeCurrency))
               , exchanger = Bitfinex
               , description = desc
             )
@@ -76,9 +77,11 @@ object Bitfinex extends Exchanger {
             Exchange( // we are buying BTC with $. Fee can be in BTC or in $
               date = date
               , id = reference
-              , fromAmount = price * amount.abs - (if(feeMarket==quoteMarket) fee.abs else 0), fromMarket = quoteMarket
-              , toAmount = amount.abs - (if(feeMarket==baseMarket) fee.abs else 0), toMarket = baseMarket
-              , fees = List(FeePair(fee.abs, feeMarket))
+              , fromAmount = price * amount.abs - (if(feeCurrency==quoteCurrency) fee.abs else 0)
+              , fromCurrency = quoteCurrency
+              , toAmount = amount.abs - (if(feeCurrency==baseCurrency) fee.abs else 0)
+              , toCurrency = baseCurrency
+              , fees = List(FeePair(fee.abs, feeCurrency))
               , exchanger = Bitfinex
               , description = desc
             )
@@ -89,11 +92,13 @@ object Bitfinex extends Exchanger {
             Margin(
               date = date
               , id = reference
-              , fromAmount = amount.abs, fromMarket = baseMarket
-              , toAmount = price * amount.abs /* + (if(feeMarket==quoteMarket) fee.abs else if(feeMarket==baseMarket) -fee.abs * price else 0) */, toMarket = quoteMarket
-              , fees = List(FeePair(fee.abs, feeMarket))
+              , fromAmount = amount.abs
+              , fromCurrency = baseCurrency
+              , toAmount = price * amount.abs /* + (if(feeCurrency==quoteCurrency) fee.abs else if(feeCurrency==baseCurrency) -fee.abs * price else 0) */
+              , toCurrency = quoteCurrency
+              , fees = List(FeePair(fee.abs, feeCurrency))
               , orderType = Operation.OrderType.Sell
-              , pair = (baseMarket, quoteMarket)
+              , pair = (baseCurrency, quoteCurrency)
               , exchanger = Bitfinex
               , description = desc + " @ " + price
             )
@@ -101,11 +106,13 @@ object Bitfinex extends Exchanger {
             Margin(
               date = date
               , id = reference
-              , fromAmount = amount.abs * price /* + (if(feeMarket==quoteMarket) fee.abs else if(feeMarket==baseMarket) -fee.abs * price else 0) */, fromMarket = quoteMarket
-              , toAmount = amount.abs, toMarket = baseMarket
-              , fees = List(FeePair(fee.abs, feeMarket))
+              , fromAmount = amount.abs * price /* + (if(feeCurrency==quoteCurrency) fee.abs else if(feeCurrency==baseCurrency) -fee.abs * price else 0) */
+              , fromCurrency = quoteCurrency
+              , toAmount = amount.abs
+              , toCurrency = baseCurrency
+              , fees = List(FeePair(fee.abs, feeCurrency))
               , orderType = Operation.OrderType.Buy
-              , pair = (baseMarket, quoteMarket)
+              , pair = (baseCurrency, quoteCurrency)
               , exchanger = Bitfinex
               , description = desc + " @ " + price
             )
@@ -127,8 +134,8 @@ object Bitfinex extends Exchanger {
       val reference = scLn.next("Reference")
 
       val (m1, m2) = scLn.next("Pair").splitAt(3)
-      val market1 = Market.normalize(m1)
-      val market2 = Market.normalize(m2)
+      val currency1 = Currency.normalize(m1)
+      val currency2 = Currency.normalize(m2)
 
       val orderType = scLn.next("Order Type")
       val hidden = scLn.next("Hidden")
@@ -153,8 +160,10 @@ object Bitfinex extends Exchanger {
               Exchange( // we are selling BTC for $
                 date = updated
                 , id = reference
-                , fromAmount = amountExecuted.abs, fromMarket = Market.normalize(market1)
-                , toAmount = averageExecutionPrice * amountExecuted.abs, toMarket = Market.normalize(market2)
+                , fromAmount = amountExecuted.abs
+                , fromCurrency = Currency.normalize(currency1)
+                , toAmount = averageExecutionPrice * amountExecuted.abs
+                , toCurrency = Currency.normalize(currency2)
                 , fees = List()
                 , exchanger = Bitfinex
                 , description = desc
@@ -163,8 +172,10 @@ object Bitfinex extends Exchanger {
               Exchange( // we are buying BTC with $
                 date = updated
                 , id = reference
-                , fromAmount = averageExecutionPrice * amountExecuted.abs, fromMarket = Market.normalize(market2)
-                , toAmount = amountExecuted.abs, toMarket = Market.normalize(market1)
+                , fromAmount = averageExecutionPrice * amountExecuted.abs
+                , fromCurrency = Currency.normalize(currency2)
+                , toAmount = amountExecuted.abs
+                , toCurrency = Currency.normalize(currency1)
                 , fees = List()
                 , exchanger = Bitfinex
                 , description = desc
@@ -176,11 +187,13 @@ object Bitfinex extends Exchanger {
                 Margin(
                   date = updated
                   , id = reference
-                  , fromAmount = amountExecuted.abs, fromMarket = Market.normalize(market1)
-                  , toAmount = amountExecuted.abs*averageExecutionPrice - 0.abs , toMarket = Market.normalize(market2) // Assumes feeCurrency == market2
+                  , fromAmount = amountExecuted.abs
+                  , fromCurrency = Currency.normalize(currency1)
+                  , toAmount = amountExecuted.abs*averageExecutionPrice - 0.abs
+                  , toCurrency = Currency.normalize(currency2) // Assumes feeCurrency == currency2
                   , fees = List()
                   , orderType = Operation.OrderType.Sell
-                  , pair = (market1, market2)
+                  , pair = (currency1, currency2)
                   , exchanger = Bitfinex
                   , description = desc
                 )
@@ -188,11 +201,13 @@ object Bitfinex extends Exchanger {
                 Margin(
                   date = updated
                   , id = reference
-                  , fromAmount = amountExecuted.abs * averageExecutionPrice, fromMarket = Market.normalize(market2)
-                  , toAmount = amountExecuted.abs, toMarket = Market.normalize(market1)
+                  , fromAmount = amountExecuted.abs * averageExecutionPrice
+                  , fromCurrency = Currency.normalize(currency2)
+                  , toAmount = amountExecuted.abs
+                  , toCurrency = Currency.normalize(currency1)
                   , fees = List()
                   , orderType = Operation.OrderType.Buy
-                  , pair = (market1, market2)
+                  , pair = (currency1, currency2)
                   , exchanger = Bitfinex
                   , description = desc
                 )
@@ -210,7 +225,7 @@ object Bitfinex extends Exchanger {
       SeparatedScanner(line, "[,]")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val currency = Market.normalize(scLn.next("Currency"))
+      val currency = Currency.normalize(scLn.next("Currency"))
       val description = scLn.next("Description")
       val amount = scLn.nextDouble("Amount")
       val balance = scLn.next("Balance")
@@ -223,10 +238,10 @@ object Bitfinex extends Exchanger {
 
       val desc = description
 
-      if(description.startsWith("Settlement") && currency == Market.usd) {
+      if(description.startsWith("Settlement") && currency == Currency.usd) {
         // USD settlements are really paid as BTC settlements
         return CSVReader.Ignore
-      } else if(description.startsWith("Settlement") && currency == Market.bitcoin) {
+      } else if(description.startsWith("Settlement") && currency == Currency.bitcoin) {
         val token1 = description.dropWhile(_ != '@').tail.tail
         val token2 = token1.takeWhile(_ != ' ')
         val sc = SeparatedScanner(token2, "[ ]")
@@ -239,9 +254,11 @@ object Bitfinex extends Exchanger {
           Exchange(
             date = date.plusSeconds(-240) // This is a bit ad-hoc but goal is to place settlement before it's used for paying a fee/loss
             , id = description
-            , fromAmount = amount.abs, fromMarket = currency
-            , toAmount = total - fee, toMarket = Market.usd
-            , fees = List(FeePair(fee, Market.usd))
+            , fromAmount = amount.abs
+            , fromCurrency = currency
+            , toAmount = total - fee
+            , toCurrency = Currency.usd
+            , fees = List(FeePair(fee, Currency.usd))
             , isSettlement = true
             , exchanger = Bitfinex
             , description = desc
@@ -274,7 +291,7 @@ object Bitfinex extends Exchanger {
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val reference = scLn.next("Reference")
-      val currency = Market.normalize(scLn.next("Currency"))
+      val currency = Currency.normalize(scLn.next("Currency"))
       val method = scLn.next("Method")
       val amount = scLn.nextDouble("Amount")
       val completed = scLn.next("Status") == "COMPLETED"
@@ -289,7 +306,7 @@ object Bitfinex extends Exchanger {
           date = created
           , id = txid
           , amount = amount
-          , market = currency
+          , currency = currency
           , exchanger = Bitfinex
           , description = desc
         )
@@ -307,7 +324,7 @@ object Bitfinex extends Exchanger {
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val reference = scLn.next("Reference")
-      val currency = Market.normalize(scLn.next("Currency"))
+      val currency = Currency.normalize(scLn.next("Currency"))
       val method = scLn.next("Method")
       val amount = scLn.nextDouble("Amount")
       val completed = scLn.next("Status") == "COMPLETED"
@@ -322,7 +339,7 @@ object Bitfinex extends Exchanger {
           date = created
           , id = txid
           , amount = amount.abs
-          , market = currency
+          , currency = currency
           , exchanger = Bitfinex
           , description = desc
         )

@@ -30,7 +30,7 @@ sealed trait Operation {
 
 object Operation {
   def feesToString(fees: Seq[FeePair]): String =
-    fees.map(fee => f"${fee.amount}%.8f ${fee.market}").mkString("(", ", ", ")")
+    fees.map(fee => f"${fee.amount}%.8f ${fee.currency}").mkString("(", ", ", ")")
 
   object OrderType extends Enumeration {
     val Buy, Sell = Value
@@ -100,22 +100,22 @@ object Operation {
 
 /*************************************************************************
 
-      if(feeMarket == fromMarket)
+      if(feeCurrency == fromCurrency)
          we exchanged ((fromAmount + feeAmount))  for  ((toAmount))
-      else if(feeMarket == toMarket)
+      else if(feeCurrency == toCurrency)
          we exchanged ((fromAmount))  for  ((toAmount + feeAmount))
 
       The fee is part of the exchange, i.e. it's not paid with other funds.
 
-      So if feeMarket == fromMarket you're really disposing (fromAmount + feeAmount)
-      from your balance of fromMarket. Note that, in this case, fromAmount is what
+      So if feeCurrency == fromCurrency you're really disposing (fromAmount + feeAmount)
+      from your balance of fromCurrency. Note that, in this case, fromAmount is what
       you pay but without including the fee. toAmount is what you end up adding to
-      your balance of toMarket.
+      your balance of toCurrency.
 
-      If feeMarket == toMarket you're only disposing fromAmount from your fromMarket balance
+      If feeCurrency == toCurrency you're only disposing fromAmount from your fromCurrency balance
       but part of these funds, after being exchanged, will be used to pay for the fee.
       Note that, in this case, toAmount is not all you get after the exchange, but
-      what you really end up maintaining in your toMarket balance after paying the fee.
+      what you really end up maintaining in your toCurrency balance after paying the fee.
 
 
   For the case of a detached fee, the corresponding fee amount is not part of the exchange hence
@@ -123,13 +123,13 @@ object Operation {
       and independently pay the fee from other funds
   ************************************************************************/
 
-case class FeePair(amount: Double, market: Market, alt: Option[(Double, Market)] = None)
+case class FeePair(amount: Double, currency: Currency, alt: Option[(Double, Currency)] = None)
 
 
 case class Exchange( date: LocalDateTime
                    , id: String
-                   , fromAmount: Double, fromMarket: Market
-                   , toAmount: Double, toMarket: Market
+                   , fromAmount: Double, fromCurrency: Currency
+                   , toAmount: Double, toCurrency: Currency
                    , fees: Seq[FeePair]
                    , isSettlement: Boolean = false
                    , exchanger: Exchanger
@@ -137,7 +137,7 @@ case class Exchange( date: LocalDateTime
                    ) extends Operation {
 
   override def toString: String =
-    f"Exchange($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s  ${Operation.feesToString(fees)}  $shortDescription)"
+    f"Exchange($dateFormatted $fromAmount%18.8f $fromCurrency%-5s -> $toAmount%18.8f $toCurrency%-5s  ${Operation.feesToString(fees)}  $shortDescription)"
 }
 
 
@@ -145,57 +145,57 @@ case class Exchange( date: LocalDateTime
 /*************************************************************************
   * Contrary to exchange, fee is not part of the exchange rate.
   *
-  * Only toAmount (without fee, even if feeMarket == toMarket)
+  * Only toAmount (without fee, even if feeCurrency == toCurrency)
     will be added to your stock of coins
-  * fromAmount (without fee, if feeMarket == fromMarket)
+  * fromAmount (without fee, if feeCurrency == fromCurrency)
     will be deducted from your stock.
  ************************************************************************/
 case class Margin(date: LocalDateTime
                   , id: String
-                  , fromAmount: Double, fromMarket: Market
-                  , toAmount: Double, toMarket: Market
+                  , fromAmount: Double, fromCurrency: Currency
+                  , toAmount: Double, toCurrency: Currency
                   , fees: Seq[FeePair]
                   , orderType: Operation.OrderType.Value
-                  , pair: (Market, Market)
+                  , pair: (Currency, Currency)
                   , exchanger: Exchanger
                   , description: String
                   ) extends Operation {
 
   override def toString: String =
-    f"Margin($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s ${Operation.feesToString(fees)} $shortDescription)"
+    f"Margin($dateFormatted $fromAmount%18.8f $fromCurrency%-5s -> $toAmount%18.8f $toCurrency%-5s ${Operation.feesToString(fees)} $shortDescription)"
 }
 
 
-case class Fee(date: LocalDateTime, id: String, amount: Double, market: Market, exchanger: Exchanger, description: String, alt: Option[(Double, Market)] = None) extends Operation {
+case class Fee(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: String, alt: Option[(Double, Currency)] = None) extends Operation {
   override def toString: String =
-    f"Fee($dateFormatted $amount%18.8f $market%-5s $shortDescription)"
+    f"Fee($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }
 
 
-case class Loss(date: LocalDateTime, id: String, amount: Double, market: Market, exchanger: Exchanger, description: String) extends Operation {
+case class Loss(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: String) extends Operation {
   override def toString: String =
-    f"Lost($dateFormatted $amount%18.8f $market%-5s $shortDescription)"
+    f"Lost($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }
 
 
 // amount is the real gain (fee has already been deducted)
-case class Gain(date: LocalDateTime, id: String, amount: Double, market: Market, exchanger: Exchanger, description: String) extends Operation {
+case class Gain(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: String) extends Operation {
   override def toString: String =
-    f"Gain($dateFormatted $amount%18.8f $market%-5s $shortDescription)"
+    f"Gain($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }
 
 
-case class Deposit(date: LocalDateTime, id: String, amount: Double, market: Market, exchanger: Exchanger, description: String) extends Operation {
+case class Deposit(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: String) extends Operation {
   override def toString: String =
-    f"Deposit($dateFormatted $amount%18.8f $market%-5s $shortDescription)"
+    f"Deposit($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }
 
-case class Withdrawal(date: LocalDateTime, id: String, amount: Double, market: Market, exchanger: Exchanger, description: String) extends Operation {
+case class Withdrawal(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: String) extends Operation {
   override def toString: String =
-    f"Withdrawal($dateFormatted $amount%18.8f $market%-5s $shortDescription)"
+    f"Withdrawal($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }
 
-case class NonTaxableFee(date: LocalDateTime, id: String, amount: Double, market: Market, exchanger: Exchanger, description: String) extends Operation {
+case class NonTaxableFee(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: String) extends Operation {
   override def toString: String =
-    f"NonTaxableFee($dateFormatted $amount%18.8f $market%-5s $shortDescription)"
+    f"NonTaxableFee($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }
