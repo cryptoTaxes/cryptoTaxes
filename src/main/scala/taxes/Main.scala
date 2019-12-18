@@ -13,7 +13,9 @@ object Main extends App {
   val cmdLine = args.mkString(" ")
   Config.config = ParseCommandLine(cmdLine)
 
-  Logger.trace("cryptoTaxes (https://github.com/cryptoTaxes/cryptoTaxes)\n")
+  val version = "1.5"
+
+  Logger.trace(s"cryptoTaxes (ver $version) (https://github.com/cryptoTaxes/cryptoTaxes)\n")
   Logger.trace(s"Starting execution at ${java.time.LocalDateTime.now()}.")
 
   if(Config.config.downloadPrices) {
@@ -22,12 +24,12 @@ object Main extends App {
   }
 
   // Exchange operation readers
-  private val exchangers : List[Exchanger] =
+  private val exchangers: List[Exchanger] =
     Exchanger.allExchangers
 
   // Modules that should be initialized
-  private val initializables : List[Initializable] =
-    List(TransactionsCache)
+  private val initializables: List[Initializable] =
+    List(TransactionsCache, AddressBook, Filters, TransactionsCache)
 
   // Do initialization of modules firstly
   for(initializable <- initializables)
@@ -47,16 +49,16 @@ object Main extends App {
 
 
 object ParseCommandLine {
-  def apply(cmdLine : String) : Config = {
+  def apply(cmdLine: String): Config = {
 
-    var config : Config = DefaultConfig
+    var config: Config = DefaultConfig
 
     var toParse = Parse.trimSpaces(cmdLine)
 
     val boolTrue = Set("true", "yes", "on")
     val boolFalse = Set("false", "no", "off")
 
-    def toBool(what : String, value : String) = {
+    def toBool(what: String, value: String) = {
       val v = value.toLowerCase
       if(boolFalse.contains(v))
         false
@@ -67,8 +69,8 @@ object ParseCommandLine {
     }
 
     def failParse = Logger.fatal(s"Cannot parse command line: $cmdLine \nFrom here: $toParse")
-    while (toParse.nonEmpty) {
-      if (toParse.head == '-') {
+    while(toParse.nonEmpty) {
+      if(toParse.head == '-') {
         toParse = toParse.tail
         val (flag, toParse1) = toParse.span(_ != '=')
         if(flag.nonEmpty && toParse1.nonEmpty && toParse1.head== '=') {
@@ -76,9 +78,9 @@ object ParseCommandLine {
           val (value, toParse2) = toParse.span(_ != ' ')
           if(value.nonEmpty) {
             toParse = toParse2.dropWhile(_.isSpaceChar)
-            if (flag == "user")
+            if(flag == "user")
               config = config.copy(user = value)
-            else if (flag == "verbosity") {
+            else if(flag == "verbosity") {
               val level =
                 try {
                   Parse.asInt(value)

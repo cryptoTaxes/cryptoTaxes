@@ -34,12 +34,12 @@ object CoinMarketCapPrice {
   private def scrapContents(line: String): String = {
     val token1 = '>'
     val token2 = '<'
-    if (!line.contains(token1)) {
+    if(!line.contains(token1)) {
       Logger.fatal(s"Error reading coinmarketcap prices: $line.")
     }
     val skipBeginning = line.dropWhile(_ != token1).tail
 
-    if (!line.contains(token2)) {
+    if(!line.contains(token2)) {
       Logger.fatal(s"Error reading coinmarketcap prices: $line.")
     }
     val contents = skipBeginning.takeWhile(_ != token2)
@@ -59,7 +59,7 @@ object CoinMarketCapPrice {
     }
   }
 
- private def scrapPrices(market: Market, coinMarketCapID: String, source : FileSystem.Source): List[DailyPrice] = {
+ private def scrapPrices(market: Market, coinMarketCapID: String, source: FileSystem.Source): List[DailyPrice] = {
    val tokenBeginRow = "<div class=\"ec35kh-0 dWPDaQ\">"
    val tokenBeginPrice = "<div class=\"sc-47a23l-0 jzTYkA\">"
    val tokenEnd = "<"
@@ -111,27 +111,27 @@ object CoinMarketCapPrice {
      }
    }
 
-   if (dailyPrices.isEmpty)
+   if(dailyPrices.isEmpty)
      Logger.fatal(s"Error reading coinmarketcap prices. Couldn't find $tokenBeginRow.")
 
    return dailyPrices.toList
   }
 
-  private def scrapPricesOld(market: Market, coinMarketCapID: String, source : FileSystem.Source): List[DailyPrice] = {
+  private def scrapPricesOld(market: Market, coinMarketCapID: String, source: FileSystem.Source): List[DailyPrice] = {
     val tokenBegin = "<table class=\"table\">"
     val tokenEnd = "</tbody>"
     val tokenNoResults = "<tr class=\"text-center\">"
 
     val inLines = source.getLines.filter(_.nonEmpty).map(_.dropWhile(_.isSpaceChar)).dropWhile(_ != tokenBegin).drop(13)
-    if (inLines.isEmpty)
+    if(inLines.isEmpty)
       Logger.fatal(s"Error reading coinmarketcap prices. Couldn't find $tokenBegin.")
 
     val dailyPrices = ListBuffer[DailyPrice]()
 
     var goOn = true
-    while (goOn) {
+    while(goOn) {
       val line1 = inLines.next()
-      if (line1 == "<tr class=\"text-right\">") {
+      if(line1 == "<tr class=\"text-right\">") {
         val dateStr = scrapContents(inLines.next())
 
         val sc = SeparatedScanner(dateStr, "[\t ,]+")
@@ -147,14 +147,14 @@ object CoinMarketCapPrice {
         val close = Parse.asDouble(scrapContents(inLines.next()))
 
         // skip 4 lines
-        for (_ <- 0 until 3)
+        for(_ <- 0 until 3)
           inLines.next()
 
         val dailyPrice = DailyPrice(date, open, high, low, close)
         dailyPrices += dailyPrice
       } else {
         goOn = false
-        if (line1 != tokenEnd && line1 != tokenNoResults)
+        if(line1 != tokenEnd && line1 != tokenNoResults)
           Logger.fatal(s"Something went wrong scrapping prices for $coinMarketCapID.\n$line1")
       }
     }
@@ -172,15 +172,11 @@ object CoinMarketCapPrice {
     }
   }
 
-  private def parsePair(t : (Market, String)) = t match {
-    case (market1, market2) => (Market.normalize(market1), market2.toLowerCase())
-  }
-
-  private lazy val allPairs = Parse.readAssociations (
+   private lazy val allPairs = Parse.readKeysValue(
     FileSystem.readConfigFile("coinmarketcapMarkets.txt")
-    , "Reading coinmarketcap markets"
-  ).map(parsePair)
-
+    , "Reading coinmarketcap markets").map{
+      case (market, url) => (Market.normalize(market), url)
+    }
 
   def downloadPrices(): Unit = {
     for((market, coinMarketCapID) <- allPairs) {
@@ -211,7 +207,7 @@ object CoinMarketCapPrice {
     }
 
     val map = scala.collection.mutable.Map[LocalDate, Price]()
-    for (dailyPrice <- src.read())
+    for(dailyPrice <- src.read())
       map(dailyPrice.date) = Config.config.priceCalculation match {
         case PriceCalculation.open      => dailyPrice.open
         case PriceCalculation.close     => dailyPrice.close
@@ -224,10 +220,10 @@ object CoinMarketCapPrice {
     return map
   }
 
-  case class CoinMarketCapPrice(market : Market) extends PriceHistory {
+  case class CoinMarketCapPrice(market: Market) extends PriceHistory {
     lazy val prices = loadFromDisk(market)
 
-    def apply(date : LocalDateTime) : Price =
+    def apply(date: LocalDateTime): Price =
       prices.get(LocalDate.of(date)) match {
         case None =>
           Logger.fatal(s"price for $market at $date not found")
@@ -241,7 +237,7 @@ object CoinMarketCapPrice {
   }
 
   // returns price in USD for a market at a given date
-  def apply(market : Market, date : LocalDateTime) : Price =
+  def apply(market: Market, date: LocalDateTime): Price =
     markets2CoinMarketPrices.get(market) match  {
       case Some(coinMarketCapPrice) => coinMarketCapPrice(date)
       case None => Logger.fatal(s"prices for $market not found.")

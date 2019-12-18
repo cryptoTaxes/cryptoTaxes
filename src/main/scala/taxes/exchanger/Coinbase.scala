@@ -11,11 +11,11 @@ object Coinbase extends Exchanger {
 
   override val sources = Seq(
     new UserInputFolderSource[Operation]("coinbase/transfers", ".csv") {
-      def fileSource(fileName : String) = operationsReader(fileName)
+      def fileSource(fileName: String) = operationsReader(fileName)
     }
   )
 
-  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 3
 
     override def lineScanner(line: String): Scanner =
@@ -47,7 +47,7 @@ object Coinbase extends Exchanger {
 
       val feeAmount = total - subtotal
 
-      if (orderType == "Sell") {
+      if(orderType == "Sell") {
         val exchange =
           Exchange(
             date = date
@@ -59,7 +59,7 @@ object Coinbase extends Exchanger {
             , description = desc
           )
         return CSVReader.Ok(exchange)
-      } else if (orderType == "Buy") {
+      } else if(orderType == "Buy") {
         val exchange =
           Exchange(
             date = date

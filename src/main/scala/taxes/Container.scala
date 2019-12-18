@@ -2,19 +2,19 @@ package taxes
 
 
 class DoubleEndedContainer[T] extends Iterable[T] {
-  private case class Node[E](var x : E, var next : Node[E])
+  private case class Node[E](var x: E, var next: Node[E])
 
-  private var firstNode : Node[T] = null
-  private var lastNode : Node[T] = null
+  private var firstNode: Node[T] = null
+  private var lastNode: Node[T] = null
   private var sz = 0
 
-  override def isEmpty : Boolean =
+  override def isEmpty: Boolean =
     sz == 0
 
-  override def nonEmpty : Boolean =
+  override def nonEmpty: Boolean =
     sz > 0
 
-  override def size : Int =
+  override def size: Int =
     sz
 
   def first: T =
@@ -29,14 +29,14 @@ class DoubleEndedContainer[T] extends Iterable[T] {
     else
       lastNode.x
 
-  def prepend(x : T): Unit = {
+  def prepend(x: T): Unit = {
     firstNode = Node(x, firstNode)
     if(sz==0)
       lastNode = firstNode
     sz += 1
   }
 
-  def append(x : T): Unit = {
+  def append(x: T): Unit = {
     val node = Node(x, null)
     if(isEmpty)
       firstNode = node
@@ -54,14 +54,14 @@ class DoubleEndedContainer[T] extends Iterable[T] {
     sz -= 1
   }
 
-  def combineFirst(x : T, eq : (T,T) => Boolean, combine : (T,T) => T): Unit = {
+  def combineFirst(x: T, eq: (T,T) => Boolean, combine: (T,T) => T): Unit = {
     if(nonEmpty && eq(firstNode.x, x)) {
       firstNode.x = combine(firstNode.x, x)
     } else
       prepend(x)
   }
 
-  def combineLast(x : T, eq : (T,T) => Boolean, combine : (T,T) => T): Unit = {
+  def combineLast(x: T, eq: (T,T) => Boolean, combine: (T,T) => T): Unit = {
     if(nonEmpty && eq(lastNode.x, x))
       lastNode.x = combine(lastNode.x, x)
     else
@@ -85,7 +85,7 @@ class DoubleEndedContainer[T] extends Iterable[T] {
     }
   }
 
-  def iterator : Iterator[T] =
+  def iterator: Iterator[T] =
     new DoubleEndedIterator
 }
 
@@ -93,21 +93,21 @@ class DoubleEndedContainer[T] extends Iterable[T] {
 trait Container[T] extends Iterable[T] {
   protected val doubleEndedContainer = new DoubleEndedContainer[T]()
 
-  override def isEmpty : Boolean =
+  override def isEmpty: Boolean =
     doubleEndedContainer.isEmpty
 
-  override def nonEmpty : Boolean =
+  override def nonEmpty: Boolean =
     doubleEndedContainer.nonEmpty
 
-  def first : T =
+  def first: T =
     doubleEndedContainer.first
 
   def removeFirst(): Unit =
     doubleEndedContainer.removeFirst()
 
-  def insert(x : T)
+  def insert(x: T)
 
-  def insert(x : T, eq : (T,T) => Boolean, combine : (T,T) => T)
+  def insert(x: T, eq: (T,T) => Boolean, combine: (T,T) => T)
 
   def iterator: Iterator[T] =
     doubleEndedContainer.iterator
@@ -115,10 +115,10 @@ trait Container[T] extends Iterable[T] {
 
 
 class Queue[T]() extends Container[T] {
-  def insert(x : T): Unit =
+  def insert(x: T): Unit =
     doubleEndedContainer.append(x)
 
-  def insert(x : T, eq : (T,T) => Boolean, combine : (T,T) => T): Unit =
+  def insert(x: T, eq: (T,T) => Boolean, combine: (T,T) => T): Unit =
     doubleEndedContainer.combineLast(x, eq, combine)
 
   override def toString =
@@ -127,10 +127,10 @@ class Queue[T]() extends Container[T] {
 
 
 class Stack[T]() extends Container[T] {
-  def insert(x : T): Unit =
+  def insert(x: T): Unit =
     doubleEndedContainer.prepend(x)
 
-  def insert(x : T, eq : (T,T) => Boolean, combine : (T,T) => T): Unit =
+  def insert(x: T, eq: (T,T) => Boolean, combine: (T,T) => T): Unit =
     doubleEndedContainer.combineFirst(x, eq, combine)
 
   override def toString =

@@ -5,41 +5,41 @@ import taxes.util.Logger
 
 
 object Parse {
-  def asDouble(str : String) : Double = {
+  def asDouble(str: String): Double = {
     val sc = new java.util.Scanner(str)
     val double = sc.nextDouble()
     sc.close()
     return double
   }
 
-  def asInt(str : String) : Int = {
+  def asInt(str: String): Int = {
     val sc = new java.util.Scanner(str)
     val int = sc.nextInt()
     sc.close()
     return int
   }
 
-  def asLong(str : String) : Long = {
+  def asLong(str: String): Long = {
     val sc = new java.util.Scanner(str)
     val long = sc.nextLong()
     sc.close()
     return long
   }
 
-  def asBigDecimal(str : String) : BigDecimal = {
+  def asBigDecimal(str: String): BigDecimal = {
     val sc = new java.util.Scanner(str)
     val big = sc.nextBigDecimal()
     sc.close()
     return big
   }
 
-  def isComment(line : String) : Boolean =
+  def isComment(line: String): Boolean =
     line.isEmpty || line.startsWith("//")
 
-  def trimSpaces(str : String) : String =
+  def trimSpaces(str: String): String =
     str.dropWhile(_.isSpaceChar).reverse.dropWhile(_.isSpaceChar).reverse
 
-  def split(str : String, separator: String) : (String, String) = {
+  def split(str: String, separator: String): (String, String) = {
     val idx = str.indexOf(separator)
     if(idx < 0) {
       Logger.fatal(s"Separator $separator not found in pair '$str'")
@@ -53,7 +53,7 @@ object Parse {
     }
   }
 
-  def sepBy(str0 : String, separator: String) : List[String] = {
+  def sepBy(str0: String, separator: String): List[String] = {
     var str = str0
     var list = List[String]()
     var idx = str.indexOf(separator)
@@ -67,29 +67,61 @@ object Parse {
     return list.map(trimSpaces).reverse
   }
 
-  def readAssociations(fileName : String, traceMsg : String) : Map[String, String] = {
-    val trace = s"$traceMsg from $fileName."
-    Logger.trace(trace)
-    val file = FileSystem.File(fileName)
-    val sc = new java.util.Scanner(file, taxes.io.defaultCharset.name())
+  private val arrowToken = "->"
+  private val commaToken = ","
+
+  def readKeysValue(fileName: String, traceMsg: String): Map[String, String] = {
     var associations = Map[String, String]()
-    var lineNumber = 0
-    while (sc.hasNextLine) {
-      val line = sc.nextLine()
-      lineNumber += 1
-      if(!isComment(line)) {
-        try {
-          val (list, normalized0) = split(line, "->")
-          val normalized = normalized0.toUpperCase()
-          val alternatives = sepBy(list, ",")
-          for (alt <- alternatives)
-            associations += (alt.toUpperCase() -> normalized)
-        } catch {
-          case _ => Logger.warning(s"Could not read associations in line $lineNumber '$line' from file $fileName.")
+    val file = FileSystem.File(fileName)
+    if(file.exists()) {
+      val trace = s"$traceMsg from $fileName."
+      Logger.trace(trace)
+      val sc = new java.util.Scanner(file, taxes.io.defaultCharset.name())
+
+      var lineNumber = 0
+      while(sc.hasNextLine) {
+        val line = sc.nextLine()
+        lineNumber += 1
+        if(!isComment(line)) {
+          try {
+            val (list, value) = split(line, arrowToken)
+            val keys = sepBy(list, commaToken)
+            for(key <- keys)
+              associations += (key -> value)
+          } catch {
+            case _ => Logger.warning(s"Could not read inverse associations in line $lineNumber '$line' from file $fileName.")
+          }
         }
       }
+      sc.close()
     }
-    sc.close()
+    return associations
+  }
+
+  def readKeyValues(fileName: String, traceMsg: String): Map[String, Iterable[String]] = {
+    var associations = Map[String, Iterable[String]]()
+    val file = FileSystem.File(fileName)
+    if(file.exists()) {
+      val trace = s"$traceMsg from $fileName."
+      Logger.trace(trace)
+      val sc = new java.util.Scanner(file, taxes.io.defaultCharset.name())
+
+      var lineNumber = 0
+      while(sc.hasNextLine) {
+        val line = sc.nextLine()
+        lineNumber += 1
+        if(!isComment(line)) {
+          try {
+            val (key, list) = split(line, arrowToken)
+            val values = sepBy(list, commaToken)
+            associations += (key -> values)
+          } catch {
+            case _ => Logger.warning(s"Could not read associations in line $lineNumber '$line' from file $fileName.")
+          }
+        }
+      }
+      sc.close()
+    }
     return associations
   }
 }

@@ -7,16 +7,15 @@ import spray.json._
 import spray.json.JsonProtocol._
 
 object Market {
-  private val conversions : Map[Market, Market] = {
-    def parsePair(t : (Market, Market)) = t match {
+  private val conversions: Map[Market, Market] = {
+    Parse.readKeysValue ( FileSystem.readConfigFile("marketsNormalization.txt")
+                        , "Reading market normalizations."
+                        ).map{
       case (market1, market2) => (market1.toUpperCase(), market2.toUpperCase())
     }
-    Parse.readAssociations ( FileSystem.readConfigFile("marketsNormalization.txt")
-                           , "Reading market normalizations."
-                           ).map(parsePair)
   }
 
-  def normalize(coin0 : Market) : Market = {
+  def normalize(coin0: Market): Market = {
     val coin = coin0.toUpperCase()
     conversions.get(coin) match {
       case None => coin
@@ -24,42 +23,41 @@ object Market {
     }
   }
 
-  val bitcoin : Market = normalize("BITCOIN")
+  val bitcoin: Market = normalize("BITCOIN")
 
-  val euro : Market = normalize("EURO")
+  val euro: Market = normalize("EURO")
 
-  val usd : Market = normalize("USD")
+  val usd: Market = normalize("USD")
 
-  val usdt : Market = normalize("USDT")
+  val usdt: Market = normalize("USDT")
 
-  val ethereum : Market = normalize("ETH")
+  val ethereum: Market = normalize("ETH")
 
-  val nxt : Market = normalize("NXT")
+  val nxt: Market = normalize("NXT")
 
-  val litecoin : Market = normalize("LTC")
+  val litecoin: Market = normalize("LTC")
 
-  val dogecoin : Market = normalize("DOGE")
+  val dogecoin: Market = normalize("DOGE")
 
-  val vertcoin : Market = normalize("VTC")
+  val vertcoin: Market = normalize("VTC")
 
-  val etc : Market = normalize("ETC")
+  val etc: Market = normalize("ETC")
 
-  val ripple : Market = normalize("XRP")
+  val ripple: Market = normalize("XRP")
 
 
-  private val priorities : Map[Market, Int] = {
-    def parsePair(t : (Market, String)) = t match {
-      case (market, str) => (normalize(market), str.toInt)
+  private val priorities: Map[Market, Int] = {
+    Parse.readKeysValue( FileSystem.readConfigFile(Config.config.parityPrioritiesFile)
+                       , "Reading market priorities."
+                       ).map{
+      case (market, str) => (normalize(market), Parse.asInt(str))
     }
-    Parse.readAssociations( FileSystem.readConfigFile(Config.config.parityPrioritiesFile)
-                          , "Reading market priorities."
-                          ).map(parsePair)
   }
 
-  def priority(market : Market) : Int =
+  def priority(market: Market): Int =
     priorities.getOrElse(market, 0)
 
-  def saveToFile(path : String): Unit = {
+  def saveToFile(path: String): Unit = {
     val json = JsObject(
       "conversions" -> JsArray(conversions.toVector.sortBy(_._1).map(_.toJson))
       , "priorities" -> JsArray(priorities.toVector.sortBy(- _._2).map(_.toJson))

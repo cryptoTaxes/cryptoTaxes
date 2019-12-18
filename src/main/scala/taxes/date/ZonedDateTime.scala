@@ -4,7 +4,7 @@ object ZonedDateTime {
 
   import java.time.format.DateTimeFormatter
 
-  def of(localDateTime: LocalDateTime, zoneId: ZoneId) : ZonedDateTime =
+  def of(localDateTime: LocalDateTime, zoneId: ZoneId): ZonedDateTime =
     java.time.ZonedDateTime.of(localDateTime, zoneId)
 
   def parse(str: CharSequence, format: DateTimeFormatter): ZonedDateTime = {
@@ -12,6 +12,6 @@ object ZonedDateTime {
     return zonedDateTime
   }
 
-  def parse(str : String, format : String) : ZonedDateTime =
+  def parse(str: String, format: String): ZonedDateTime =
     parse(str, DateTimeFormatter.ofPattern(format))
 }

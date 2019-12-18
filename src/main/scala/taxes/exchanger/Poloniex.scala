@@ -11,17 +11,20 @@ object Poloniex extends Exchanger {
 
   override val sources = Seq(
       new UserInputFolderSource[Operation]("poloniex", ".csv") {
-        def fileSource(fileName : String) = operationsReader(fileName)
+        def fileSource(fileName: String) = operationsReader(fileName)
       }
     /* , new UserFolderSource[Operation]("poloniex/borrowing") {
-        def fileSource(fileName : String) = borrowingFeesReader(fileName)
+        def fileSource(fileName: String) = borrowingFeesReader(fileName)
       } */
+    , new UserInputFolderSource[Operation]("poloniex/deposits", ".csv") {
+        def fileSource(fileName: String) = depositsReader(fileName)
+      }
     , new UserInputFolderSource[Operation]("poloniex/withdrawals", ".csv") {
-        def fileSource(fileName : String) = withdrawalsReader(fileName)
+        def fileSource(fileName: String) = withdrawalsReader(fileName)
       }
     )
 
-  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
     override def lineScanner(line: String) =
@@ -75,12 +78,12 @@ object Poloniex extends Exchanger {
       if(amount==0 && total==0) // Must be a Poloniex error but I got an entry with no amount nor total
         return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
 
-      if (category == "Exchange") {
+      if(category == "Exchange") {
         // Rate is computed as Total / Amount
         // A sell gets you Total minus fee coins. You release Amount coins.
         // A buy gets you Amount minus fee coins. You release Total coins.
         val exchange =
-          if (orderType == "Sell") {
+          if(orderType == "Sell") {
             val fee = total * feePercent / 100
             Exchange(
               date = date
@@ -123,7 +126,7 @@ object Poloniex extends Exchanger {
         return CSVReader.Ok(settlement)
       } else if(category == "Margin trade") {
         val margin =
-          if (orderType == "Sell") {
+          if(orderType == "Sell") {
             val fee = total * feePercent / 100
             Margin(
               date = date
@@ -161,16 +164,16 @@ object Poloniex extends Exchanger {
     //  group(super.read().sortBy(_.id)).sortBy(_.date)
   }
 
-  def group(operations: List[Operation]) : List[Operation] =
+  def group(operations: List[Operation]): List[Operation] =
     operations match {
-      case (exchange1 : Exchange)::(exchange2 : Exchange)::ops if exchange1.id.nonEmpty && exchange1.id==exchange2.id =>
+      case (exchange1: Exchange)::(exchange2: Exchange)::ops if exchange1.id.nonEmpty && exchange1.id==exchange2.id =>
         val op = exchange1.copy(
             fromAmount = exchange1.fromAmount + exchange2.fromAmount
           , toAmount = exchange1.toAmount + exchange2.toAmount
           , fees = exchange1.fees ++ exchange2.fees
         )
         group(op :: ops)
-      case (margin1 : Margin)::(margin2 : Margin)::ops if margin1.id.nonEmpty && margin1.id==margin2.id =>
+      case (margin1: Margin)::(margin2: Margin)::ops if margin1.id.nonEmpty && margin1.id==margin2.id =>
         val op = margin1.copy(
             fromAmount = margin1.fromAmount + margin2.fromAmount
           , toAmount = margin1.toAmount + margin2.toAmount
@@ -183,7 +186,7 @@ object Poloniex extends Exchanger {
         ops
     }
 
-  private def borrowingFeesReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def borrowingFeesReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
     override def lineScanner(line: String) =
@@ -212,7 +215,7 @@ object Poloniex extends Exchanger {
     }
   }
 
-  private def withdrawalsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def depositsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
     override def lineScanner(line: String) =
@@ -225,12 +228,21 @@ object Poloniex extends Exchanger {
       val address = scLn.next("Address")
       val status = scLn.next("Status")
 
-      val tk = "COMPLETE: "
-      val isFinalized = status.startsWith(tk)
+      val tokenComplete = "COMPLETE"
+      val isFinalized = status.startsWith(tokenComplete)
 
       if(isFinalized) {
-        val txid = status.drop(tk.length)
-
+        val desc = "Deposit " + address
+        val deposit = Deposit(
+          date = date
+          , id = address
+          , amount = amount
+          , market = currency
+          , exchanger = Poloniex
+          , description = desc
+        )
+        return CSVReader.Ok(deposit)
+        /*
         if(currency == Market.bitcoin) {
           val desc = id + " Withdrawal fee " + currency + " " + txid
 
@@ -249,10 +261,65 @@ object Poloniex extends Exchanger {
           return CSVReader.Ok(fee)
         } else
           CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was ignored: $line.")
+        */
+      } else
+        CSVReader.Warning(s"$id. Read deposit ${FileSystem.pathFromData(fileName)}: This deposit was not completed: $line.")
+    }
+  }
 
+  private def withdrawalsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
+    override val linesToSkip = 1
+
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[,%]")
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Poloniex csv withdrawal history uses UTC time zone
+      val currency = Market.normalize(scLn.next("Currency"))
+      val amount = scLn.nextDouble("Amount")
+      val address = scLn.next("Address")
+      val status = scLn.next("Status")
+
+      val tokenComplete = "COMPLETE: "
+      val isFinalized = status.startsWith(tokenComplete)
+
+      if(isFinalized) {
+        val txid = status.drop(tokenComplete.length)
+
+        val desc = "Withdrawal " + AddressBook.format(address) + "\n" + txid
+        val withdrawal = Withdrawal(
+          date = date
+          , id = txid
+          , amount = amount
+          , market = currency
+          , exchanger = Poloniex
+          , description = desc
+        )
+        return CSVReader.Ok(withdrawal)
+        /*
+        if(currency == Market.bitcoin) {
+          val desc = id + " Withdrawal fee " + currency + " " + txid
+
+          val txInfo = TransactionsCache.lookup(currency, txid, address)
+
+          val totalFee = amount - txInfo.amount
+
+          val fee = Fee(
+            date = date
+            , id = desc
+            , amount = totalFee
+            , market = currency
+            , exchanger = Poloniex
+            , description = desc
+          )
+          return CSVReader.Ok(fee)
+        } else
+          CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was ignored: $line.")
+        */
       } else
         CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was not completed: $line.")
     }
   }
+
 }
 

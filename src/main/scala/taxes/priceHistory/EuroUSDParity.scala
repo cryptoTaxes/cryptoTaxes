@@ -11,7 +11,7 @@ import taxes.util.Logger
 object EuroUSDParity {
   // see https://www.bde.es/webbde/es/estadis/infoest/tipos/tipos.html
   //     https://www.bde.es/webbde/es/estadis/infoest/series/tc_1_1.csv
-  private def parseMonth(month : String) =
+  private def parseMonth(month: String) =
     month match {
       case "ENE" => 1
       case "FEB" => 2
@@ -27,7 +27,7 @@ object EuroUSDParity {
       case "DIC" => 12
     }
 
-  private def readPrices() : scala.collection.mutable.Map[LocalDate, Price] = {
+  private def readPrices(): scala.collection.mutable.Map[LocalDate, Price] = {
     val file = FileSystem.File(FileSystem.euroUSDFile)
     Logger.trace(s"Reading Euro prices from ${file.getAbsoluteFile}.")
 
@@ -39,10 +39,10 @@ object EuroUSDParity {
     val header3 = sc.nextLine()
     val header4 = sc.nextLine()
     var noPriceDates = List[LocalDate]()
-    while (sc.hasNextLine) {
+    while(sc.hasNextLine) {
       val line = sc.nextLine()
       lineNumber += 1
-      if (line.nonEmpty) {
+      if(line.nonEmpty) {
         val scLn = new java.util.Scanner(line).useDelimiter("[,]+")
         try {
           val strDate = scLn.next().tail
@@ -81,7 +81,7 @@ object EuroUSDParity {
 
   private lazy val lastDay = prices.keys.max
 
-  def oneEuro2USD(date : LocalDateTime) : Price = {
+  def oneEuro2USD(date: LocalDateTime): Price = {
     // uses price of next day if not found
     var attemptDate = LocalDate.of(date)
     while(attemptDate <= lastDay) {
@@ -95,10 +95,10 @@ object EuroUSDParity {
     return Logger.fatal(s"oneEuro2USD. Price for Euro not found for day $attemptDate. Last download price is for $lastDay.")
   }
 
-  def USD2Euro(amount : Double, date : LocalDateTime) : Price =
+  def USD2Euro(amount: Double, date: LocalDateTime): Price =
     amount / oneEuro2USD(date)
 
-  def euro2USD(amount : Double, date : LocalDateTime) : Price =
+  def euro2USD(amount: Double, date: LocalDateTime): Price =
     amount * oneEuro2USD(date)
 
   def downloadPrices(): Unit = {

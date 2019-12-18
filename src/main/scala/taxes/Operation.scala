@@ -8,12 +8,23 @@ import spray.json.JsonProtocol._
 
 
 sealed trait Operation {
-  def date : LocalDateTime
-  def id : String
-  def exchanger : Exchanger
+  def date: LocalDateTime
+  def id: String
+  def exchanger: Exchanger
+  def description: String
 
   protected def dateFormatted =
     java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(date)
+
+  protected def shortDescription = {
+    val maxLen = 35
+    val suffix = "..."
+    val str = util.parse.Parse.trimSpaces(description.replace("\n", " "))
+    if(str.length > maxLen)
+      str.take(maxLen-suffix.length) ++ suffix
+    else
+      str
+  }
 }
 
 
@@ -32,29 +43,38 @@ object Operation {
   implicit val feeJson = jsonFormat7(Fee)
   implicit val feeJLoss = jsonFormat6(Loss)
   implicit val gainJson = jsonFormat6(Gain)
+  implicit val depositJson = jsonFormat6(Deposit)
+  implicit val withdrawalJson = jsonFormat6(Withdrawal)
+  implicit val nonTaxableFeeJson = jsonFormat6(NonTaxableFee)
 
   implicit object operationJson extends RootJsonFormat[Operation] {
     val _Exchange = "Exchange"
     val _Margin = "Margin"
     val _Fee = "Fee"
     val _Loss = "Loss"
-    val _Gain ="Gain"
+    val _Gain = "Gain"
+    val _Deposit = "Deposit"
+    val _Withdrawal = "Withdrawal"
+    val _NonTaxableFee = "NonTaxableFee"
 
     val _type = "type"
     val _operation = "operation"
 
     def write(operation: Operation) = {
       val (tag, json) = operation match {
-        case e : Exchange => (_Exchange, e.toJson)
-        case m : Margin => (_Margin, m.toJson)
-        case f : Fee => (_Fee, f.toJson)
-        case l : Loss => (_Loss, l.toJson)
-        case g : Gain => (_Gain, g.toJson)
+        case e: Exchange => (_Exchange, e.toJson)
+        case m: Margin => (_Margin, m.toJson)
+        case f: Fee => (_Fee, f.toJson)
+        case l: Loss => (_Loss, l.toJson)
+        case g: Gain => (_Gain, g.toJson)
+        case d: Deposit => (_Deposit, d.toJson)
+        case w: Withdrawal => (_Withdrawal, w.toJson)
+        case ntf: NonTaxableFee => (_NonTaxableFee, ntf.toJson)
       }
       JsObject(_type -> JsString(tag), _operation -> json)
     }
 
-    def read(value: JsValue) : Operation =
+    def read(value: JsValue): Operation =
       try {
         value.asJsObject.getFields(_type, _operation) match {
           case Seq(JsString(tag), jsObj) =>
@@ -64,6 +84,9 @@ object Operation {
               case `_Fee` => jsObj.convertTo[Fee]
               case `_Loss` => jsObj.convertTo[Loss]
               case `_Gain` => jsObj.convertTo[Gain]
+              case `_Deposit` => jsObj.convertTo[Deposit]
+              case `_Withdrawal` => jsObj.convertTo[Withdrawal]
+              case `_NonTaxableFee` => jsObj.convertTo[NonTaxableFee]
             }
         }
       } catch {
@@ -100,21 +123,21 @@ object Operation {
       and independently pay the fee from other funds
   ************************************************************************/
 
-case class FeePair(amount : Double, market: Market, alt : Option[(Double, Market)] = None)
+case class FeePair(amount: Double, market: Market, alt: Option[(Double, Market)] = None)
 
 
-case class Exchange(date : LocalDateTime
-                    , id : String
-                    , fromAmount : Double, fromMarket : Market
-                    , toAmount : Double, toMarket : Market
-                    , fees : Seq[FeePair]
-                    , isSettlement : Boolean = false
-                    , exchanger: Exchanger
-                    , description : String
-                    ) extends Operation {
+case class Exchange( date: LocalDateTime
+                   , id: String
+                   , fromAmount: Double, fromMarket: Market
+                   , toAmount: Double, toMarket: Market
+                   , fees: Seq[FeePair]
+                   , isSettlement: Boolean = false
+                   , exchanger: Exchanger
+                   , description: String
+                   ) extends Operation {
 
-  override def toString : String =
-    f"Exchange($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s  ${Operation.feesToString(fees)}  $description)"
+  override def toString: String =
+    f"Exchange($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s  ${Operation.feesToString(fees)}  $shortDescription)"
 }
 
 
@@ -127,38 +150,52 @@ case class Exchange(date : LocalDateTime
   * fromAmount (without fee, if feeMarket == fromMarket)
     will be deducted from your stock.
  ************************************************************************/
-case class Margin(date : LocalDateTime
-                  , id : String
-                  , fromAmount : Double, fromMarket : Market
-                  , toAmount : Double, toMarket : Market
-                  , fees : Seq[FeePair]
-                  , orderType : Operation.OrderType.Value
-                  , pair : (Market, Market)
-                  , exchanger : Exchanger
-                  , description : String
+case class Margin(date: LocalDateTime
+                  , id: String
+                  , fromAmount: Double, fromMarket: Market
+                  , toAmount: Double, toMarket: Market
+                  , fees: Seq[FeePair]
+                  , orderType: Operation.OrderType.Value
+                  , pair: (Market, Market)
+                  , exchanger: Exchanger
+                  , description: String
                   ) extends Operation {
 
-  override def toString : String =
-    f"Margin($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s  ${Operation.feesToString(fees)}  $description)"
+  override def toString: String =
+    f"Margin($dateFormatted $fromAmount%18.8f $fromMarket%-5s -> $toAmount%18.8f $toMarket%-5s ${Operation.feesToString(fees)} $shortDescription)"
 }
 
 
-case class Fee(date : LocalDateTime, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String, alt : Option[(Double, Market)] = None) extends Operation {
-  override def toString : String =
-    f"Fee($dateFormatted $amount%18.8f $market%-5s  $description)"
+case class Fee(date: LocalDateTime, id: String, amount: Double, market: Market, exchanger: Exchanger, description: String, alt: Option[(Double, Market)] = None) extends Operation {
+  override def toString: String =
+    f"Fee($dateFormatted $amount%18.8f $market%-5s $shortDescription)"
 }
 
 
-case class Loss(date : LocalDateTime, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String) extends Operation {
-  override def toString : String =
-    f"Lost($dateFormatted $amount%18.8f $market%-5s  $description)"
+case class Loss(date: LocalDateTime, id: String, amount: Double, market: Market, exchanger: Exchanger, description: String) extends Operation {
+  override def toString: String =
+    f"Lost($dateFormatted $amount%18.8f $market%-5s $shortDescription)"
 }
 
 
 // amount is the real gain (fee has already been deducted)
-case class Gain(date : LocalDateTime, id : String, amount: Double, market: Market, exchanger : Exchanger, description : String) extends Operation {
-  override def toString : String =
-    f"Gain($dateFormatted $amount%18.8f $market%-5s   $description)"
+case class Gain(date: LocalDateTime, id: String, amount: Double, market: Market, exchanger: Exchanger, description: String) extends Operation {
+  override def toString: String =
+    f"Gain($dateFormatted $amount%18.8f $market%-5s $shortDescription)"
 }
 
 
+case class Deposit(date: LocalDateTime, id: String, amount: Double, market: Market, exchanger: Exchanger, description: String) extends Operation {
+  override def toString: String =
+    f"Deposit($dateFormatted $amount%18.8f $market%-5s $shortDescription)"
+}
+
+case class Withdrawal(date: LocalDateTime, id: String, amount: Double, market: Market, exchanger: Exchanger, description: String) extends Operation {
+  override def toString: String =
+    f"Withdrawal($dateFormatted $amount%18.8f $market%-5s $shortDescription)"
+}
+
+case class NonTaxableFee(date: LocalDateTime, id: String, amount: Double, market: Market, exchanger: Exchanger, description: String) extends Operation {
+  override def toString: String =
+    f"NonTaxableFee($dateFormatted $amount%18.8f $market%-5s $shortDescription)"
+}

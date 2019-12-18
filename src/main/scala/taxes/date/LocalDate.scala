@@ -4,17 +4,17 @@ import spray.json._
 
 
 object LocalDate {
-  def apply(year : Int, month : Int, dayOfMonth : Int) : LocalDate =
+  def apply(year: Int, month: Int, dayOfMonth: Int): LocalDate =
     java.time.LocalDate.of(year, month, dayOfMonth)
 
-  def of(localDateTime : LocalDateTime) : LocalDate =
+  def of(localDateTime: LocalDateTime): LocalDate =
     localDateTime.toLocalDate
 }
 
 object LocalDateJson extends JsonFormat[LocalDate] {
   private val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
-  def write(ld : LocalDate): JsString = {
+  def write(ld: LocalDate): JsString = {
     JsString(formatter.format(ld))
   }
 

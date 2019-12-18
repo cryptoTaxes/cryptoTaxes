@@ -10,7 +10,7 @@ object Changelly extends Exchanger {
 
   override val id: String = "Changelly"
 
-  private def split(str : String) : (Double, Market) = {
+  private def split(str: String): (Double, Market) = {
     val token = str.filter(_ != ',')
     val sc = SeparatedScanner(token, "[ ]")
     val amount = sc.nextDouble()
@@ -21,11 +21,11 @@ object Changelly extends Exchanger {
 
   override val sources = Seq(
     new UserInputFolderSource[Operation]("changelly", ".csv") {
-      def fileSource(fileName : String) = operationsReader(fileName)
+      def fileSource(fileName: String) = operationsReader(fileName)
     }
   )
 
-  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
     override def lineScanner(line: String): Scanner =
@@ -36,7 +36,7 @@ object Changelly extends Exchanger {
       if(status=="finished") {
         val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "dd MMM yyyy, HH:mm:ss")  // Changelly transactions-history.csv file uses UTC time zone
                                                                                          // Note that the detailed transactions shown in the GUI use a different time zone
-        val (amount, soldMarket) = split(scLn.next("Sold"))
+        val (fromAmount, soldMarket) = split(scLn.next("Sold"))
         val (totalFee, feeMarket) = split(scLn.next("Fee"))
 
         val (token1, token2) = Parse.split(scLn.next("Exchange Rate"), " = ")
@@ -45,27 +45,49 @@ object Changelly extends Exchanger {
         val exchangeRate = rateReceived / rateSold
 
         val receiverWallet = scLn.next("Receiver Wallet")
-        val (amountReceived, receivedMarket) = split(scLn.next("Received"))
+        val (toAmount, receivedMarket) = split(scLn.next("Received"))
 
         if(soldMarket1 != soldMarket || receivedMarket1 != receivedMarket)
           CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: cannot parse this line: $line as rate is not expressed as receivedMarket/soldMarket.")
 
-        val realFee = amount * exchangeRate - amountReceived
-        val feePercent = realFee * 100 / (amount * exchangeRate)
+        val realFee = fromAmount * exchangeRate - toAmount
+        val feePercent = realFee * 100 / (fromAmount * exchangeRate)
 
         val desc = "Order: " + receiverWallet
+
+        val fromMarket = Market.normalize(soldMarket)
+        val toMarket = Market.normalize(receivedMarket)
+
+        val deposit = Deposit(
+          date = date
+          , id = receivedMarket
+          , amount = fromAmount
+          , market = fromMarket
+          , exchanger = Changelly
+          , description = "Deposit "
+        )
 
         val exchange =
           Exchange(
             date = date
             , id = receivedMarket
-            , fromAmount = amount, fromMarket = Market.normalize(soldMarket)
-            , toAmount = amountReceived, toMarket = Market.normalize(receivedMarket)
+            , fromAmount = fromAmount, fromMarket = fromMarket
+            , toAmount = toAmount, toMarket = toMarket
             , fees = List(FeePair(realFee, Market.normalize(feeMarket)))
             , exchanger = Changelly
             , description = desc
           )
-        return CSVReader.Ok(exchange)
+
+        val withdrawal = Withdrawal(
+          date = date
+          , id = receivedMarket
+          , amount = toAmount
+          , market = toMarket
+          , exchanger = Changelly
+          , description = "Withdrawal " + AddressBook.format(receiverWallet)
+        )
+
+        return CSVReader.Ok(List(deposit, exchange, withdrawal))
       } else
         return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: cannot parse this line: $line.")
     }

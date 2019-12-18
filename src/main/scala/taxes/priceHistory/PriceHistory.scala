@@ -5,7 +5,7 @@ import taxes.date._
 
 
 trait PriceHistory {
-  def apply(date : LocalDateTime) : Price
+  def apply(date: LocalDateTime): Price
 }
 
 

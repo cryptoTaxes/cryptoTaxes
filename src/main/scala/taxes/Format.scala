@@ -9,10 +9,10 @@ object Format {
 
   val shortDf = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
-  val decimalSep : Char =
+  val decimalSep: Char =
     java.text.NumberFormat.getInstance().asInstanceOf[DecimalFormat].getDecimalFormatSymbols.getDecimalSeparator
 
-  def trimZeros(str0 : String) : String = {
+  def trimZeros(str0: String): String = {
     var str = str0.reverse
     if(str0.contains(decimalSep)) {
       str = str.dropWhile(_ == '0')
@@ -22,26 +22,26 @@ object Format {
     return str.reverse
   }
 
-  def formatDecimal(x : Double, decimals : Int = Config.config.decimalPlaces) : String = {
+  def formatDecimal(x: Double, decimals: Int = Config.config.decimalPlaces): String = {
     if(x.isInfinite)
       return "∞"
     else if(x.isNaN)
       return "NaN"
     val xAbs = x.abs
     var fmt =
-      if (xAbs <= 0.00000009)
+      if(xAbs <= 0.00000009)
         "0.000000000"
-      else if (xAbs <= 0.0000009)
+      else if(xAbs <= 0.0000009)
         "0.00000000"
-      else if (xAbs <= 0.000009)
+      else if(xAbs <= 0.000009)
         "0.0000000"
-      else if (xAbs <= 0.00009)
+      else if(xAbs <= 0.00009)
         "0.000000"
-      else if (xAbs <= 0.0009)
+      else if(xAbs <= 0.0009)
         "0.00000"
-      else if (xAbs <= 0.009)
+      else if(xAbs <= 0.009)
         "0.0000"
-      else if (xAbs <= 0.09)
+      else if(xAbs <= 0.09)
         "0.000"
       else
         "0.00"
@@ -54,6 +54,6 @@ object Format {
     return trimZeros(df.format(x))
   }
 
-  def asMarket(amount : Double, marketUnit : Market, decimals : Int = Config.config.decimalPlaces) : String =
+  def asMarket(amount: Double, marketUnit: Market, decimals: Int = Config.config.decimalPlaces): String =
     Format.formatDecimal(amount, decimals) + " " + marketUnit
 }

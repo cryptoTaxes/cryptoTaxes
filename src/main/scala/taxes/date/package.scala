@@ -18,7 +18,7 @@ package object date  {
     override def compare(that: LocalDateTime): Int =
       localDateTime.compareTo(that)
 
-    def sameDayAs(that : LocalDateTime) : Boolean =
+    def sameDayAs(that: LocalDateTime): Boolean =
       localDateTime.truncatedTo(ChronoUnit.DAYS).equals(that.truncatedTo(ChronoUnit.DAYS))
   }
 

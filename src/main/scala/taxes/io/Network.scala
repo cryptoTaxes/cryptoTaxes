@@ -10,7 +10,7 @@ object Network {
     private val userAgentKey = "User-Agent"
     private val userAgentVal = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11"
 
-    case class Error(code : Int) extends Exception {
+    case class Error(code: Int) extends Exception {
       override def toString: String = s"Network.Http.Error($code)"
     }
 
@@ -19,10 +19,10 @@ object Network {
     object Output {
       case object None extends Output
       case class String(string: scala.Predef.String) extends Output
-      case class Bytes(bytes : Array[Byte]) extends Output
+      case class Bytes(bytes: Array[Byte]) extends Output
     }
 
-    def withSource[A](url: String, requestMethod: String = "GET", charset: Charset = StandardCharsets.UTF_8, requestProperties : Map[String,String] = Map(), output: Output = Output.None)(p : scala.io.Source => A) : A = {
+    def withSource[A](url: String, requestMethod: String = "GET", charset: Charset = StandardCharsets.UTF_8, requestProperties: Map[String,String] = Map(), output: Output = Output.None)(p: scala.io.Source => A): A = {
       var conn: HttpURLConnection = null
       var src: scala.io.Source = null
 
@@ -57,7 +57,7 @@ object Network {
             try
               os.write(bytes)
             finally
-              if (os != null)
+              if(os != null)
                 os.close()
         }
 
@@ -71,7 +71,7 @@ object Network {
         return x
       } finally {
         // toDo if src escapes p procedure scope, we will close connection before reading from it
-        if (conn != null)
+        if(conn != null)
           conn.disconnect()
         if(src != null)
           src.close()
@@ -82,22 +82,22 @@ object Network {
       import spray.json._
       import spray.json.JsonProtocol._
 
-      case class Error(code : Int, message : String, data : Option[JsValue] = None) extends Exception {
+      case class Error(code: Int, message: String, data: Option[JsValue] = None) extends Exception {
         override def toString = s"Http.Json.Error($code, $message, $data)"
       }
       implicit val error = jsonFormat3(Error)
 
-      case class Request(jsonrpc: String, id : Int, method : String, params : Option[JsValue])
+      case class Request(jsonrpc: String, id: Int, method: String, params: Option[JsValue])
       implicit val request = jsonFormat4(Request)
 
-      case class Response(jsonrpc: String, id : Int, error: Option[Error], result: Option[JsObject])
+      case class Response(jsonrpc: String, id: Int, error: Option[Error], result: Option[JsObject])
       implicit val response = jsonFormat4(Response)
 
       private var id = 0
 
       private val jsonrpc = "2.0"
 
-      def RPC(url: String, charset: Charset = defaultCharset, method: String, params : JsValue = null): JsObject = {
+      def RPC(url: String, charset: Charset = defaultCharset, method: String, params: JsValue = null): JsObject = {
         id += 1
         val request =
           Request(
@@ -107,9 +107,9 @@ object Network {
             , params = params match {
                 case null =>
                   None
-                case jsObject : JsObject =>
+                case jsObject: JsObject =>
                   Some(jsObject)
-                case jsArray : JsArray =>
+                case jsArray: JsArray =>
                   Some(jsArray)
                 case _ =>
                   throw Error(-32602, s"Network.Http.Json._RPC: params should be a JSON array or object.\nparams 0 $params.")

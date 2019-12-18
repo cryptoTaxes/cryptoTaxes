@@ -8,7 +8,7 @@ import scala.collection.mutable.ListBuffer
 
 
 trait ToHTML {
-  def toHTML : HTML
+  def toHTML: HTML
 }
 
 
@@ -17,21 +17,21 @@ object HTMLDoc {
 
   lazy val baseMarket = Config.config.baseCoin.market
 
-  def asMarket(amount: Double, marketUnit: Market, decimals : Int = Config.config.decimalPlaces) : HTML =
+  def asMarket(amount: Double, marketUnit: Market, decimals: Int = Config.config.decimalPlaces): HTML =
     <span class='noLineBreak'>
       {Format.formatDecimal(amount, decimals)}
       <span class='market'>{marketUnit}</span>
     </span>
 
 
-  def asRate(rate: Double, marketUnit0: Market, marketUnit1: Market, decimals : Int = Config.config.decimalPlaces) : HTML =
+  def asRate(rate: Double, marketUnit0: Market, marketUnit1: Market, decimals: Int = Config.config.decimalPlaces): HTML =
     <span class='noLineBreak'>
       {asMarket(rate, marketUnit0, decimals)}
       / <span class="market">{marketUnit1}</span>
     </span>
 
 
-  def box(header : Any, boxBody : Any) : HTML =
+  def box(header: Any, boxBody: Any): HTML =
     <div class='boxed'>
       <div class='boxHeader'>
           {header}
@@ -42,7 +42,7 @@ object HTMLDoc {
     </div>
 
 
-  def header4(header0 : Any, header1 : Any, header2 : Any, header3 : Any) : HTML =
+  def header4(header0: Any, header1: Any, header2: Any, header3: Any): HTML =
     <span>
       <span class='header0'>
         {header0}
@@ -60,22 +60,22 @@ object HTMLDoc {
 
 
   trait Boxed {
-    def headerToHTML : HTML
+    def headerToHTML: HTML
 
-    def bodyToHTML : HTML
+    def bodyToHTML: HTML
 
     def toHTML: HTML =
       box(headerToHTML, bodyToHTML)
   }
 
 
-  def reportResults(year : Int, realized : Report.Realized) : HTML = {
+  def reportResults(year: Int, realized: Report.Realized): HTML = {
     val proceeds = realized.proceeds.sum
     val costs = realized.costBasis.sum
     val fees = realized.perMarketPaidFees.sum
 
     val net = proceeds - costs - fees
-    val netMsg = s"Net ${if (net > 0) "gain" else "loss"}:"
+    val netMsg = s"Net ${if(net > 0) "gain" else "loss"}:"
     <table id='tableStyle1'>
       <caption>{s"$year Resume"}</caption>
       <tr>
@@ -98,7 +98,7 @@ object HTMLDoc {
   }
 
 
-  def reportYear(year : Int, realized : Report.Realized) : HTML = {
+  def reportYear(year: Int, realized: Report.Realized): HTML = {
     <div>
       <div>{realized.perMarketGains.toHTML("Gains per market")}</div>
       <div>{realized.perMarketLooses.toHTML("Looses per market")}</div>
@@ -127,50 +127,55 @@ object HTMLDoc {
       </div>
     </div>
   }
+
+  def expandNewlines(text: String): HTML =
+    <div>{text.split("\n").map(scala.xml.Text(_):scala.xml.NodeSeq).reduce(_ ++ <br/> ++ _)}</div>
 }
 
 
-case class HTMLDoc(fileName : String, title : String) {
+case class HTMLDoc(fileName: String, title: String) {
   private val allHTMLs = ListBuffer[ToHTML]()
 
-  def +=(html : ToHTML) : Unit =
+  def +=(html: ToHTML): Unit =
     allHTMLs += html
 
-  def +=(html : HTML): Unit = {
+  def +=(html: HTML): Unit = {
     allHTMLs += new ToHTML {
-      override def toHTML : HTML = html
+      override def toHTML: HTML = html
     }
   }
 
-  private case class State(fileName : String, ps : FileSystem.PrintStream, title : String)
+  private case class State(fileName: String, title: String)
 
-  private var optState : Option[State] = Some(State(fileName, FileSystem.PrintStream(fileName), title))
+  private var optState: Option[State] = Some(State(fileName, title))
 
-  def setOutputTo(fileName : String): Unit = {
-    val newState = State(fileName, FileSystem.PrintStream(fileName), title)
+  def setOutputTo(fileName: String): Unit = {
+    val newState = State(fileName, title)
 
     optState match {
       case None     => ;
-      case Some(st) => printlnPage()
-                       st.ps.close()
+      case Some(st) =>
+        if(allHTMLs.nonEmpty) {
+          val ps = FileSystem.PrintStream(st.fileName)
+          printlnPage(ps)
+          ps.close()
+        }
     }
     optState = Some(newState)
   }
 
-  def close() : Unit = {
+  def close(): Unit = {
     optState match {
-      case None     => Logger.fatal("HTML.close: stream is already closed")
-      case Some(st) => printlnPage()
-                       st.ps.close()
+      case None     =>
+        Logger.fatal("HTML.close: stream is already closed")
+      case Some(st) =>
+        if(allHTMLs.nonEmpty) {
+          val ps = FileSystem.PrintStream(st.fileName)
+          printlnPage(ps)
+          ps.close()
+        }
     }
     optState = None
-  }
-
-  private def println(x : Any) : Unit = {
-    optState match {
-      case None     => Logger.fatal("HTML.println: stream is currently closed")
-      case Some(st) => st.ps.println(x)
-    }
   }
 
   private val styles =
@@ -202,6 +207,7 @@ case class HTMLDoc(fileName : String, title : String) {
       | .alignR { text-align: right; }
       | .darkBlue { color: #0000b0; }
       | .darkRed { color: #b00000; }
+      | .darkMagenta { color: #a000a0; }
       |
       | table#tableStyle1 { border: 1px solid black; border-collapse: collapse; margin-bottom: 20px; page-break-inside:avoid; }
       | table#tableStyle1 caption { border: 1px solid black; border-bottom: 0px solid black; font-weight: bold; text-align: left; }
@@ -227,7 +233,7 @@ case class HTMLDoc(fileName : String, title : String) {
       | }
       |""".stripMargin
 
-  private def page() : HTML =
+  private def page(): HTML =
     <html>
     <head>
       <meta charset="UTF-8"></meta>
@@ -246,9 +252,9 @@ case class HTMLDoc(fileName : String, title : String) {
     </body>
     </html>
 
-  private def printlnPage() : Unit = {
-    println("<!DOCTYPE html>")
-    println(page())
+  private def printlnPage(ps: FileSystem.PrintStream): Unit = {
+    ps.println("<!DOCTYPE html>")
+    ps.println(page())
     allHTMLs.clear()
   }
 }

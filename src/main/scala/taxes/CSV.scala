@@ -9,10 +9,9 @@ import taxes.util.Logger
 
 
 case class CSV() {
+  private case class State(fileName: String, ps: FileSystem.PrintStream)
 
-  private case class State(fileName : String, ps : FileSystem.PrintStream)
-
-  private var optState : Option[State] = None
+  private var optState: Option[State] = None
 
   private val header = List("Date", "Sold", "Amount", "Bought", "Amount", "Cost basis", "Proceeds", "Fee", "Exchanger")
 
@@ -23,9 +22,9 @@ case class CSV() {
 
   private val sep = ";"
 
-  case class Entry(date : Option[LocalDateTime] = None, sold : Option[Market] = None, soldAmount : Option[Double] = None, bought : Option[Market] = None, boughtAmount : Option[Double] = None, costBasis : Option[Double] = None, sellValue : Option[Double] = None, fee : Option[Double] = None, exchanger: Exchanger) {
+  case class Entry(date: Option[LocalDateTime] = None, sold: Option[Market] = None, soldAmount: Option[Double] = None, bought: Option[Market] = None, boughtAmount: Option[Double] = None, costBasis: Option[Double] = None, sellValue: Option[Double] = None, fee: Option[Double] = None, exchanger: Exchanger) {
 
-    private def doFormat[A](opt : Option[A], f : A => String) : String = opt match {
+    private def doFormat[A](opt: Option[A], f: A => String): String = opt match {
       case None => ""
       case Some(x) => f(x)
     }
@@ -46,7 +45,7 @@ case class CSV() {
     }
   }
 
-  def setOutputTo(fileName : String): Unit = {
+  def setOutputTo(fileName: String): Unit = {
     val newState = State(fileName, FileSystem.PrintStream(fileName))
 
     optState match {
@@ -57,28 +56,26 @@ case class CSV() {
     optState = Some(newState)
   }
 
-  def close() : Unit = {
+  def close(): Unit = {
     optState match {
       case None     => Logger.fatal("CSV.close: stream is already closed")
       case Some(st) => st.ps.close()
     }
   }
 
-  def println(str : String) : Unit = {
+  def println(str: String): Unit = {
     optState match {
       case None     => Logger.fatal("CSV.println: stream is currently closed")
       case Some(st) => st.ps.println(str)
     }
   }
 
-  def println() : Unit = {
+  def println(): Unit =
     println("")
-  }
 
-  def println(x : Any) : Unit = {
+  def println(x: Any): Unit =
     println(x.toString)
-  }
 
-  def printlnHeader() =
+  def printlnHeader(): Unit =
     println(header.mkString(sep))
 }

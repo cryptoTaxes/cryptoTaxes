@@ -2,6 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
+import taxes.io.FileSystem
 import taxes.util.parse._
 
 
@@ -10,11 +11,17 @@ object Yobit extends Exchanger {
 
   override val sources = Seq(
     new UserInputFolderSource[Operation]("yobit", ".csv") {
-      def fileSource(fileName : String) = operationsReader(fileName)
+      def fileSource(fileName: String) = operationsReader(fileName)
+    },
+    new UserInputFolderSource[Operation]("yobit/deposits", ".csv") {
+      def fileSource(fileName: String) = depositsReader(fileName)
+    },
+    new UserInputFolderSource[Operation]("yobit/withdrawals", ".csv") {
+      def fileSource(fileName: String) = withdrawalsReader(fileName)
     }
   )
 
-  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
     override def lineScanner(line: String) =
@@ -38,7 +45,7 @@ object Yobit extends Exchanger {
       val desc = ""
 
       val (m1,m2) = Parse.split(pair, "/")
-      val isSell = orderType == "SELL"
+      val isShort = orderType == "SELL"
 
       val baseMarket = Market.normalize(m1)
       val quoteMarket = Market.normalize(m2)
@@ -46,7 +53,7 @@ object Yobit extends Exchanger {
       if(completed>0) {
         // quoteMarket is usually BTC
         val exchange =
-          if (isSell)
+          if(isShort)
             Exchange(
               date = date
               , id = ""
@@ -69,6 +76,68 @@ object Yobit extends Exchanger {
         return CSVReader.Ok(exchange)
       } else
         return CSVReader.Ignore
+    }
+  }
+
+  private def depositsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
+    override val linesToSkip = 1
+
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[ \t]+")
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val date1 = scLn.next("Date1")
+      val date2 = scLn.next("Date2")
+
+      val date = LocalDateTime.parseAsUTC(s"$date1 $date2", "yyyy-MM-dd HH:mm:ss")
+
+      val currency = Market.normalize(scLn.next("Currency"))
+      val amount = scLn.nextDouble("Amount")
+      val accepted = scLn.next("Status") == "Accepted"
+
+      if(accepted) {
+        val deposit = Deposit(
+          date = date
+          , id = ""
+          , amount = amount
+          , market = currency
+          , exchanger = Yobit
+          , description = "Deposit into Yobit"
+        )
+        return CSVReader.Ok(deposit)
+      } else
+        CSVReader.Warning(s"$id. Read deposit ${FileSystem.pathFromData(fileName)}: This deposit was not completed: $line.")
+    }
+  }
+
+  private def withdrawalsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
+    override val linesToSkip = 1
+
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[ \t]+")
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val date1 = scLn.next("Date1")
+      val date2 = scLn.next("Date2")
+
+      val date = LocalDateTime.parseAsUTC(s"$date1 $date2", "yyyy-MM-dd HH:mm:ss")
+
+      val currency = Market.normalize(scLn.next("Currency"))
+      val amount = scLn.nextDouble("Amount")
+      val completed = scLn.next("Status") == "Completed"
+
+      if(completed) {
+        val withdrawal = Withdrawal(
+          date = date
+          , id = ""
+          , amount = amount
+          , market = currency
+          , exchanger = Yobit
+          , description = "Withdrawal from Yobit"
+        )
+        return CSVReader.Ok(withdrawal)
+      } else
+        CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was not completed: $line.")
     }
   }
 }

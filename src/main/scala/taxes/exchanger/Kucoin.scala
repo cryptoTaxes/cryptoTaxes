@@ -10,11 +10,11 @@ object Kucoin extends Exchanger {
 
   override val sources = Seq(
     new UserInputFolderSource[Operation]("kucoin", ".csv") {
-      def fileSource(fileName : String) = operationsReader(fileName)
+      def fileSource(fileName: String) = operationsReader(fileName)
     }
   )
 
-  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
     override def lineScanner(line: String): Scanner =
@@ -48,7 +48,7 @@ object Kucoin extends Exchanger {
          For trade fee, we do not list them separately.
        */
 
-      if (direction == "BUY") {
+      if(direction == "BUY") {
         val exchange = Exchange(
           date = createdDate
           , id = oid

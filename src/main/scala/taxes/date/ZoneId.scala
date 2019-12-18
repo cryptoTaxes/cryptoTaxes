@@ -4,10 +4,10 @@ import spray.json._
 
 
 object ZoneId {
-  def of(str : String) : ZoneId =
+  def of(str: String): ZoneId =
     java.time.ZoneId.of(str)
 
-  def systemDefault() : ZoneId =
+  def systemDefault(): ZoneId =
     java.time.ZoneId.systemDefault()
 }
 

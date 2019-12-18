@@ -12,27 +12,36 @@ object Binance extends Exchanger {
 
   override val sources = Seq(
     new UserInputFolderSource[Operation]("binance", ".xlsx") {
-      def fileSource(xlsxFileName : String) = operationsReader(xlsxFileName)
+      def fileSource(xlsxFileName: String) = operationsReader(xlsxFileName)
+    },
+    new UserInputFolderSource[Operation]("binance/deposits", ".xlsx") {
+      def fileSource(xlsxFileName: String) = depositsReader(xlsxFileName)
+    },
+    new UserInputFolderSource[Operation]("binance/withdrawals", ".xlsx") {
+      def fileSource(xlsxFileName: String) = withdrawalsReader(xlsxFileName)
     }
   )
 
-  private def operationsReader(xlsxFileName : String) = {
+  abstract class BinanceReader(xlsxFileName: String) extends {
     val (path, name, ext) = FileSystem.decompose(xlsxFileName)
     val csvFileName = FileSystem.compose(Seq(path, "generated"), name, ".csv")
+  } with CSVReader[Operation](csvFileName) {
 
-    new CSVSortedOperationReader(csvFileName) {
-      private val csvSeparator = ','
+    private val csvSeparator = ','
 
-      override def preprocess() = Some { () =>
-        Logger.trace(s"Generating $csvFileName file from $xlsxFileName.")
-        ExcelReader.XLSXToCSV(xlsxFileName, csvFileName, sep = csvSeparator)
-      }
+    override def preprocess() = Some { () =>
+      Logger.trace(s"Generating $csvFileName file from $xlsxFileName.")
+      ExcelReader.XLSXToCSV(xlsxFileName, csvFileName, sep = csvSeparator)
+    }
 
-      override val linesToSkip = 1
+    override val linesToSkip = 1
 
-      override def lineScanner(line: String): Scanner =
-        QuotedScanner(line, '\"', csvSeparator)
+    override def lineScanner(line: String): Scanner =
+      QuotedScanner(line, '\"', csvSeparator)
+  }
 
+  private def operationsReader(xlsxFileName: String) =
+    new BinanceReader(xlsxFileName) {
       private val baseMarkets = List[Market]("BNB", "BTC", "ETH", "USDT")
 
       override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
@@ -63,11 +72,11 @@ object Binance extends Exchanger {
             // `amount' - `feeAmount'
             // Else you get `amount' but you additionally pay a BNB fee
 
-            if (orderType == "BUY") {
+            if(orderType == "BUY") {
               // toDo check this further
               // This has to be the first case as if you're buying BNB and you pay
               // your fee with BNB, you get `amount` - `feeAmount'
-              if (feeCoin == baseMarket) {
+              if(feeCoin == baseMarket) {
                 val exchange = Exchange(
                   date = date
                   , id = ""
@@ -78,7 +87,7 @@ object Binance extends Exchanger {
                   , description = desc
                 )
                 return CSVReader.Ok(exchange)
-              } else if (feeCoin == Market.normalize("BNB")) {
+              } else if(feeCoin == Market.normalize("BNB")) {
                 val exchange = Exchange(
                   date = date
                   , id = ""
@@ -91,8 +100,8 @@ object Binance extends Exchanger {
                 return CSVReader.Ok(exchange)
               } else
                 return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
-            } else if (orderType == "SELL") {
-              if (feeCoin == quoteMarket) {
+            } else if(orderType == "SELL") {
+              if(feeCoin == quoteMarket) {
                 val exchange = Exchange(
                   date = date
                   , id = ""
@@ -103,7 +112,7 @@ object Binance extends Exchanger {
                   , description = desc
                 )
                 return CSVReader.Ok(exchange)
-              } else if (feeCoin == Market.normalize("BNB")) {
+              } else if(feeCoin == Market.normalize("BNB")) {
                 val exchange = Exchange(
                   date = date
                   , id = ""
@@ -121,5 +130,56 @@ object Binance extends Exchanger {
         }
       }
     }
-  }
+
+  private def depositsReader(xlsxFileName: String) =
+    new BinanceReader(xlsxFileName) {
+      override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+        val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Binance uses UTC time zone
+        val coin = Market.normalize(scLn.next("Coin"))
+        val amount = scLn.nextDouble("Amount")
+        val address = scLn.next("Address")
+        val txid = scLn.next("TXID")
+        val completed = scLn.next("Status") == "Completed"
+
+        if(completed) {
+          val desc = "Deposit " + address + "\n" + txid
+          val deposit = Deposit(
+            date = date
+            , id = address
+            , amount = amount
+            , market = coin
+            , exchanger = Binance
+            , description = desc
+          )
+          return CSVReader.Ok(deposit)
+        } else
+          CSVReader.Warning(s"$id. Read deposit ${FileSystem.pathFromData(fileName)}: This deposit was not completed: $line.")
+      }
+    }
+
+  private def withdrawalsReader(xlsxFileName: String) =
+    new BinanceReader(xlsxFileName) {
+      override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+        val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Binance uses UTC time zone
+        val coin = Market.normalize(scLn.next("Coin"))
+        val amount = scLn.nextDouble("Amount")
+        val address = scLn.next("Address")
+        val txid = scLn.next("TXID")
+        val completed = scLn.next("Status") == "Completed"
+
+        if(completed) {
+          val desc = "Withdrawal " + address + "\n" + txid
+          val withdrawal = Withdrawal(
+            date = date
+            , id = address
+            , amount = amount
+            , market = coin
+            , exchanger = Binance
+            , description = desc
+          )
+          return CSVReader.Ok(withdrawal)
+        } else
+          CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was not completed: $line.")
+      }
+    }
 }

@@ -7,10 +7,10 @@ import taxes.util.parse.Parse
 
 
 object BlockExplorerSearcher {
-  def apply(market : Market, txid : String, address : String) =
+  def apply(market: Market, txid: String, address: String) =
     new BlockExplorerSearcher(market, txid, address)
 
-  private def locateAndSkip(str : String, prefix : String, toSkip : Char, numSkip : Int, endToken : String) : String = {
+  private def locateAndSkip(str: String, prefix: String, toSkip: Char, numSkip: Int, endToken: String): String = {
     val before = str.indexOf(prefix)
     var str1 = str.drop(before +  prefix.length)
     var found = 0
@@ -31,7 +31,7 @@ object BlockExplorerSearcher {
     return token
   }
 
-  def etcScrap(txid : String, address : String) : (LocalDateTime, Double, Double) = {
+  def etcScrap(txid: String, address: String): (LocalDateTime, Double, Double) = {
     val url = s"https://gastracker.io/tx/$txid"
     val str = Network.Http.withSource(url){
       src => src.mkString
@@ -59,23 +59,23 @@ object BlockExplorerSearcher {
   }
 
 
-  def etcScrap2(txid : String, address : String) : (LocalDateTime, Double, Double) = {
+  def etcScrap2(txid: String, address: String): (LocalDateTime, Double, Double) = {
     import spray.json._
     import spray.json.JsonProtocol._
 
-    def JsonETCQuery[A](method : String, params : JsArray)(implicit json : JsonFormat[A]) : A = {
+    def JsonETCQuery[A](method: String, params: JsArray)(implicit json: JsonFormat[A]): A = {
       val RPC_API_endPoint = "http://web3.gastracker.io"
       val response = Network.Http.Json.RPC(RPC_API_endPoint, method = method, params = params)
       return response.convertTo[A]
     }
 
-    case class Transaction(blockHash : String, blockNumber : String, from : String, to : String, gas : String, gasPrice : String, value : String)
+    case class Transaction(blockHash: String, blockNumber: String, from: String, to: String, gas: String, gasPrice: String, value: String)
     implicit val transactionJson = jsonFormat7(Transaction)
 
-    case class Block(timestamp : String)
+    case class Block(timestamp: String)
     implicit val blockJson = jsonFormat1(Block)
 
-    case class TransactionReceipt(gasUsed : String, cumulativeGasUsed : String)
+    case class TransactionReceipt(gasUsed: String, cumulativeGasUsed: String)
     implicit val transactionReceiptJson = jsonFormat2(TransactionReceipt)
 
     val tx = JsonETCQuery[Transaction]("eth_getTransactionByHash", JsArray(JsString(txid)))
@@ -87,14 +87,14 @@ object BlockExplorerSearcher {
 
     val txReceipt = JsonETCQuery[TransactionReceipt]("eth_getTransactionReceipt", JsArray(JsString(txid)))
 
-    def parseHex(str : String) : BigInt = {
+    def parseHex(str: String): BigInt = {
       val toParse = if(str.startsWith("0x")) str.drop(2) else str
       BigInt(toParse, 16)
     }
 
-    def weiToGwei(x : BigInt) : BigInt = x / BigInt(10).pow(9)
+    def weiToGwei(x: BigInt): BigInt = x / BigInt(10).pow(9)
 
-    def weiToETC(x : BigInt) : Double =
+    def weiToETC(x: BigInt): Double =
       weiToGwei(x).toDouble / 1E9
 
     val date = LocalDateTime.fromUnix(parseHex(block.timestamp).toLong)
@@ -104,14 +104,14 @@ object BlockExplorerSearcher {
     return (date, amount, fee)
   }
 
-  def chainzCryptoidInfoScrap(coin : String, txid : String, address : String) : (LocalDateTime, Double, Double) = {
+  def chainzCryptoidInfoScrap(coin: String, txid: String, address: String): (LocalDateTime, Double, Double) = {
     import spray.json._
     import spray.json.JsonProtocol._
 
-    case class Output(addr : String, amount : Double)
+    case class Output(addr: String, amount: Double)
     implicit val outputJson = jsonFormat2(Output)
 
-    case class Response(timestamp : Long, fees : Double, outputs : Seq[Output])
+    case class Response(timestamp: Long, fees: Double, outputs: Seq[Output])
     implicit val responseJson = jsonFormat3(Response)
 
     val url = s"https://chainz.cryptoid.info/$coin/api.dws?q=txinfo;t=$txid"
@@ -126,43 +126,43 @@ object BlockExplorerSearcher {
     var found = false
     val it = response.outputs.iterator
     var amount = 0.0
-    while (!found && it.hasNext) {
+    while(!found && it.hasNext) {
       val output = it.next()
-      if (output.addr == address) {
+      if(output.addr == address) {
         amount = output.amount
         found = true
       }
     }
 
-    if (!found)
+    if(!found)
       Logger.fatal(s"BlockExplorerScraper.chainzCryptoidInfoScrap: output address $address not found in JSON $response")
 
     return (date, amount, fee)
   }
 
-  def btcScrap(txid : String, address : String) : (LocalDateTime, Double, Double) =
+  def btcScrap(txid: String, address: String): (LocalDateTime, Double, Double) =
     chainzCryptoidInfoScrap("btc", txid, address)
 
-  def ltcScrap(txid : String, address : String) : (LocalDateTime, Double, Double) =
+  def ltcScrap(txid: String, address: String): (LocalDateTime, Double, Double) =
     chainzCryptoidInfoScrap("ltc", txid, address)
 
-  def vtcScrap(txid : String, address : String) : (LocalDateTime, Double, Double) =
+  def vtcScrap(txid: String, address: String): (LocalDateTime, Double, Double) =
     chainzCryptoidInfoScrap("vtc", txid, address)
 
-  def dogeScrap(txid : String, address : String) : (LocalDateTime, Double, Double) = {
+  def dogeScrap(txid: String, address: String): (LocalDateTime, Double, Double) = {
     import spray.json._
     import spray.json.JsonProtocol._
 
-    case class Input(address : String, value : String)
+    case class Input(address: String, value: String)
     implicit val inputJson = jsonFormat2(Input)
 
-    case class Output(address : String, value : String)
+    case class Output(address: String, value: String)
     implicit val outputJson = jsonFormat2(Output)
 
-    case class Transaction(time : Long, inputs : Seq[Input], outputs : Seq[Output])
+    case class Transaction(time: Long, inputs: Seq[Input], outputs: Seq[Output])
     implicit val transactionJson = jsonFormat3(Transaction)
 
-    case class Response(success : Int, transaction : Transaction)
+    case class Response(success: Int, transaction: Transaction)
     implicit val responseJson = jsonFormat2(Response)
 
     val url = s"https://dogechain.info/api/v1/transaction/$txid"
@@ -209,7 +209,7 @@ object BlockExplorerSearcher {
     return (date, amount, fee)
   }
 
-  def btcScrap2(txid : String, address : String) : (LocalDateTime, Double, Double) = {
+  def btcScrap2(txid: String, address: String): (LocalDateTime, Double, Double) = {
     val url = s"https://blockchain.info/tx/$txid"
     val str = Network.Http.withSource(url){src => src.mkString}
 
@@ -225,7 +225,7 @@ object BlockExplorerSearcher {
     return (date, amount, fee)
   }
 
-  def dogeScrap2(url : String) : (LocalDateTime, Double, Double) = {
+  def dogeScrap2(url: String): (LocalDateTime, Double, Double) = {
     val str = Network.Http.withSource(url){src => src.mkString}
 
     val feeStr = locateAndSkip(str, "<td>Fee</td>", '>', 1, "<")
@@ -237,7 +237,7 @@ object BlockExplorerSearcher {
   }
 
 
-  def vtcScrap2(url : String) : (LocalDateTime, Double, Double) = {
+  def vtcScrap2(url: String): (LocalDateTime, Double, Double) = {
     val str = Network.Http.withSource(url){src => src.mkString}
 
     val feeStr = locateAndSkip(str, "<th>Fees</th>", '>', 1, "V")
@@ -249,7 +249,7 @@ object BlockExplorerSearcher {
   }
 }
 
-class BlockExplorerSearcher(market : Market, txid : String, address : String) {
+class BlockExplorerSearcher(market: Market, txid: String, address: String) {
   lazy val search = market match {
     case Market.bitcoin  => Some(BlockExplorerSearcher.btcScrap(txid, address))
     case Market.dogecoin => Some(BlockExplorerSearcher.dogeScrap(txid, address))

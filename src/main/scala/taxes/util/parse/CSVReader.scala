@@ -16,26 +16,26 @@ object CSVReader {
       new Ok(List(result))
   }
 
-  case class Ok[+A](results : Seq[A]) extends Result[A]
-  case class Warning(msg : String) extends Result[Nothing]
+  case class Ok[+A](results: Seq[A]) extends Result[A]
+  case class Warning(msg: String) extends Result[Nothing]
   case object Ignore extends Result[Nothing]
 }
 
-abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
+abstract class CSVReader[A](fileName: String) extends FileSource[A](fileName) {
   import CSVReader._
 
   // number of non-empty lines to skip before data
-  val linesToSkip : Int
+  val linesToSkip: Int
 
   lazy val skippedLines = new Array[String](linesToSkip)
 
-  val charset : String = taxes.io.defaultCharset.name
+  val charset: String = taxes.io.defaultCharset.name
 
-  def lineScanner(line : String) : Scanner
+  def lineScanner(line: String): Scanner
 
-  def readLine(line : String, lineScanner : Scanner) : Result[A]
+  def readLine(line: String, lineScanner: Scanner): Result[A]
 
-  def read() : List[A] = {
+  def read(): List[A] = {
     val f = FileSystem.File(fileName)
     val sc = new java.util.Scanner(f, charset)
 
@@ -80,7 +80,7 @@ abstract class CSVReader[A](fileName : String) extends FileSource[A](fileName) {
 }
 
 
-abstract class CSVSortedOperationReader(fileName : String) extends CSVReader[Operation](fileName) {
-  override def read() : List[Operation] =
+abstract class CSVSortedOperationReader(fileName: String) extends CSVReader[Operation](fileName) {
+  override def read(): List[Operation] =
     super.read().sortBy(_.date)
 }

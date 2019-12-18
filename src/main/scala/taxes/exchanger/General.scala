@@ -5,7 +5,7 @@ import taxes.date._
 import taxes.util.parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 
 
-case class General(name : String) extends Exchanger {
+case class General(name: String) extends Exchanger {
   override val id = name
   override val sources = Seq()
 }
@@ -16,10 +16,10 @@ object General extends Exchanger {
 
   override val sources = Seq(
       new UserInputFolderSource[Operation]("general/exchanges", ".csv") {
-        def fileSource(fileName : String) = exchangesReader(fileName)
+        def fileSource(fileName: String) = exchangesReader(fileName)
       }
     , new UserInputFolderSource[Operation]("general/gainslosses", ".csv") {
-       def fileSource(fileName : String) = gainsLossesReader(fileName)
+       def fileSource(fileName: String) = gainsLossesReader(fileName)
       }
   )
 
@@ -39,10 +39,10 @@ object General extends Exchanger {
       .toFormatter()
   }
 
-  private def parseDate(str : String) : LocalDateTime =
+  private def parseDate(str: String): LocalDateTime =
     LocalDateTime.parse(str+LocalDateTime.myZoneId, format)
 
-  private def exchangesReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def exchangesReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
     override def lineScanner(line: String) =
@@ -66,14 +66,14 @@ object General extends Exchanger {
           , fromAmount = fromAmount, fromMarket = Market.normalize(fromMarket)
           , toAmount = toAmount, toMarket = Market.normalize(toMarket)
           , fees = List(FeePair(fee, Market.normalize(feeMarket)))
-          , exchanger = General(exchangerName)
+          , exchanger = Exchanger.parse(exchangerName)
           , description = desc
         )
       return CSVReader.Ok(exchange)
     }
   }
 
-  private def gainsLossesReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def gainsLossesReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
     override def lineScanner(line: String) =
@@ -95,7 +95,7 @@ object General extends Exchanger {
             , id = ""
             , amount = amount
             , market = market
-            , exchanger = General(exchangerName)
+            , exchanger = Exchanger.parse(exchangerName)
             , description = desc
           )
         } else {
@@ -104,7 +104,7 @@ object General extends Exchanger {
             , id = ""
             , amount = amount.abs
             , market = market
-            , exchanger = General(exchangerName)
+            , exchanger = Exchanger.parse(exchangerName)
             , description = desc
           )
         }
@@ -115,7 +115,7 @@ object General extends Exchanger {
           , id = ""
           , amount = fee
           , market = feeMarket
-          , exchanger = General(exchangerName)
+          , exchanger = Exchanger.parse(exchangerName)
           , description = desc
         )
         return CSVReader.Ok(List(op, f))

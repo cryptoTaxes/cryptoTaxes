@@ -12,11 +12,11 @@ object Idex extends Exchanger {
 
   override val sources = Seq(
     new UserInputFolderSource[Operation]("idex", ".csv") {
-      def fileSource(fileName : String) = operationsReader(fileName)
+      def fileSource(fileName: String) = operationsReader(fileName)
     }
   )
 
-  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
     override def lineScanner(line: String): Scanner =
@@ -89,7 +89,7 @@ object Idex extends Exchanger {
       exchange rate from the last 10 trades.
       */
 
-      if (buyOrSell == "buy") {
+      if(buyOrSell == "buy") {
         val gasFeeInBaseMarket =
           if(quoteMarket != Market.ethereum) {
             Logger.warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading gass fee for this transaction is not currently supported: $line.")

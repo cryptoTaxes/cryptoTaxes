@@ -13,7 +13,9 @@ object Kraken extends Exchanger {
   private val configFileName = FileSystem.readConfigFile("krakenMarkets.txt")
 
   private val conversions: Map[Market, Market] =
-    Parse.readAssociations(configFileName, "Reading Kraken markets")
+    Parse.readKeysValue(configFileName, "Reading Kraken markets").map{
+      case (krakenMarket, market) => (krakenMarket.toUpperCase, Market.normalize(market))
+    }
 
   def parsePair(pair: String): (Market, Market) = {
     var found = false
@@ -22,16 +24,16 @@ object Kraken extends Exchanger {
     var baseMarket = ""
 
     val it = conversions.keys.iterator
-    while (!found && it.hasNext) {
+    while(!found && it.hasNext) {
       baseMarket0 = it.next()
 
-      if (pair.startsWith(baseMarket0)) {
+      if(pair.startsWith(baseMarket0)) {
         found = true
         baseMarket = conversions(baseMarket0)
       }
     }
 
-    if (!found)
+    if(!found)
       Logger.fatal(s"Could not parse Kraken pair $pair. Check file $configFileName.")
 
     val quoteMarket0 = pair.drop(baseMarket0.length)
@@ -48,7 +50,7 @@ object Kraken extends Exchanger {
   }
 
   private type TxID = String
-  private case class Ledger(txType : String, market: Market, amount: Double, fee: Double)
+  private case class Ledger(txType: String, market: Market, amount: Double, fee: Double)
   private val ledgersCache = scala.collection.mutable.Map[TxID, Ledger]()
 
   private type OrderID = String
@@ -100,8 +102,8 @@ object Kraken extends Exchanger {
       val id = txid + "/" + ordertxid
       val desc = "Order: " + id
 
-      val isSell = sellBuy == "sell"
-      val isBuy = sellBuy == "buy"
+      val isShort = sellBuy == "sell"
+      val isLong = sellBuy == "buy"
       val isMargin = isMarginCache(ordertxid)
 
       val ledgersTxids = Parse.sepBy(ledgers, ",")
@@ -125,8 +127,8 @@ object Kraken extends Exchanger {
           Logger.fatal(s"${Kraken.id}. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported as it has more than two fees: $line.\n$ls")
       }
 
-      if (isMargin) { // margin trade
-        if(isSell) {
+      if(isMargin) { // margin trade
+        if(isShort) {
           val margin =
             Margin(
               date = date
@@ -140,7 +142,7 @@ object Kraken extends Exchanger {
               , description = desc
             )
           return CSVReader.Ok(margin)
-        } else if(isBuy) {
+        } else if(isLong) {
           val margin =
             Margin(
               date = date
@@ -157,7 +159,7 @@ object Kraken extends Exchanger {
         } else
           return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
     } else { // spot exchange
-        if(isSell) {
+        if(isShort) {
             // If fee1Market==fromMarket, vol is just what we are exchanging
             // (hence it corresponds to fromAmount). As vol does not include
             // fee1, we don't have to subtract fee1 to define fromAmount.
@@ -170,7 +172,7 @@ object Kraken extends Exchanger {
 
             val toAmount =
               if(Config.config.deprecatedUp2017Version)
-                cost - (if (fee1Market == quoteMarket) fee1 else 0)
+                cost - (if(fee1Market == quoteMarket) fee1 else 0)
               else
                 cost - {
                   if(fee1Market == quoteMarket && fee2Market == quoteMarket)
@@ -195,7 +197,7 @@ object Kraken extends Exchanger {
                 , description = desc
               )
             return CSVReader.Ok(exchange)
-        } else if(isBuy) {
+        } else if(isLong) {
             // If fee1Market==fromMarket, cost is just what we are exchanging
             // (hence it corresponds to fromAmount). As cost does not include
             // fee1, we don't have to subtract fee1 to define fromAmount.
@@ -208,7 +210,7 @@ object Kraken extends Exchanger {
 
           val toAmount =
             if(Config.config.deprecatedUp2017Version)
-              vol - (if (fee1Market == quoteMarket) fee1 else 0)
+              vol - (if(fee1Market == quoteMarket) fee1 else 0)
             else
               vol - {
                 if(fee1Market == baseMarket && fee2Market == baseMarket)
@@ -258,27 +260,114 @@ object Kraken extends Exchanger {
 
       val currency = Market.normalize(conversions.getOrElse(asset, asset))
 
-      if (txType == "trade" || txType == "margin") {
+      if(txType == "trade" || txType == "margin") {
         val ledger = Ledger(txType, currency, amount.abs, feeAmount)
         ledgersCache += (txid -> ledger)
 
         return CSVReader.Ignore
-      } else if (txType == "withdrawal"
-                  && txid.nonEmpty // kraken annotates withdrawals twice. Only valid one has a non-empty txid
-                  && (currency == Market.bitcoin || currency == Market.euro)) {
+      } else if(txType == "withdrawal"
+                  && txid.nonEmpty) { // kraken annotates withdrawals twice. Only valid one has a non-empty txid
+
         val date = LocalDateTime.parseAsUTC(time, "yyyy-MM-dd HH:mm:ss") // kraken ledgers.csv uses UTC time zone
         val id = txid + "/" + refid
 
-        val fee = Fee(
+        val withdrawal = Withdrawal(
+          date = date
+          , id = id
+          , amount = amount.abs
+          , market = currency
+          , exchanger = Kraken
+          , description = "Withdrawal " + currency + " " + id
+        )
+
+        var results = List[Operation](withdrawal)
+        if((currency == Market.bitcoin || currency == Market.euro) && !Config.config.deprecatedUp2017Version) {
+          val fee = Fee(
+            date = date
+            , id = id
+            , amount = feeAmount
+            , market = currency
+            , exchanger = Kraken
+            , description = Kraken + " Withdrawal fee " + currency + " " + id
+          )
+          results ++= List(fee)
+        } else {
+          val nonTaxableFee = NonTaxableFee(
+            date = date
+            , id = id
+            , amount = feeAmount
+            , market = currency
+            , exchanger = Kraken
+            , description = Kraken + " Withdrawal non taxable fee " + currency + " " + id
+          )
+          results ++= List(nonTaxableFee)
+        }
+        return CSVReader.Ok(results)
+      }  else if(txType == "deposit"
+        && txid.nonEmpty) { // kraken annotates deposits twice. Only valid one has a non-empty txid
+        val date = LocalDateTime.parseAsUTC(time, "yyyy-MM-dd HH:mm:ss") // kraken ledgers.csv uses UTC time zone
+        val id = txid + "/" + refid
+
+        val deposit = Deposit(
+          date = date
+          , id = id
+          , amount = amount
+          , market = currency
+          , exchanger = Kraken
+          , description = "Deposit " + currency + " " + id
+        )
+        var results = List[Operation](deposit)
+        if((currency == Market.bitcoin || currency == Market.euro) && !Config.config.deprecatedUp2017Version) {
+          if(feeAmount > 0) {
+            val fee = Fee(
+              date = date
+              , id = id
+              , amount = feeAmount
+              , market = currency
+              , exchanger = Kraken
+              , description = Kraken + " Deposit fee " + currency + " " + id
+            )
+            results ++= List(fee)
+          } else if(feeAmount < 0) {
+            val deposit = Deposit(
+              date = date
+              , id = id
+              , amount = -feeAmount
+              , market = currency
+              , exchanger = Kraken
+              , description = "Deposit " + currency + " " + id
+            )
+            results ++= List(deposit)
+          }
+        }
+        return CSVReader.Ok(results)
+      } else if(txType == "rollover") {
+        val date = LocalDateTime.parseAsUTC(time, "yyyy-MM-dd HH:mm:ss") // kraken ledgers.csv uses UTC time zone
+        val id = txid + "/" + refid
+
+        val nonTaxableFee = NonTaxableFee(
           date = date
           , id = id
           , amount = feeAmount
           , market = currency
           , exchanger = Kraken
-          , description = Kraken + " Withdrawal fee " + currency + " " + id
+          , description = "Non Taxable Fee " + currency + " " + id
         )
-        return CSVReader.Ok(fee)
-      }  else
+        return CSVReader.Ok(nonTaxableFee)
+      } else if(txType == "transfer") {
+        val date = LocalDateTime.parseAsUTC(time, "yyyy-MM-dd HH:mm:ss") // kraken ledgers.csv uses UTC time zone
+        val id = txid + "/" + refid
+
+        val deposit = Deposit(
+          date = date
+          , id = id
+          , amount = amount
+          , market = currency
+          , exchanger = Kraken
+          , description = "Transfer " + currency + " " + id
+        )
+        return CSVReader.Ok(deposit)
+      } else
         return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}; Reading this transaction is not currently supported: $line.")
     }
   }

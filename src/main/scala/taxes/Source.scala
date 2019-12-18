@@ -9,18 +9,18 @@ import scala.collection.mutable.ListBuffer
 trait Source[+A] {
   def preprocess(): Option[() => Unit] = None
 
-  def read() : Seq[A]
+  def read(): Seq[A]
 }
 
-abstract case class FileSource[+A](fileName : String) extends Source[A]
+abstract case class FileSource[+A](fileName: String) extends Source[A]
 
-abstract class FolderSource[+A](folderPath : String, extension : String) extends Source[A] {
-  def fileSource(fileName : String) : FileSource[A]
+abstract class FolderSource[+A](folderPath: String, extension: String) extends Source[A] {
+  def fileSource(fileName: String): FileSource[A]
 
-  private def doWithAllFiles(procedure : String => Unit) {
+  private def doWithAllFiles(procedure: String => Unit) {
     val files = FileSystem.findFilesAt(folderPath, extension)
-    if (files != null)
-      for (file <- files) {
+    if(files != null)
+      for(file <- files) {
         val fileName = file.getPath
         procedure(fileName)
       }

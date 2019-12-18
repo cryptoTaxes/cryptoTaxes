@@ -8,7 +8,7 @@ import spray.json._
 import spray.json.JsonProtocol._
 
 trait Processed extends Boxed with ToHTML {
-  val operationNumber : Int
+  val operationNumber: Int
 }
 
 
@@ -17,7 +17,7 @@ object Processed {
 
   private val headerDecimals = 6
 
-  case class Composed(operationNumber : Int, processed: Seq[Processed]) extends Processed {
+  case class Composed(operationNumber: Int, processed: Seq[Processed]) extends Processed {
     override def headerToHTML: HTML =
       processed.head.headerToHTML
 
@@ -26,21 +26,21 @@ object Processed {
   }
 
 
-  case class Exchange( operationNumber : Int
-                       , exchange : taxes.Exchange
-                       , baseCoinProxy : Market, baseCoinProxyRate : Double
-                       , boughtBasisPriceInBaseCoin : Double
-                       , soldPriceInBaseCoin : Double
-                       , proceedsInBaseCoin : Double
-                       , soldBasisInBaseCoin : Double
-                       , _deprecated_feeAmount : Double
-                       , _deprecated_feeMarket : Market
-                       , _deprecated_feeInBaseCoin : Double
-                       , gainInBaseCoin : Double
-                       , boughtSoldExchangeRate : Double, soldBoughtExchangeRate : Double
-                       , usedStocks : StockContainer
-                       , buys : StockContainer
-                       , sells : StockContainer
+  case class Exchange( operationNumber: Int
+                       , exchange: taxes.Exchange
+                       , baseCoinProxy: Market, baseCoinProxyRate: Double
+                       , boughtBasisPriceInBaseCoin: Double
+                       , soldPriceInBaseCoin: Double
+                       , proceedsInBaseCoin: Double
+                       , soldBasisInBaseCoin: Double
+                       , _deprecated_feeAmount: Double
+                       , _deprecated_feeMarket: Market
+                       , _deprecated_feeInBaseCoin: Double
+                       , gainInBaseCoin: Double
+                       , boughtSoldExchangeRate: Double, soldBoughtExchangeRate: Double
+                       , usedStocks: StockContainer
+                       , buys: StockContainer
+                       , sells: StockContainer
                      ) extends Processed {
 
     override def headerToHTML: HTML =
@@ -48,7 +48,7 @@ object Processed {
         <span class='operationNumber'>{operationNumber}</span>
         , exchange.date.format(df)
         , <span>
-          {s"${if (exchange.isSettlement) "Settlement " else ""} Exchange of"}
+          {s"${if(exchange.isSettlement) "Settlement " else ""} Exchange of"}
           <span>
             {asMarket(exchange.fromAmount, exchange.fromMarket, decimals = headerDecimals)}
           </span>
@@ -75,7 +75,7 @@ object Processed {
             {asRate(baseCoinProxyRate, baseMarket, baseCoinProxy)}.
           </span>
           }
-          {def isOK(x : Double) = !x.isNaN && !x.isInfinity
+          {def isOK(x: Double) = !x.isNaN && !x.isInfinity
         if(isOK(boughtBasisPriceInBaseCoin) && isOK(soldBoughtExchangeRate))
           <span>
             <span class='embold'>Exchange rates:</span>
@@ -124,7 +124,7 @@ object Processed {
           </span>
           {if(Config.verbosity(Verbosity.showRates) && usedStocks.nonEmpty && exchange.fromMarket != baseMarket)
           <span class='stock'>. Used
-            {s"${if (usedStocks.size > 1) "batches" else "batch"}:"}
+            {s"${if(usedStocks.size > 1) "batches" else "batch"}:"}
             ({usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
           </span>
           }
@@ -164,11 +164,11 @@ object Processed {
   }
 
 
-  case class Gain(operationNumber : Int
-                   , gain : taxes.Gain
-                   , gainInBaseCoin : Double
-                   , basePrice : Double
-                   , stocks : StockContainer
+  case class Gain(operationNumber: Int
+                   , gain: taxes.Gain
+                   , gainInBaseCoin: Double
+                   , basePrice: Double
+                   , stocks: StockContainer
                  ) extends Processed {
 
     override def headerToHTML: HTML =
@@ -213,11 +213,11 @@ object Processed {
   }
 
 
-  case class Loss(operationNumber : Int
-                   , loss : taxes.Loss
-                   , lossInBaseCoin : Double
-                   , usedStocks : StockContainer
-                   , stocks : StockContainer
+  case class Loss(operationNumber: Int
+                   , loss: taxes.Loss
+                   , lossInBaseCoin: Double
+                   , usedStocks: StockContainer
+                   , stocks: StockContainer
                  ) extends Processed {
 
     override def headerToHTML: HTML =
@@ -246,7 +246,7 @@ object Processed {
             <span class='small2'>
               ({if(usedStocks.nonEmpty)
               <span>Used
-                {s"${if (usedStocks.iterator.length > 1) "batches" else "batch"}:"}
+                {s"${if(usedStocks.iterator.length > 1) "batches" else "batch"}:"}
                 {usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}
               </span>
             else
@@ -268,11 +268,11 @@ object Processed {
   }
 
 
-  case class Fee(operationNumber : Int
-                  , fee : taxes.Fee
-                  , feeInBaseCoin : Double
-                  , usedStocks : StockContainer
-                  , stocks : StockContainer
+  case class Fee(operationNumber: Int
+                  , fee: taxes.Fee
+                  , feeInBaseCoin: Double
+                  , usedStocks: StockContainer
+                  , stocks: StockContainer
                 ) extends Processed {
 
     override def headerToHTML: HTML =
@@ -311,7 +311,7 @@ object Processed {
             <span class='small2'>
               ({if(usedStocks.nonEmpty)
               <span>
-                Used {s"${if (usedStocks.iterator.length > 1) "batches" else "batch"}:"}
+                Used {s"${if(usedStocks.iterator.length > 1) "batches" else "batch"}:"}
                 {usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}
               </span>
             else
@@ -333,17 +333,17 @@ object Processed {
   }
 
 
-  case class Margin(operationNumber : Int
-                     , date : LocalDateTime
-                     , exchanger: Exchanger
-                     , what : String
-                     , fromAmount : Double, fromMarket : Market
-                     , toAmount : Double, toMarket : Market
-                     , exchangeRate : Double
-                     , description : String
-                     , usedStocksOpt : Option[StockContainer]
-                     , marginBuys : StockContainer
-                     , marginSells : StockContainer
+  case class Margin(operationNumber: Int
+                    , date: LocalDateTime
+                    , exchanger: Exchanger
+                    , what: String
+                    , fromAmount: Double, fromMarket: Market
+                    , toAmount: Double, toMarket: Market
+                    , exchangeRate: Double
+                    , description: String
+                    , usedStocksOpt: Option[StockContainer]
+                    , marginLongs: StockContainer
+                    , marginShorts: StockContainer
                    ) extends Processed {
 
     private val isLong = what.toLowerCase.contains("long")
@@ -388,7 +388,7 @@ object Processed {
             <span>{asMarket(usedStocks.totalCost, usedStocks.baseMarket)}</span>
             {if(Config.verbosity(Verbosity.showRates) && usedStocksOpt.nonEmpty)
             <span class='small2'>. Used
-              {s"${if (usedStocksOpt.iterator.length > 1) "batches" else "batch"}:"}
+              {s"${if(usedStocksOpt.iterator.length > 1) "batches" else "batch"}:"}
               ({usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
             </span>
             }
@@ -399,9 +399,9 @@ object Processed {
         {if(Config.verbosity(Verbosity.showStocks))
         <div class='stock marginTopBottom20'>
           <div class='embold'>Margin buys:</div>
-          <div>{marginBuys.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
+          <div>{marginLongs.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
           <div class='embold'>Margin sells:</div>
-          <div>{marginSells.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
+          <div>{marginShorts.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
         </div>
         }
       </span>
@@ -413,7 +413,7 @@ object Processed {
   implicit val gainJson = jsonFormat5(Gain)
   implicit val lossJson = jsonFormat5(Loss)
   implicit val feeJson = jsonFormat5(Fee)
-  //implicit val marginJson : JsonFormat[Margin] = rootFormat((jsonFormat13(Margin)))
+  //implicit val marginJson: JsonFormat[Margin] = rootFormat((jsonFormat13(Margin)))
   implicit val marginJson = jsonFormat(Margin,"operationNumber", "date", "exchanger", "what", "fromAmount", "fromMarket", "toAmount", "toMarket","exchangeRate","description", "usedStocksOpt", "marginBuys", "marginSells")
   implicit val processedJson = new RootJsonFormat[Processed] {
     val _Composed = "Composed"
@@ -428,17 +428,17 @@ object Processed {
 
     def write(processed: Processed) = {
       val (tag, json) = processed match {
-        case c : Composed => (_Composed, composedJson.write(c))
-        case e : Exchange => (_Exchange, exchangeJson.write(e))
-        case m : Margin => (_Margin, marginJson.write(m))
-        case f : Fee => (_Fee, feeJson.write(f))
-        case l : Loss => (_Loss, lossJson.write(l))
-        case g : Gain => (_Gain, gainJson.write(g))
+        case c: Composed => (_Composed, composedJson.write(c))
+        case e: Exchange => (_Exchange, exchangeJson.write(e))
+        case m: Margin => (_Margin, marginJson.write(m))
+        case f: Fee => (_Fee, feeJson.write(f))
+        case l: Loss => (_Loss, lossJson.write(l))
+        case g: Gain => (_Gain, gainJson.write(g))
       }
       JsObject(_type -> JsString(tag), _operation -> json)
     }
 
-    def read(value: JsValue) : Processed =
+    def read(value: JsValue): Processed =
       try {
         value.asJsObject.getFields(_type, _operation) match {
           case Seq(JsString(tag), jsObj) =>
@@ -455,5 +455,5 @@ object Processed {
         case _ => deserializationError(s"Processed expected in $value")
       }
   }
-  implicit val composedJson : JsonFormat[Composed] = jsonFormat2(Composed)
+  implicit val composedJson: JsonFormat[Composed] = jsonFormat2(Composed)
 }

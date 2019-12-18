@@ -12,14 +12,14 @@ object Shapeshift extends Exchanger {
 
   override val sources = Seq(
     new UserInputFolderSource[Operation]("shapeshift", ".json") {
-      def fileSource(fileName : String) = new FileSource[Operation](fileName) {
+      def fileSource(fileName: String) = new FileSource[Operation](fileName) {
         override def read(): Seq[Operation] =
           readFile(fileName)
       }
     }
   )
 
-  def readFile(fileName : String) : List[Exchange] = {
+  def readFile(fileName: String): List[Operation] = {
     val prefix0 = "https://shapeshift.io/#/status/"
     val prefix1 = "https://shapeshift.io/txStat/"
 
@@ -32,8 +32,8 @@ object Shapeshift extends Exchanger {
       Parse.trimSpaces(sc.nextLine())
     }
 
-    var exchanges = List[Exchange]()
-    while (sc.hasNextLine) {
+    var operations = List[Operation]()
+    while(sc.hasNextLine) {
       val ln0 = nextLine()
       if(ln0.nonEmpty) {
         if(!ln0.startsWith(prefix0))
@@ -43,7 +43,7 @@ object Shapeshift extends Exchanger {
           val desc = "Order: " + orderId
 
           val ln1 = nextLine()
-          if (!ln1.startsWith(prefix1))
+          if(!ln1.startsWith(prefix1))
             Logger.warning(s"$id. ${FileSystem.pathFromData(fileName)} Line $lnNumber: '$ln1' should start with $prefix1.")
           else {
             val inAddress = ln1.drop(prefix1.length)
@@ -51,25 +51,35 @@ object Shapeshift extends Exchanger {
             val ln2 = nextLine()
             val json = JsObjectAST.fromString(ln2)
 
-            val addr = json.getString("address")
-            if (addr != inAddress)
-              Logger.warning(s"$id. ${FileSystem.pathFromData(fileName)} Line $lnNumber: Input address $addr should be $inAddress.")
+            val depositAddress = json.getString("address")
+            if(depositAddress != inAddress)
+              Logger.warning(s"$id. ${FileSystem.pathFromData(fileName)} Line $lnNumber: Input address $depositAddress should be $inAddress.")
             else if(json.getString("status") != "complete")
               Logger.warning(s"$id. ${FileSystem.pathFromData(fileName)} Line $lnNumber: Status should be complete.")
             else {
               val fromAmount = json.getDouble("incomingCoin")
               val fromMarket = Market.normalize(json.getString("incomingType"))
-              val address1 = json.getString("address")
 
               val toAmount = json.getDouble("outgoingCoin")
               val toMarket = Market.normalize(json.getString("outgoingType"))
+              val withdrawalAddress = json.getString("withdraw")
+              val toTxId = json.getString("transaction")
 
               val ln3 = nextLine()
-              val txid = ln3
+              val fromTxId = ln3
 
-              val txInfo = TransactionsCache.lookup(fromMarket, txid, address1)
+              val fromTxInfo = TransactionsCache.lookup(fromMarket, fromTxId, depositAddress)
 
-              val date = txInfo.localDate
+              val date = fromTxInfo.localDate
+
+              val deposit = Deposit(
+                date = date
+                , id = fromTxId
+                , amount = fromAmount + fromTxInfo.fee
+                , market = fromMarket
+                , exchanger = Shapeshift
+                , description = "Deposit " + AddressBook.format(depositAddress) + "\n" + fromTxId
+              )
 
               val exchange =
                 Exchange(
@@ -77,19 +87,28 @@ object Shapeshift extends Exchanger {
                   , id = orderId
                   , fromAmount = fromAmount, fromMarket = fromMarket
                   , toAmount = toAmount, toMarket = toMarket
-                  , fees = List(FeePair(txInfo.fee, fromMarket))
+                  , fees = List(FeePair(fromTxInfo.fee, fromMarket))
                   , exchanger = Shapeshift
                   , description = desc
                 )
 
-              exchanges ::= exchange
+              val withdrawal = Withdrawal(
+                date = date
+                , id = orderId
+                , amount = toAmount
+                , market = toMarket
+                , exchanger = Shapeshift
+                , description = "Withdrawal " + AddressBook.format(withdrawalAddress) + "\n" + toTxId
+              )
+
+              operations ++= List(deposit, exchange, withdrawal)
             }
           }
         }
       }
     }
     sc.close()
-    return exchanges.sortBy(_.date)
+    return operations.sortBy(_.date)
   }
 }
 

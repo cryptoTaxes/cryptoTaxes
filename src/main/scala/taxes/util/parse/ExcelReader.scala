@@ -12,13 +12,13 @@ object ExcelReader {
     val formatter = new DataFormatter()
 
     FileSystem.withPrintStream(csvFileName, doBackUp = false) { ps =>
-      for (r <- sheet.getFirstRowNum to sheet.getLastRowNum) {
+      for(r <- sheet.getFirstRowNum to sheet.getLastRowNum) {
         val row = sheet.getRow(r)
         val strings = ListBuffer[String]()
 
-        for (col <- row.getFirstCellNum until row.getLastCellNum) {
+        for(col <- row.getFirstCellNum until row.getLastCellNum) {
           val cell = row.getCell(col, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
-          val str = if (cell == null) "" else formatter.formatCellValue(cell)
+          val str = if(cell == null) "" else formatter.formatCellValue(cell)
           strings.append(str)
         }
         ps.println(strings.mkString(sep.toString))

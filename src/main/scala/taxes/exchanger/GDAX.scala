@@ -10,11 +10,14 @@ object GDAX extends Exchanger {
 
   override val sources = Seq(
     new UserInputFolderSource[Operation]("gdax", ".csv") {
-      def fileSource(fileName : String) = operationsReader(fileName)
+      def fileSource(fileName: String) = operationsReader(fileName)
+    },
+    new UserInputFolderSource[Operation]("gdax/accounts", ".csv") {
+      def fileSource(fileName: String) = depositsWithdrawalsReader(fileName)
     }
   )
 
-  private def operationsReader(fileName : String) = new CSVSortedOperationReader(fileName) {
+  private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
     override def lineScanner(line: String): Scanner =
@@ -45,7 +48,7 @@ object GDAX extends Exchanger {
       if(sizeMarket != baseMarket)
         return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line as sizeMarket($sizeMarket) and quoteMarket($quoteMarket) are different.")
 
-      if (side == "SELL") {
+      if(side == "SELL") {
         val exchange =
           Exchange(
             date = date
@@ -57,7 +60,7 @@ object GDAX extends Exchanger {
             , description = desc
           )
         return CSVReader.Ok(exchange)
-      } else if (side == "BUY") {
+      } else if(side == "BUY") {
         val exchange =
           Exchange(
             date = date
@@ -69,6 +72,46 @@ object GDAX extends Exchanger {
             , description = desc
           )
         return CSVReader.Ok(exchange)
+      } else
+        return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
+    }
+  }
+
+  private def depositsWithdrawalsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
+    override val linesToSkip = 1
+
+    override def lineScanner(line: String): Scanner =
+      SeparatedScanner(line, "[,]")
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val profile = scLn.next("profile")
+      val what = scLn.next("type")
+      val time = LocalDateTime.parse(scLn.next("time"), "yyyy-MM-dd'T'HH:mm:ss.SSSX") // GDAX includes a zone-offset 'Z' at the end
+      val amount = scLn.nextDouble("amount")
+      val balance = scLn.nextDouble("balance")
+      val unit = Market.normalize(scLn.next("amount/balance unit"))
+      val id = scLn.next("transfer id,trade id,order id")
+
+      if(what=="deposit") {
+        val deposit = Deposit(
+          date = time
+          , id = id
+          , amount = amount
+          , market = unit
+          , exchanger = GDAX
+          , description = "Deposit " + id
+        )
+        return CSVReader.Ok(deposit)
+      } else if(what=="withdrawal") {
+        val withdrawal = Withdrawal(
+          date = time
+          , id = id
+          , amount = amount.abs
+          , market = unit
+          , exchanger = GDAX
+          , description = "Withdrawal " + id
+        )
+        return CSVReader.Ok(withdrawal)
       } else
         return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
     }

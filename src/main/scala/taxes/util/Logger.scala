@@ -13,17 +13,17 @@ object Logger extends Finalizable {
   private val warningStream = FileSystem.PrintStream(FileSystem.File(s"${FileSystem.userOutputFolder}/warnings $suffix.txt"), doBackUp = false)
   private val traceStream = FileSystem.PrintStream(FileSystem.File(s"${FileSystem.userOutputFolder}/trace $suffix.txt"), doBackUp = false)
 
-  def trace(what : String): Unit = {
+  def trace(what: String): Unit = {
     traceStream.println(what)
     println(what)
   }
 
-  def fatal(what : String): Nothing = {
+  def fatal(what: String): Nothing = {
     traceStream.println(s"FATAL ERROR: $what")
     sys.error(what)
   }
 
-  def warning(what : String): Unit = {
+  def warning(what: String): Unit = {
     warningStream.println(s"Warning: $what")
   }
 

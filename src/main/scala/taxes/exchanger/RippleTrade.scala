@@ -18,12 +18,16 @@ object RippleTrade extends Exchanger {
         override def read(): Seq[Operation] =
           readFile(fileName)
       }
+    },
+    new UserInputFolderSource[Operation]("xrptrade/depositsWithdrawals", ".csv") {
+      def fileSource(fileName: String) = depositsWithdrawalsReader(fileName)
     }
+
   )
 
-  private case class Entry(hash : String, amount : Double, currency : Market, date : LocalDateTime)
+  private case class Entry(hash: String, amount: Double, currency: Market, date: LocalDateTime)
 
-  private def readFile(fileName : String) : List[Exchange] = {
+  private def readFile(fileName: String): List[Exchange] = {
     val contents = FileSystem.withSource(fileName){ src =>
       src.dropWhile(_ != '{').mkString // skip till proper start of json
     }
@@ -58,7 +62,7 @@ object RippleTrade extends Exchanger {
             case Some(entryBTC) => {
               val desc = "Order: " + hash
               val exchange =
-                if (entryXRP.amount < 0)
+                if(entryXRP.amount < 0)
                   Exchange(
                     date = entryXRP.date
                     , id = hash
@@ -86,4 +90,56 @@ object RippleTrade extends Exchanger {
     }
     return exchanges.sortBy(_.date)
   }
+
+  private def depositsWithdrawalsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
+    override val linesToSkip = 1
+
+    override def lineScanner(line: String): Scanner =
+      SeparatedScanner(line, "[ \t]+")
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val date1 = scLn.next("Date1")
+      val date2 = scLn.next("Date2")
+
+      val fmt = "dd/MM/yyyy HH:mm"
+      val date = LocalDateTime.parseAsUTC(date1 + " " + date2, fmt)
+
+      val txHash = scLn.next("Tx Hash")
+      val ledger = scLn.next("Ledger")
+
+      val from = scLn.next("From")
+      val what = scLn.next("What")
+      val to = scLn.next("To")
+      val amount = scLn.nextDouble("Amount")
+      val market = Market.normalize(scLn.next("Market"))
+
+
+      if(what=="ACTIVATED" || what=="IN") {
+        val desc = "Deposit " + from + "\n" + txHash
+        val deposit = Deposit(
+          date = date
+          , id = txHash
+          , amount = amount
+          , market = market
+          , exchanger = RippleTrade
+          , description = desc
+        )
+        return CSVReader.Ok(deposit)
+      } else if(what=="OUT") {
+        val desc = "Withdrawal " + AddressBook.format(to) + "\n" + txHash
+        val withdrawal = Withdrawal(
+          date = date
+          , id = txHash
+          , amount = amount
+          , market = market
+          , exchanger = RippleTrade
+          , description = desc
+        )
+        return CSVReader.Ok(withdrawal)
+
+      } else
+        CSVReader.Warning(s"$id. Read deposit/withdrawal ${FileSystem.pathFromData(fileName)}: This line could not be read: $line.")
+    }
+  }
+
 }

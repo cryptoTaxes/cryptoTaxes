@@ -10,17 +10,23 @@ object Bitfinex extends Exchanger {
   override val id: String = "Bitfinex"
 
   override val sources = Seq(
-    /*
-    new UserFolderSource[Operation]("bitfinex", ".csv") {
-      def fileSource(fileName: String) = reportReader(fileName)
-    },*/
     new UserInputFolderSource[Operation]("bitfinex/ledger", ".csv") {
       def fileSource(fileName: String) = ledgerReader(fileName)
     },
     new UserInputFolderSource[Operation]("bitfinex/trades", ".csv") {
       def fileSource(fileName: String) = tradesReader(fileName)
+    },
+    new UserInputFolderSource[Operation]("bitfinex/deposits", ".csv") {
+      def fileSource(fileName: String) = depositsReader(fileName)
+    },
+    new UserInputFolderSource[Operation]("bitfinex/withdrawals", ".csv") {
+      def fileSource(fileName: String) = withdrawalsReader(fileName)
     }
   )
+
+  // note that Bitfinex processes margin in a LIFO way
+  override val marginLongs = StackStockPool()
+  override val marginShorts = StackStockPool()
 
   private def tradesReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
@@ -60,8 +66,8 @@ object Bitfinex extends Exchanger {
             Exchange( // we are selling BTC for $. Fee can be in BTC or in $
               date = date
               , id = reference
-              , fromAmount = amount.abs - (if (feeMarket==baseMarket) fee.abs else 0), fromMarket = baseMarket
-              , toAmount = price * amount.abs - (if (feeMarket==quoteMarket) fee.abs else 0), toMarket = quoteMarket
+              , fromAmount = amount.abs - (if(feeMarket==baseMarket) fee.abs else 0), fromMarket = baseMarket
+              , toAmount = price * amount.abs - (if(feeMarket==quoteMarket) fee.abs else 0), toMarket = quoteMarket
               , fees = List(FeePair(fee.abs, feeMarket))
               , exchanger = Bitfinex
               , description = desc
@@ -70,14 +76,14 @@ object Bitfinex extends Exchanger {
             Exchange( // we are buying BTC with $. Fee can be in BTC or in $
               date = date
               , id = reference
-              , fromAmount = price * amount.abs - (if (feeMarket==quoteMarket) fee.abs else 0), fromMarket = quoteMarket
-              , toAmount = amount.abs - (if (feeMarket==baseMarket) fee.abs else 0), toMarket = baseMarket
+              , fromAmount = price * amount.abs - (if(feeMarket==quoteMarket) fee.abs else 0), fromMarket = quoteMarket
+              , toAmount = amount.abs - (if(feeMarket==baseMarket) fee.abs else 0), toMarket = baseMarket
               , fees = List(FeePair(fee.abs, feeMarket))
               , exchanger = Bitfinex
               , description = desc
             )
         return CSVReader.Ok(exchange)
-      } else if (margin.toLowerCase == "true") { // margin order
+      } else if(margin.toLowerCase == "true") { // margin order
         val margin =
           if(amount<0)
             Margin(
@@ -95,7 +101,7 @@ object Bitfinex extends Exchanger {
             Margin(
               date = date
               , id = reference
-              , fromAmount = amount.abs * price /* + (if (feeMarket==quoteMarket) fee.abs else if(feeMarket==baseMarket) -fee.abs * price else 0) */, fromMarket = quoteMarket
+              , fromAmount = amount.abs * price /* + (if(feeMarket==quoteMarket) fee.abs else if(feeMarket==baseMarket) -fee.abs * price else 0) */, fromMarket = quoteMarket
               , toAmount = amount.abs, toMarket = baseMarket
               , fees = List(FeePair(fee.abs, feeMarket))
               , orderType = Operation.OrderType.Buy
@@ -217,10 +223,10 @@ object Bitfinex extends Exchanger {
 
       val desc = description
 
-      if (description.startsWith("Settlement") && currency == Market.usd) {
+      if(description.startsWith("Settlement") && currency == Market.usd) {
         // USD settlements are really paid as BTC settlements
         return CSVReader.Ignore
-      } else if (description.startsWith("Settlement") && currency == Market.bitcoin) {
+      } else if(description.startsWith("Settlement") && currency == Market.bitcoin) {
         val token1 = description.dropWhile(_ != '@').tail.tail
         val token2 = token1.takeWhile(_ != ' ')
         val sc = SeparatedScanner(token2, "[ ]")
@@ -259,6 +265,70 @@ object Bitfinex extends Exchanger {
         return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
     }
   }
+
+  private def depositsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
+    override val linesToSkip = 1
+
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[,]")
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val reference = scLn.next("Reference")
+      val currency = Market.normalize(scLn.next("Currency"))
+      val method = scLn.next("Method")
+      val amount = scLn.nextDouble("Amount")
+      val completed = scLn.next("Status") == "COMPLETED"
+      val address = scLn.next("Address")
+      val txid = scLn.next("TXID")
+      val created = LocalDateTime.parseAsUTC(scLn.next("Created"), "yyyy-MM-dd HH:mm:ss")
+      val updated = LocalDateTime.parseAsUTC(scLn.next("Updated"), "yyyy-MM-dd HH:mm:ss")
+
+      if(completed) {
+        val desc = "Deposit " + address + "\n" + txid
+        val deposit = Deposit(
+          date = created
+          , id = txid
+          , amount = amount
+          , market = currency
+          , exchanger = Bitfinex
+          , description = desc
+        )
+        return CSVReader.Ok(deposit)
+      } else
+        CSVReader.Warning(s"$id. Read deposit ${FileSystem.pathFromData(fileName)}: This deposit was not completed: $line.")
+    }
+  }
+
+  private def withdrawalsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
+    override val linesToSkip = 1
+
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[,]")
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val reference = scLn.next("Reference")
+      val currency = Market.normalize(scLn.next("Currency"))
+      val method = scLn.next("Method")
+      val amount = scLn.nextDouble("Amount")
+      val completed = scLn.next("Status") == "COMPLETED"
+      val address = scLn.next("Address")
+      val txid = scLn.next("TXID")
+      val created = LocalDateTime.parseAsUTC(scLn.next("Created"), "yyyy-MM-dd HH:mm:ss")
+      val updated = LocalDateTime.parseAsUTC(scLn.next("Updated"), "yyyy-MM-dd HH:mm:ss")
+
+      if(completed) {
+        val desc = "Withdrawal " + AddressBook.format(address) + "\n" + txid
+        val withdrawal = Withdrawal(
+          date = created
+          , id = txid
+          , amount = amount.abs
+          , market = currency
+          , exchanger = Bitfinex
+          , description = desc
+        )
+        return CSVReader.Ok(withdrawal)
+      } else
+        CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was not completed: $line.")
+    }
+  }
 }
-
-

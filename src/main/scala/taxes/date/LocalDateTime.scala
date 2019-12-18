@@ -9,45 +9,45 @@ object LocalDateTime {
   import java.time.Instant
 
   // LocalDateTimes are in myZoneId
-  lazy val myZoneId : ZoneId = Config.config.timeZone // ZoneId.of("Europe/Madrid") // ZoneId.systemDefault()
+  lazy val myZoneId: ZoneId = Config.config.timeZone // ZoneId.of("Europe/Madrid") // ZoneId.systemDefault()
 
-  def apply(year : Int, month: Int, day : Int) : LocalDateTime =
+  def apply(year: Int, month: Int, day: Int): LocalDateTime =
     java.time.LocalDateTime.of(year, month, day, 0, 0, 0)
 
-  def apply() : LocalDateTime =
+  def apply(): LocalDateTime =
     apply(0, 1, 1)
 
-  def fromZonedDateTime(zonedDateTime: ZonedDateTime) : LocalDateTime =
+  def fromZonedDateTime(zonedDateTime: ZonedDateTime): LocalDateTime =
     zonedDateTime.withZoneSameInstant(myZoneId).toLocalDateTime
 
-  def fromUnix(seconds : Long) : LocalDateTime = {
+  def fromUnix(seconds: Long): LocalDateTime = {
     val instant = Instant.ofEpochSecond(seconds)
     val zonedDateTime = java.time.ZonedDateTime.ofInstant(instant, myZoneId)
     return fromZonedDateTime(zonedDateTime)
   }
 
-  def parse(str : CharSequence, format : DateTimeFormatter) : LocalDateTime = {
+  def parse(str: CharSequence, format: DateTimeFormatter): LocalDateTime = {
     val zonedDateTime = ZonedDateTime.parse(str, format)
     return fromZonedDateTime(zonedDateTime)
   }
 
   val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSS VV")
 
-  def parse(str : String) : LocalDateTime =
+  def parse(str: String): LocalDateTime =
     parse(str, formatter)
 
-  def parse(str : String, format : String) : LocalDateTime =
+  def parse(str: String, format: String): LocalDateTime =
     parse(str, DateTimeFormatter.ofPattern(format))
 
   private val UTC_Offset = "+0000"
 
-  def parseAsUTC(str : String, format : String) : LocalDateTime =
+  def parseAsUTC(str: String, format: String): LocalDateTime =
     parse(str+UTC_Offset, s"${format}Z")
 
-  def parseAsUTC(str : String, UTC_Offset : String, format : String) : LocalDateTime =
+  def parseAsUTC(str: String, UTC_Offset: String, format: String): LocalDateTime =
     parse(str+UTC_Offset, s"${format}Z")
 
-  def parseAsMyZoneId(str : String, format: String) : LocalDateTime =
+  def parseAsMyZoneId(str: String, format: String): LocalDateTime =
     parse(str+myZoneId, s"${format}VV")
 }
 

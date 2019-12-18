@@ -4,7 +4,7 @@ package taxes.util.parse
 import spray.json._
 import taxes.io.FileSystem
 
-case class JSONException(msg : String) extends RuntimeException(msg)
+case class JSONException(msg: String) extends RuntimeException(msg)
 
 object JsObjectAST {
   def apply(fields: Map[String, JsValue]): JsObjectAST =

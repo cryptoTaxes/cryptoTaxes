@@ -8,10 +8,10 @@ import spray.json._
 import spray.json.JsonProtocol._
 
 object TransactionsCache extends Initializable with Finalizable {
-  case class TxKey(market: Market, txid : String, address : String)
+  case class TxKey(market: Market, txid: String, address: String)
   implicit val txKeyJson = jsonFormat3(TxKey)
 
-  case class TxInfo(amount : Double, fee : Double, localDate : LocalDateTime)
+  case class TxInfo(amount: Double, fee: Double, localDate: LocalDateTime)
   implicit val txInfoJson = jsonFormat3(TxInfo)
 
   private val map = scala.collection.mutable.Map[TxKey, TxInfo]()
@@ -38,7 +38,7 @@ object TransactionsCache extends Initializable with Finalizable {
       map += pair
   }
 
-  def lookup(market: Market, txid : String, address : String) : TxInfo = {
+  def lookup(market: Market, txid: String, address: String): TxInfo = {
     map.get(TxKey(market, txid, address)) match {
       case Some(txInfo) => txInfo
       case None =>
