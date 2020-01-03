@@ -2,6 +2,7 @@
 // One line for each currency.
 // Used to download historical prices.
 
+
 BCH   -> bitcoin-cash
 BNB   -> binance-coin
 BTC   -> bitcoin
@@ -12,5 +13,19 @@ NXT   -> nxt
 STRAT -> stratis
 USDT  -> tether
 VTC   -> vertcoin
-XRP   -> ripple
+XRP   -> xrp
 ZEC   -> zcash
+
+// ADA   -> cardano
+// XTZ   -> tezos
+// UNO   -> unobtanium
+// DOGE  -> dogecoin
+// DGB   -> digibyte
+// DCR   -> decred
+// WAVES -> waves
+// BLK   -> blackcoin
+// XVC   -> vcash
+// XEl   -> xel
+// XMY   -> myriad
+
+

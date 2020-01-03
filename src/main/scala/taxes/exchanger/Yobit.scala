@@ -42,7 +42,7 @@ object Yobit extends Exchanger {
       val completed = scLn.nextDouble("Completed")
       val total = scLn.nextDouble("Total")
 
-      val desc = ""
+      val desc = RichText("")
 
       val (currency1, currency2) = Parse.split(pair, "/")
       val isSell = orderType == "SELL"
@@ -94,6 +94,16 @@ object Yobit extends Exchanger {
       val currency = Currency.normalize(scLn.next("Currency"))
       val amount = scLn.nextDouble("Amount")
       val accepted = scLn.next("Status") == "Accepted"
+      val txHash = scLn.next("Tx Hash")
+      val address = scLn.next("Address")
+
+      val desc =
+        if(txHash=="?")
+          "Deposit from Yobit"
+        else if(address=="?")
+          s"Deposit ${RichText.util.transaction(currency, txHash)}"
+        else
+          s"Deposit ${RichText.util.transaction(currency, txHash, address)}"
 
       if(accepted) {
         val deposit = Deposit(
@@ -102,7 +112,7 @@ object Yobit extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = Yobit
-          , description = "Deposit into Yobit"
+          , description = RichText(desc)
         )
         return CSVReader.Ok(deposit)
       } else
@@ -125,6 +135,16 @@ object Yobit extends Exchanger {
       val currency = Currency.normalize(scLn.next("Currency"))
       val amount = scLn.nextDouble("Amount")
       val completed = scLn.next("Status") == "Completed"
+      val txHash = scLn.next("Tx Hash")
+      val address = scLn.next("Address")
+
+      val desc =
+        if(txHash=="?")
+          "Withdrawal from Yobit"
+        else if(address=="?")
+          s"Withdrawal ${RichText.util.transaction(currency, txHash)}"
+        else
+          s"Withdrawal ${RichText.util.transaction(currency, txHash, address)}"
 
       if(completed) {
         val withdrawal = Withdrawal(
@@ -133,7 +153,7 @@ object Yobit extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = Yobit
-          , description = "Withdrawal from Yobit"
+          , description = RichText(desc)
         )
         return CSVReader.Ok(withdrawal)
       } else

@@ -4,10 +4,10 @@ object AddressBook extends Initializable {
   private val book: Map[String,String] = // from address to description
     util.parse.Parse.readKeysValue(io.FileSystem.addressBookFile, "Reading address book")
 
-  def format(address: String): String = book.get(address) match {
+  def richElem(currency: Currency, address: String): RichText.Elem = book.get(address) match {
     case None =>
-      address
+      s"${RichText.address(currency, address)}"
     case Some(desc) =>
-      s"$address ($desc)"
+      s"${RichText.address(currency, address)} ($desc)"
   }
 }

@@ -67,6 +67,18 @@ object Parse {
     return list.map(trimSpaces).reverse
   }
 
+  def removePrefix(str: String, prefix: String): Option[String] =
+    if(str.startsWith(prefix))
+      Some(str.drop(prefix.length))
+    else
+      None
+
+  def removeSuffix(str: String, suffix: String): Option[String] =
+    if(str.endsWith(suffix))
+      Some(str.take(str.length - suffix.length))
+    else
+      None
+
   private val arrowToken = "->"
   private val commaToken = ","
 

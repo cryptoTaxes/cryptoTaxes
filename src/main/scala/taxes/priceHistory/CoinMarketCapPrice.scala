@@ -49,7 +49,10 @@ object CoinMarketCapPrice {
   private def downloadPricesFor(currency: Currency, coinMarketCapId: String): List[DailyPrice] = {
     Logger.trace(s"Downloading prices for $currency from coinmarketcap.com.")
     val (yearBegin, yearEnd) = Config.config.filterYear match {
-      case None => (2010, 2500)
+      case None =>
+        import java.util.Calendar
+        val thisYear = Calendar.getInstance.get(Calendar.YEAR)
+        (2010, thisYear)
       case Some(year) => (year, year)
     }
 
@@ -60,8 +63,8 @@ object CoinMarketCapPrice {
   }
 
  private def scrapPrices(currency: Currency, coinMarketCapId: String, source: FileSystem.Source): List[DailyPrice] = {
-   val tokenBeginRow = "<div class=\"ec35kh-0 dWPDaQ\">"
-   val tokenBeginPrice = "<div class=\"sc-47a23l-0 jzTYkA\">"
+   val tokenBeginRow = "<td class=\"cmc-table__cell cmc-table__cell--sticky cmc-table__cell--left\"><div class=\"\">"
+   val tokenBeginPrice = "<td class=\"cmc-table__cell cmc-table__cell--right\"><div class=\"\">"
    val tokenEnd = "<"
 
    var textLine = source.getLines().dropWhile(_.indexOf(tokenBeginRow) < 0).next()
@@ -162,18 +165,25 @@ object CoinMarketCapPrice {
   }
 
   private def saveToDisk(currency: Currency, dailyPrices: List[DailyPrice]): Unit = {
-    val map = dailyPrices.groupBy(_.date.getYear)
-
-    for ((year, dailyPrices) <- map) {
-      val fileName = FileSystem.coinMarketCapFile(currency, year)
-      FileSystem.withPrintStream(fileName) { ps =>
-        ps.print(dailyPrices.toJson.prettyPrint)
-      }
+    def relevant(year: Int):Boolean = Config.config.filterYear match {
+      case None =>
+        true
+      case Some(y) =>
+        year == y
     }
+
+    val map = dailyPrices.groupBy(_.date.getYear)
+    for((year, dailyPrices) <- map)
+      if(relevant(year)){
+        val fileName = FileSystem.coinMarketCapFile(currency, year)
+        FileSystem.withPrintStream(fileName) { ps =>
+          ps.print(dailyPrices.toJson.prettyPrint)
+        }
+      }
   }
 
    private lazy val allPairs = Parse.readKeysValue(
-    FileSystem.readConfigFile("coinmarketcapCurrencies.txt")
+    FileSystem.inConfigFolder("coinmarketcapCurrencies.txt")
     , "Reading coinmarketcap currencies").map{
       case (currency, url) => (Currency.normalize(currency), url)
     }

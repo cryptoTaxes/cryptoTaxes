@@ -35,7 +35,7 @@ object Kucoin extends Exchanger {
       val baseCurrency = Currency.normalize(_baseCurrency)
       val quoteCurrency = Currency.normalize(_quoteCurrency)
 
-      val desc = "Order: " + oid
+      val desc = RichText(s"Order: $oid")
 
       /* According to question 13 in
          https://www.reddit.com/r/kucoin/comments/7dm6s5/new_to_kucoin_check_this_out_faq/

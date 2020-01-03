@@ -22,7 +22,7 @@ object Format {
     return str.reverse
   }
 
-  def formatDecimal(x: Double, decimals: Int = Config.config.decimalPlaces): String = {
+  def formatDecimalOld(x: Double, decimals: Int = Config.config.decimalPlaces): String = {
     if(x.isInfinite)
       return "∞"
     else if(x.isNaN)
@@ -51,6 +51,45 @@ object Format {
 
     val df = new DecimalFormat(fmt)
     df.setRoundingMode(RoundingMode.DOWN)
+    return trimZeros(df.format(x))
+  }
+
+  def formatDecimal(x: Double, tailDigits: Int = Config.config.decimalPlaces): String = {
+    if(x.isInfinite)
+      return "∞"
+    else if(x.isNaN)
+      return "NaN"
+    val xAbs = x.abs
+    var fmt =
+      if(xAbs <= 0.00000009)
+        "0.00000000"
+      else if(xAbs <= 0.0000009)
+        "0.0000000"
+      else if(xAbs <= 0.000009)
+        "0.000000"
+      else if(xAbs <= 0.00009)
+        "0.00000"
+      else if(xAbs <= 0.0009)
+        "0.0000"
+      else if(xAbs <= 0.009)
+        "0.000"
+      else if(xAbs <= 0.09)
+        "0.00"
+      else if(xAbs <= 0.9)
+        "0.0"
+      else
+        "0.0"
+
+    val maxDecimals = 8
+
+    var added = 0
+    while(fmt.length - 2 < maxDecimals && added < tailDigits-1) {
+      fmt = fmt + '0'
+      added += 1
+    }
+
+    val df = new DecimalFormat(fmt)
+    df.setRoundingMode(RoundingMode.HALF_DOWN)
     return trimZeros(df.format(x))
   }
 

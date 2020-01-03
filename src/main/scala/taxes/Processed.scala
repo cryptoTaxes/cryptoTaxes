@@ -15,7 +15,7 @@ trait Processed extends Boxed with ToHTML {
 object Processed {
   import HTMLDoc._
 
-  private val headerDecimals = 6
+  private val headerDecimals = 4
 
   case class Composed(operationNumber: Int, processed: Seq[Processed]) extends Processed {
     override def headerToHTML: HTML =
@@ -25,6 +25,9 @@ object Processed {
       <span>{processed.map(_.bodyToHTML)}</span>
   }
 
+
+  def operationNumberAnchor(operationNumber: Int): HTML =
+    <span class='opNumber' id={s"$operationNumber"}>{operationNumber}</span>
 
   case class Exchange( operationNumber: Int
                      , exchange: taxes.Exchange
@@ -45,7 +48,7 @@ object Processed {
 
     override def headerToHTML: HTML =
       header4(
-        <span class='operationNumber'>{operationNumber}</span>
+        operationNumberAnchor(operationNumber)
         , exchange.date.format(df)
         , <span>
           {s"${if(exchange.isSettlement) "Settlement " else ""} Exchange of"}
@@ -64,7 +67,7 @@ object Processed {
       <span>
         {if(Config.verbosity(Verbosity.showMoreDetails) && exchange.description.nonEmpty)
         <div class='desc'>
-          {exchange.description}
+          {exchange.description.toHTML}
         </div>
         }
         {if(Config.verbosity(Verbosity.showRates))
@@ -173,7 +176,7 @@ object Processed {
 
     override def headerToHTML: HTML =
       header4(
-        <span class='operationNumber'>{operationNumber}</span>
+        operationNumberAnchor(operationNumber)
         , gain.date.format(df)
         , <span> Gain of
           {asCurrency(gain.amount, gain.currency, decimals = headerDecimals)}
@@ -185,7 +188,7 @@ object Processed {
       <span>
         {if(Config.verbosity(Verbosity.showMoreDetails) && gain.description.nonEmpty)
         <div class='desc'>
-          {gain.description}
+          {gain.description.toHTML}
         </div>
         }
         <div>
@@ -221,7 +224,7 @@ object Processed {
 
     override def headerToHTML: HTML =
       header4(
-        <span class='operationNumber'>{operationNumber}</span>
+        operationNumberAnchor(operationNumber)
         , loss.date.format(df)
         , <span> Loss of
           {asCurrency(loss.amount, loss.currency, decimals = headerDecimals)}
@@ -233,7 +236,7 @@ object Processed {
       <span>
         {if(Config.verbosity(Verbosity.showMoreDetails) && loss.description.nonEmpty)
         <div class='desc'>
-          {loss.description}
+          {loss.description.toHTML}
         </div>
         }
         <div>
@@ -243,14 +246,14 @@ object Processed {
           <span>
             {if(Config.verbosity(Verbosity.showRates))
             <span class='small2'>
-              ({if(usedStocks.nonEmpty)
-              <span>Used
+              {if(usedStocks.nonEmpty)
+              <span>(Used
                 {s"${if(usedStocks.iterator.length > 1) "batches" else "batch"}:"}
-                {usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}
+                {usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
               </span>
             else
-              "no funds available"
-              })
+              ""
+              }
             </span>
             }
             = {asCurrency(lossInBaseCurrency, baseCurrency)}
@@ -276,7 +279,7 @@ object Processed {
 
     override def headerToHTML: HTML =
       header4(
-        <span class='operationNumber'>{operationNumber}</span>
+        operationNumberAnchor(operationNumber)
         , fee.date.format(df)
         , <span> Fee of
           {fee.alt match {
@@ -292,7 +295,7 @@ object Processed {
       <span>
         {if(Config.verbosity(Verbosity.showMoreDetails) && fee.description.nonEmpty)
         <div class='desc'>
-          {fee.description}
+          {fee.description.toHTML}
         </div>
         }
         <div>
@@ -308,14 +311,14 @@ object Processed {
           <span>
             {if(fee.currency != baseCurrency && Config.verbosity(Verbosity.showRates))
             <span class='small2'>
-              ({if(usedStocks.nonEmpty)
+              {if(usedStocks.nonEmpty)
               <span>
-                Used {s"${if(usedStocks.iterator.length > 1) "batches" else "batch"}:"}
-                {usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}
+                (Used {s"${if(usedStocks.iterator.length > 1) "batches" else "batch"}:"}
+                {usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
               </span>
             else
-              "no funds available"
-              })
+              ""
+              }
             </span>
             }
             = {asCurrency(feeInBaseCurrency, baseCurrency)}
@@ -339,7 +342,7 @@ object Processed {
                    , fromAmount: Double, fromCurrency: Currency
                    , toAmount: Double, toCurrency: Currency
                    , exchangeRate: Double
-                   , description: String
+                   , description: RichText
                    , usedStocksOpt: Option[StockContainer]
                    , marginLongs: StockContainer
                    , marginShorts: StockContainer
@@ -355,7 +358,7 @@ object Processed {
 
     override def headerToHTML: HTML =
       header4(
-        <span class='operationNumber'>{operationNumber}</span>
+        operationNumberAnchor(operationNumber)
         , date.format(df)
         , <span> {what}
           {asCurrency(amount1, currency1, decimals = headerDecimals)}

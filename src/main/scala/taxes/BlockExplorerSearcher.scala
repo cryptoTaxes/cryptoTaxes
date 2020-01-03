@@ -1,18 +1,15 @@
 package taxes
 
 import taxes.date._
-import taxes.io.Network
+import taxes.io.{FileSystem, Network}
 import taxes.util.Logger
 import taxes.util.parse.Parse
 
 
-object BlockExplorerSearcher {
-  def apply(currency: Currency, txid: String, address: String) =
-    new BlockExplorerSearcher(currency, txid, address)
-
+private object BlockExplorerSearcher {
   private def locateAndSkip(str: String, prefix: String, toSkip: Char, numSkip: Int, endToken: String): String = {
     val before = str.indexOf(prefix)
-    var str1 = str.drop(before +  prefix.length)
+    var str1 = str.drop(before + prefix.length)
     var found = 0
     while(found < numSkip) {
       if(str1.head == toSkip)
@@ -263,4 +260,68 @@ class BlockExplorerSearcher(currency: Currency, txid: String, address: String) {
     case Some(t3) => t3
     case None => Logger.fatal(s"BlockExplorerScraper: non-supported currency $currency")
   }
+}
+
+
+object BlockExplorer {
+  private trait Attribute
+
+  private object Address {
+    val tag = "address"
+  }
+
+  private case class Address(currency: Currency) extends Attribute
+
+  private object Transaction {
+    val tag = "transaction"
+  }
+
+  private case class Transaction(currency: Currency) extends Attribute
+
+  private def parseAttribute(tag: String, currency: Currency): Attribute =
+    tag.toLowerCase match {
+      case Address.`tag`     => Address(currency)
+      case Transaction.`tag` => Transaction(currency)
+      case _                 => Logger.fatal(s"Error parsing block explorers. ${Transaction.tag}|${Address.tag} expected but $tag found.")
+    }
+
+  private val urls: Map[Attribute, String] = {
+    import util.parse.Parse._
+    val sep = ":"
+    readKeyValues(FileSystem.inConfigFolder("blockExplorers.txt"), "Reading block explorers").map{
+      case (key, value) =>
+        val url =
+          if(value.size == 1)
+            trimSpaces(value.head)
+          else
+            Logger.fatal(s"Single url expected but $value found.")
+
+        val elems = sepBy(key, sep).map(trimSpaces)
+        elems match {
+          case List(_currency, tag) =>
+            val currency = Currency.normalize(_currency)
+            val attribute = parseAttribute(tag, currency)
+            (attribute, url)
+          case _ =>
+            Logger.fatal(s"Error parsing block explorers. currency$sep${Transaction.tag}|${Address.tag} expected but $key found.")
+        }
+    }
+  }
+
+  private val param = "*"
+
+  def transactionURL(currency: Currency, txid: String): Option[String] =
+    urls.get(Transaction(currency)) match {
+      case None      => None
+      case Some(url) => Some(url.replace(param, txid))
+    }
+
+  def addressURL(currency: Currency, addr: String): Option[String] =
+    urls.get(Address(currency)) match {
+      case None      => None
+      case Some(url) => Some(url.replace(param, addr))
+    }
+
+  def Searcher(currency: Currency, txid: String, address: String) =
+    new BlockExplorerSearcher(currency, txid, address)
 }

@@ -50,7 +50,7 @@ object CCEX extends Exchanger {
             , toAmount = toAmount, toCurrency = toCurrency  // toAmount in csv doesn't include fee
             , fees = List(FeePair(fee, toCurrency))
             , exchanger = CCEX
-            , description = ""
+            , description = RichText("")
           )
 
         return CSVReader.Ok(exchange)
@@ -62,10 +62,10 @@ object CCEX extends Exchanger {
         val skip2 = scLn.next("skip1")
         val skip3 = scLn.next("skip1")
 
-        val txid = scLn.next("txid")
+        val txid = scLn.next("txid").init.tail
 
 
-        val desc = "Deposit " + txid
+        val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txid)}")
         val deposit = Deposit(
           date = date
           , id = txid
@@ -86,9 +86,9 @@ object CCEX extends Exchanger {
         val skip4 = scLn.next("skip4")
 
         val address = scLn.next("Address")
-        val txid = scLn.next("txid")
+        val txid = scLn.next("txid").init.tail
 
-        val desc = "Withdrawal " + AddressBook.format(address) + "\n" + txid
+        val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
         val withdrawal = Withdrawal(
           date = date
           , id = txid

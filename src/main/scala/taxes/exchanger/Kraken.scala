@@ -10,10 +10,10 @@ import taxes.util.parse._
 object Kraken extends Exchanger {
   override val id: String = "Kraken"
 
-  private val configFileName = FileSystem.readConfigFile("krakenCurrencies.txt")
+  val krakenCurrenciesFile = FileSystem.inConfigFolder("krakenCurrencies.txt")
 
   private val conversions: Map[Currency, Currency] =
-    Parse.readKeysValue(configFileName, "Reading Kraken currencies").map{
+    Parse.readKeysValue(krakenCurrenciesFile, "Reading Kraken currencies").map{
       case (krakenCurrency, currency) => (krakenCurrency.toUpperCase, Currency.normalize(currency))
     }
 
@@ -34,12 +34,12 @@ object Kraken extends Exchanger {
     }
 
     if(!found)
-      Logger.fatal(s"Could not parse Kraken pair $pair. Check file $configFileName.")
+      Logger.fatal(s"Could not parse Kraken pair $pair. Check file $krakenCurrenciesFile.")
 
     val _quoteCurrency = pair.drop(_baseCurrency.length)
 
     val quoteCurrency = conversions.get(_quoteCurrency) match {
-      case None => Logger.fatal(s"Could not parse Kraken currency ${_quoteCurrency}. Check file $configFileName.")
+      case None => Logger.fatal(s"Could not parse Kraken currency ${_quoteCurrency}. Check file $krakenCurrenciesFile.")
       case Some(currency) => currency
     }
 
@@ -56,9 +56,20 @@ object Kraken extends Exchanger {
   private type OrderID = String
   private val isMarginCache = scala.collection.mutable.Map[OrderID, Boolean]()
 
+  private type RefID = String
+  private case class OnChainInfo(address: String, tx: String)
+  private val depositsWithdrawalsInfo = scala.collection.mutable.Map[RefID, OnChainInfo]()
+
   override val sources = {
     val tradesFolder = "kraken/trades"
     Seq(
+      // reads extra on-chain information for deposits and withdrawals and populates depositsWithdrawalsInfo
+      new UserInputFolderSource[Operation]("kraken/ledgers/depositsWithdrawals", ".txt") {
+        def fileSource(fileName: String)= new FileSource[Nothing](fileName) {
+          override def read(): Seq[Nothing] =
+            readDepositsWithdrawals(fileName)
+        }
+      },
       // Reads deposits/withdrawals but also populates ledgersCache
       new UserInputFolderSource[Operation]("kraken/ledgers", ".csv") {
         def fileSource(fileName: String) = ledgerReader(fileName)
@@ -100,7 +111,7 @@ object Kraken extends Exchanger {
       val (baseCurrency, quoteCurrency) = parsePair(pair) // already normalized
 
       val id = txid + "/" + ordertxid
-      val desc = "Order: " + id
+      val desc = RichText("Order: " + id)
 
       val isSell = sellBuy == "sell"
       val isBuy = sellBuy == "buy"
@@ -245,6 +256,18 @@ object Kraken extends Exchanger {
     }
   }
 
+  def readDepositsWithdrawals(fileName: String): Seq[Nothing] = {
+    FileSystem.withSource(fileName) { src =>
+      val lines = src.getLines().filterNot(taxes.util.parse.Parse.isComment)
+
+      while(lines.hasNext) {
+        val Array(refId, address, tx) = lines.take(3).toArray
+        depositsWithdrawalsInfo(refId) = OnChainInfo(address, tx)
+      }
+      return Seq()
+    }
+  }
+
   private def ledgerReader(fileName: String) = new CSVReader[Operation](fileName) {
     override val linesToSkip = 1
 
@@ -275,13 +298,20 @@ object Kraken extends Exchanger {
         val date = LocalDateTime.parseAsUTC(time, "yyyy-MM-dd HH:mm:ss") // kraken ledgers.csv uses UTC time zone
         val id = txid + "/" + refid
 
+        val desc = depositsWithdrawalsInfo.get(refid) match {
+          case None =>
+            RichText(s"Withdrawal $currency $id")
+          case Some(Kraken.OnChainInfo(address, tx)) =>
+            RichText(s"Withdrawal ${RichText.util.transaction(currency, tx, address)}")
+        }
+
         val withdrawal = Withdrawal(
           date = date
           , id = id
           , amount = amount.abs
           , currency = currency
           , exchanger = Kraken
-          , description = "Withdrawal " + currency + " " + id
+          , description = desc // RichText(s"Withdrawal $currency $id")
         )
 
         var results = List[Operation](withdrawal)
@@ -292,7 +322,7 @@ object Kraken extends Exchanger {
             , amount = feeAmount
             , currency = currency
             , exchanger = Kraken
-            , description = Kraken + " Withdrawal fee " + currency + " " + id
+            , description = RichText(s"Kraken withdrawal fee $currency $id")
           )
           results ++= List(fee)
         } else {
@@ -302,7 +332,7 @@ object Kraken extends Exchanger {
             , amount = feeAmount
             , currency = currency
             , exchanger = Kraken
-            , description = Kraken + " Withdrawal non taxable fee " + currency + " " + id
+            , description = RichText(s"Kraken withdrawal non taxable fee $currency $id")
           )
           results ++= List(nonTaxableFee)
         }
@@ -312,13 +342,20 @@ object Kraken extends Exchanger {
         val date = LocalDateTime.parseAsUTC(time, "yyyy-MM-dd HH:mm:ss") // kraken ledgers.csv uses UTC time zone
         val id = txid + "/" + refid
 
+        val desc = depositsWithdrawalsInfo.get(refid) match {
+          case None =>
+            RichText(s"Deposit $currency $id")
+          case Some(Kraken.OnChainInfo(address, tx)) =>
+            RichText(s"Deposit ${RichText.util.transaction(currency, tx, address)}")
+        }
+
         val deposit = Deposit(
           date = date
           , id = id
           , amount = amount
           , currency = currency
           , exchanger = Kraken
-          , description = "Deposit " + currency + " " + id
+          , description = desc // RichText(s"Deposit $currency $id")
         )
         var results = List[Operation](deposit)
         if((currency == Currency.bitcoin || currency == Currency.euro) && !Config.config.deprecatedUp2017Version) {
@@ -329,7 +366,7 @@ object Kraken extends Exchanger {
               , amount = feeAmount
               , currency = currency
               , exchanger = Kraken
-              , description = Kraken + " Deposit fee " + currency + " " + id
+              , description = RichText(s"Kraken Deposit fee $currency $id")
             )
             results ++= List(fee)
           } else if(feeAmount < 0) {
@@ -339,7 +376,7 @@ object Kraken extends Exchanger {
               , amount = -feeAmount
               , currency = currency
               , exchanger = Kraken
-              , description = "Deposit " + currency + " " + id
+              , description = RichText(s"Deposit $currency $id")
             )
             results ++= List(deposit)
           }
@@ -355,7 +392,7 @@ object Kraken extends Exchanger {
           , amount = feeAmount
           , currency = currency
           , exchanger = Kraken
-          , description = "Non Taxable Fee " + currency + " " + id
+          , description = RichText(s"Non Taxable Fee $currency $id")
         )
         return CSVReader.Ok(nonTaxableFee)
       } else if(txType == "transfer") {
@@ -368,7 +405,7 @@ object Kraken extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = Kraken
-          , description = "Transfer " + currency + " " + id
+          , description = RichText(s"Transfer $currency $id")
         )
         return CSVReader.Ok(deposit)
       } else

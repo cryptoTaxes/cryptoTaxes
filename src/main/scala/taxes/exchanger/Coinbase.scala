@@ -39,8 +39,8 @@ object Coinbase extends Exchanger {
       val price = scLn.nextDouble("Price")
       val paymentMethod = scLn.next("Payment Method")
 
-      val desc = paymentMethod
-      val id = desc
+      val desc = RichText(paymentMethod)
+      val id = paymentMethod
       val date = LocalDateTime.parse(timeStamp, "yyyy-MM-dd HH:mm:ss Z")
 
       val quoteCurrency = Currency.normalize(currency)

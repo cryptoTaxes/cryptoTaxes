@@ -8,14 +8,14 @@ import spray.json.JsonProtocol._
 import taxes.io.FileSystem
 
 object Stock {
-  implicit val stockJson = jsonFormat6(Stock.apply)
+  implicit val stockJson = jsonFormat7(Stock.apply)
 }
 
 
 // basis is expressed in base unit. exchanger is where it was bought
-case class Stock(var amount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeCurrency: Currency) {
+case class Stock(var amount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeCurrency: Currency, operationNumber: Int) {
   override def toString: String =
-    f"Stock($amount%.4f, $costBasis%.8f, $exchanger, $exchangeRate%.8f, $exchangeCurrency, ${Format.df.format(date)})"
+    f"Stock($amount%.4f, $costBasis%.8f, $exchanger, $exchangeRate%.8f, $exchangeCurrency, ${Format.df.format(date)} $operationNumber)"
 }
 
 object StockContainer {
@@ -109,17 +109,17 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
         Config.config.epsilon
     }
 
-  def insert(stock: Stock, description: String): Unit = {
+  def insert(stock: Stock, description: RichText): Unit = {
     ledger += Ledger.Entry(stock.date, stock.amount, stock.exchanger, description)
     insert(stock)
   }
 
-  def insert(stock: Stock, eq: (Stock,Stock) => Boolean, combine: (Stock,Stock) => Stock, description: String): Unit = {
+  def insert(stock: Stock, eq: (Stock,Stock) => Boolean, combine: (Stock,Stock) => Stock, description: RichText): Unit = {
     ledger += Ledger.Entry(stock.date, stock.amount, stock.exchanger, description)
     insert(stock, eq, combine)
   }
 
-  def removeAndGetBasis(amount: Double)(date: LocalDateTime, exchanger: Exchanger, description: String): (Price, Double, StockContainer) = {
+  def removeAndGetBasis(amount: Double)(date: LocalDateTime, exchanger: Exchanger, description: RichText): (Price, Double, StockContainer) = {
     var toRemove = amount
     var basis = 0.0
     var done = false
@@ -164,36 +164,36 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
        }
       }
       {zipWithIndex.map{ case (stock, i) =>
-      <span>
-      <span class='noLineBreak'>
-        <span>
-          {stock.date.format(Format.shortDf)}
-        </span>
-        <span class='exchanger'>
-          {stock.exchanger}
-        </span>
-        {if(showExchangeRates && stock.exchangeCurrency != baseCurrency)
+      <a href={s"${FileSystem.linkToReportHTML(stock.date.getYear, stock.operationNumber)}"} class='noDecor'>
+        <span class='noLineBreak'>
+          <span>
+            {stock.date.format(Format.shortDf)}
+          </span>
+          <span class='exchanger'>
+            {stock.exchanger}
+          </span>
+          {if(showExchangeRates && stock.exchangeCurrency != baseCurrency)
+            <span>
+              {if(showAmounts)
+                s"${Format.formatDecimal(stock.amount)} x"
+               else
+                ""
+              }
+              {HTMLDoc.asRate(stock.exchangeRate, stock.exchangeCurrency, currency)}
+              =
+            </span>
+          }
           <span>
             {if(showAmounts)
               s"${Format.formatDecimal(stock.amount)} x"
              else
               ""
             }
-            {HTMLDoc.asRate(stock.exchangeRate, stock.exchangeCurrency, currency)}
-            =
+            {HTMLDoc.asRate(stock.costBasis, baseCurrency, currency)}
+              {if(i < size - 1) "," else ""}
           </span>
-        }
-        <span>
-          {if(showAmounts)
-            s"${Format.formatDecimal(stock.amount)} x"
-           else
-            ""
-          }
-          {HTMLDoc.asRate(stock.costBasis, baseCurrency, currency)}
-            {if(i < size - 1) "," else ""}
         </span>
-      </span>
-      </span>
+      </a>
     }}
   </span>
 
@@ -252,11 +252,11 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
   def iterator: Iterator[StockContainer] =
     containers.iterator.map(_._2)
 
-  def add(id: String, boughtCurrency: Currency, boughtAmount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeCurrency: Currency, desc: String)(baseCurrency: Currency): Unit = {
+  def add(id: String, boughtCurrency: Currency, boughtAmount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeCurrency: Currency, desc: RichText, operationNumber: Int)(baseCurrency: Currency): Unit = {
     val container = containers.getOrElse(id, newContainer(id, boughtCurrency, baseCurrency))
 
     container.insert(
-      Stock(boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeCurrency)
+      Stock(boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeCurrency, operationNumber)
       , (x: Stock, y: Stock) => (x.costBasis - y.costBasis).abs < container.eps && x.exchanger == y.exchanger
           && x.date.sameDayAs(y.date)
           && x.exchangeCurrency == y.exchangeCurrency && (x.exchangeRate - y.exchangeRate).abs < container.eps
@@ -267,11 +267,11 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
   }
 
   // Assumes id = boughtCurrency. Useful for non-margin currencies where ids are currencies themselves
-  def add(boughtCurrency: Currency, boughtAmount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeCurrency: Currency, desc: String)(baseCurrency: Currency): Unit = {
-    add(boughtCurrency, boughtCurrency, boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeCurrency, desc)(baseCurrency)
+  def add(boughtCurrency: Currency, boughtAmount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeCurrency: Currency, desc: RichText, operationNumber: Int)(baseCurrency: Currency): Unit = {
+    add(boughtCurrency, boughtCurrency, boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeCurrency, desc, operationNumber)(baseCurrency)
   }
 
-  def remove(id: String, soldAmount: Double)(baseCurrency: Currency)(date: LocalDateTime, exchanger: Exchanger, desc: String): (Price, Price, StockContainer) = {
+  def remove(id: String, soldAmount: Double)(baseCurrency: Currency)(date: LocalDateTime, exchanger: Exchanger, desc: RichText): (Price, Price, StockContainer) = {
     val container = apply(id)(baseCurrency)
     return container.removeAndGetBasis(soldAmount)(date: LocalDateTime, exchanger: Exchanger, desc)
   }
@@ -302,7 +302,7 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
         totalCost += cost
         if(totalCost > 0) {
           <tr>
-            <td ><span class='currency'>{stockContainer.currency}</span></td>
+            <td ><span class='currency' id={stockContainer.currency}>{stockContainer.currency}</span></td>
             <td>{HTMLDoc.asCurrency(amount, stockContainer.currency, decimals = 4.max(Config.config.decimalPlaces))}</td>
             <td>{HTMLDoc.asCurrency(cost, stockContainer.baseCurrency)}</td>
             <td class='noLineBreak'>{HTMLDoc.asCurrency(cost / amount, stockContainer.baseCurrency)} / <span class='currency'>{stockContainer.currency}</span></td>

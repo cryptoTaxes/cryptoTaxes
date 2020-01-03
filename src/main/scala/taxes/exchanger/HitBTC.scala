@@ -40,7 +40,7 @@ object HitBTC extends Exchanger {
       val rebate = scLn.nextDouble("Rebate")
       val total = scLn.nextDouble("Total")
 
-      val desc = "Order: " + tradeID + "/" + orderID
+      val desc = RichText(s"Order: $tradeID / $orderID")
 
       val (m1,m2) = Parse.split(instrument,"/")
       val baseCurrency = Currency.normalize(m1)
@@ -84,7 +84,7 @@ object HitBTC extends Exchanger {
       val currency = Currency.normalize(scLn.next("Currency"))
 
       if(what=="Deposit") {
-        val desc = "Deposit " + txHash
+        val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txHash)}")
         val deposit = Deposit(
           date = date
           , id = operationId
@@ -95,7 +95,7 @@ object HitBTC extends Exchanger {
         )
         return CSVReader.Ok(deposit)
       } else if(what=="Withdraw") {
-        val desc = "Withdrawal " + txHash
+        val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txHash)}")
         val withdraw = Withdrawal(
           date = date
           , id = operationId

@@ -106,6 +106,10 @@ object Report {
     // order of current operation within current year
     var operationNumber = 0
 
+    var currentYear: Int = -1
+    def linkToCurrentOperation(what: String): RichText =
+      RichText(s"${RichText.report(currentYear, operationNumber)} $what")
+
     val operationTracker = OperationTracker()
 
     def initializeYear(year: Int): Unit = {
@@ -156,7 +160,7 @@ object Report {
     def reportYear(year: Int): Unit = {
       val method = Accounting.toString(Config.config.accountingMethod)
 
-      val htmlReportFile = s"${FileSystem.userOutputFolder(year)}/$method$year.html"
+      val htmlReportFile = FileSystem.report(year, "html")
       val htmlReportTitle = s"$year $method Report"
       val htmlReport = HTMLDoc(htmlReportFile, htmlReportTitle)
 
@@ -167,6 +171,10 @@ object Report {
 
       htmlReport += HTMLDoc.reportResults(year, Realized)
       htmlReport.close()
+
+
+      val csvlReportFile = FileSystem.report(year, "csv")
+      operationTracker.printToCSVFile(csvlReportFile, year)
 
       reportPortfolio(year)
 
@@ -213,7 +221,7 @@ object Report {
       htmlExtra.close()
 
 
-      operationTracker.printToCSVFile("FIFO", year)
+
 
       val htmlLedgersFile = s"${FileSystem.userOutputFolder(year)}/Ledgers$year.html"
       val htmlLedgersTitle = s"Ledgers $year"
@@ -276,11 +284,11 @@ object Report {
       Currency.saveToFile(FileSystem.currencyFile(year))
       Config.config.saveToFile(FileSystem.configFile(year))
       FileSystem.withPrintStream(FileSystem.operationsFile(year)){ ps =>
-        ps.print(thisYearOperations.toList.toJson.prettyPrint)
+        spray.json.PrintStream.prettyPrintOn(ps, thisYearOperations)
       }
 
-      FileSystem.withPrintStream(FileSystem.processedOperationsFile(year)){ ps =>
-        ps.print(processedOperations.toList.toJson.prettyPrint)
+      FileSystem.withPrintStream(FileSystem.processedOperationsFile(year)) { ps =>
+        spray.json.PrintStream.prettyPrintOn(ps, processedOperations)
       }
     }
 
@@ -358,19 +366,21 @@ object Report {
       // fees expressed in `boughtCurrency' are included
       val boughtBasisPriceInBaseCurrency = totalInBaseCurrency / totalBoughtAmount
 
+      val desc = linkToCurrentOperation("Exchange")
+
       // Add all bought currencies with their cost basis to our stock of assets.
       // Note that fee in `boughtCurrency' are included as they will be deducted right after as a fee
       if(!boughtBasisPriceInBaseCurrency.isNaN && totalBoughtAmount > 0) {
-        state.allStocks.add(boughtCurrency, totalBoughtAmount, boughtBasisPriceInBaseCurrency, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldCurrency, s"$operationNumber Exchange")(baseCurrency)
-        exchange.exchanger.ledgerPool.record(boughtCurrency)(exchange.date, totalBoughtAmount, exchange.exchanger, s"$operationNumber Exchange")
+        state.allStocks.add(boughtCurrency, totalBoughtAmount, boughtBasisPriceInBaseCurrency, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldCurrency, desc, operationNumber)(baseCurrency)
+        exchange.exchanger.ledgerPool.record(boughtCurrency)(exchange.date, totalBoughtAmount, exchange.exchanger, desc)
       }
 
       // Get cost basis for sold currencies from current stock
       // fees expressed in `soldCurrency' are not included
       val (soldBasisInBaseCurrency, noBasis, usedStocks) = {
-        exchange.exchanger.ledgerPool.record(soldCurrency)(exchange.date, -soldAmount, exchange.exchanger, s"$operationNumber Exchange")
+        exchange.exchanger.ledgerPool.record(soldCurrency)(exchange.date, -soldAmount, exchange.exchanger, desc)
 
-        val t3 = state.allStocks.remove(soldCurrency, soldAmount)(baseCurrency)(exchange.date, exchange.exchanger, s"$operationNumber Exchange")
+        val t3 = state.allStocks.remove(soldCurrency, soldAmount)(baseCurrency)(exchange.date, exchange.exchanger, desc)
         if(soldCurrency != baseCurrency)
           t3
         else
@@ -441,7 +451,7 @@ object Report {
             , amount = fee.amount
             , currency = fee.currency
             , exchanger = exchange.exchanger
-            , description = ""
+            , description = RichText("")
             , alt = fee.alt
           ))
 
@@ -475,7 +485,7 @@ object Report {
 
         val stockContainer = Poloniex.marginShorts(currencyKey)(baseCurrency)
         if(stockContainer.nonEmpty) {
-          stockContainer.removeAndGetBasis(totalBoughtAmount)(exchange.date, exchange.exchanger, exchange.description)
+          stockContainer.removeAndGetBasis(totalBoughtAmount)(exchange.date, exchange.exchanger, linkToCurrentOperation(exchange.description.str))
           // We bought these to pay for fees and looses of a short that went against us.
           // We need to clear remaining margin sells
         }
@@ -486,7 +496,7 @@ object Report {
             , amount = totalBoughtAmount
             , currency = exchange.toCurrency
             , exchanger = exchange.exchanger
-            , description = ""
+            , description = RichText("")
           ))
         processed ::= processedLoss
       }
@@ -497,9 +507,10 @@ object Report {
 
 
     def preprocessFee(fee: Fee): Processed.Fee = {
-      fee.exchanger.ledgerPool.record(fee.currency)(fee.date, -fee.amount, fee.exchanger, s"$operationNumber Fee")
+      val desc = linkToCurrentOperation("Fee")
+      fee.exchanger.ledgerPool.record(fee.currency)(fee.date, -fee.amount, fee.exchanger, desc)
 
-      val (feeInBaseCurrency0, _, usedStocks) = state.allStocks.remove(fee.currency, fee.amount)(baseCurrency)(fee.date, fee.exchanger, s"$operationNumber Fee")
+      val (feeInBaseCurrency0, _, usedStocks) = state.allStocks.remove(fee.currency, fee.amount)(baseCurrency)(fee.date, fee.exchanger, desc)
 
       val feeInBaseCurrency = if(fee.currency == baseCurrency) fee.amount else feeInBaseCurrency0
 
@@ -519,9 +530,11 @@ object Report {
 
 
     def preprocessLoss(loss: Loss): Processed.Loss = {
-      loss.exchanger.ledgerPool.record(loss.currency)(loss.date, -loss.amount, loss.exchanger, s"$operationNumber Loss")
+      val desc = linkToCurrentOperation("Loss")
 
-      val (lossBasisInBaseCurrency0, _, usedStocks) = state.allStocks.remove(loss.currency, loss.amount)(baseCurrency)(loss.date, loss.exchanger, s"$operationNumber Loss")
+      loss.exchanger.ledgerPool.record(loss.currency)(loss.date, -loss.amount, loss.exchanger, desc)
+
+      val (lossBasisInBaseCurrency0, _, usedStocks) = state.allStocks.remove(loss.currency, loss.amount)(baseCurrency)(loss.date, loss.exchanger, desc)
 
       val lossBasisInBaseCurrency = if(loss.currency == baseCurrency) loss.amount else lossBasisInBaseCurrency0
 
@@ -544,10 +557,12 @@ object Report {
 
 
     def preprocessGain(gain: Gain): Processed.Gain = {
+      val desc = linkToCurrentOperation("Gain")
+
       // Record cost basis of gained currencies at price corresponding to gain date
       val basePrice = basis.priceOf(gain.currency, gain.date)
-      state.allStocks.add(gain.currency, gain.amount, basePrice, gain.exchanger, gain.date, basePrice, baseCurrency, s"$operationNumber Gain")(baseCurrency)
-      gain.exchanger.ledgerPool.record(gain.currency)(gain.date, gain.amount, gain.exchanger, s"$operationNumber Gain")
+      state.allStocks.add(gain.currency, gain.amount, basePrice, gain.exchanger, gain.date, basePrice, baseCurrency, desc, operationNumber)(baseCurrency)
+      gain.exchanger.ledgerPool.record(gain.currency)(gain.date, gain.amount, gain.exchanger, desc)
 
       val gainInBaseCurrency = gain.amount * basePrice
 
@@ -622,7 +637,7 @@ object Report {
             , feeInMarginBaseCurrency
             , marginBaseCurrency
             , margin.exchanger
-            , ""
+            , RichText("")
             , Some(feeInMarginBaseCurrency * boughtSoldExchangeRate, boughtCurrency)
             )
           )
@@ -634,7 +649,7 @@ object Report {
               , fee.amount
               , fee.currency
               , margin.exchanger
-              , ""
+              , RichText("")
               , alt = fee.alt
               )
             )
@@ -652,7 +667,7 @@ object Report {
 
       def openShort(soldAmount: Double, boughtAmount: Double, fees: Seq[FeePair]): List[Processed] = {
         // Opening a short
-        marginShorts.add(currencyKey, soldCurrency, soldAmount, boughtSoldExchangeRate, margin.exchanger, margin.date, boughtSoldExchangeRate, boughtCurrency, s"$operationNumber Open Short")(marginBaseCurrency)
+        marginShorts.add(currencyKey, soldCurrency, soldAmount, boughtSoldExchangeRate, margin.exchanger, margin.date, boughtSoldExchangeRate, boughtCurrency, linkToCurrentOperation("Open short"), operationNumber)(marginBaseCurrency)
 
         var processed = List[Processed]()
 
@@ -678,7 +693,7 @@ object Report {
 
       def openLong(soldAmount: Double, boughtAmount: Double, fees: Seq[FeePair]): List[Processed] = {
         // Opening a long
-        marginLongs.add(currencyKey, boughtCurrency, boughtAmount, soldBoughtExchangeRate, margin.exchanger, margin.date, soldBoughtExchangeRate, soldCurrency, s"$operationNumber Open Long")(marginBaseCurrency)
+        marginLongs.add(currencyKey, boughtCurrency, boughtAmount, soldBoughtExchangeRate, margin.exchanger, margin.date, soldBoughtExchangeRate, soldCurrency, linkToCurrentOperation("Open long"), operationNumber)(marginBaseCurrency)
 
         var processed = List[Processed]()
 
@@ -713,7 +728,7 @@ object Report {
           val closedSoldAmount = soldAmount min inLongsAmount
           val closedBoughtAmount = closedSoldAmount * boughtSoldExchangeRate
 
-          val (basis, noBasis, usedStocks) = marginLongs.remove(currencyKey, soldAmount)(baseCurrency)(margin.date, margin.exchanger, s"$operationNumber Close Long")
+          val (basis, noBasis, usedStocks) = marginLongs.remove(currencyKey, soldAmount)(baseCurrency)(margin.date, margin.exchanger, linkToCurrentOperation("Close long"))
 
           processed ::=
             Processed.Margin(
@@ -734,9 +749,9 @@ object Report {
 
           val gainLoss =
             if(gain>0)
-              preprocessGain(Gain(margin.date, margin.id, gain, marginBaseCurrency, margin.exchanger, ""))
+              preprocessGain(Gain(margin.date, margin.id, gain, marginBaseCurrency, margin.exchanger, RichText("")))
             else
-              preprocessLoss(Loss(margin.date, margin.id, gain.abs, marginBaseCurrency, margin.exchanger, ""))
+              preprocessLoss(Loss(margin.date, margin.id, gain.abs, marginBaseCurrency, margin.exchanger, RichText("")))
 
           processed :::= processFees(fees, poloniexConversion = false)
 
@@ -760,7 +775,7 @@ object Report {
           val closedBoughtAmount = boughtAmount min inShortsAmount
           val closedSoldAmount = closedBoughtAmount * soldBoughtExchangeRate
 
-          val (basis, noBasis, usedStocks) = marginShorts.remove(currencyKey, boughtAmount)(baseCurrency)(margin.date, margin.exchanger, s"$operationNumber Close Short")
+          val (basis, noBasis, usedStocks) = marginShorts.remove(currencyKey, boughtAmount)(baseCurrency)(margin.date, margin.exchanger, linkToCurrentOperation("Close short"))
 
           processed ::=
             Processed.Margin(
@@ -781,9 +796,9 @@ object Report {
 
           val gainLoss =
             if(gain>0)
-              preprocessGain(Gain(margin.date, margin.id, gain, marginBaseCurrency, margin.exchanger, "") /*, -closedSoldAmount*/)
+              preprocessGain(Gain(margin.date, margin.id, gain, marginBaseCurrency, margin.exchanger, RichText("")) /*, -closedSoldAmount*/)
             else
-              preprocessLoss(Loss(margin.date, margin.id, gain.abs, marginBaseCurrency, margin.exchanger, ""))
+              preprocessLoss(Loss(margin.date, margin.id, gain.abs, marginBaseCurrency, margin.exchanger, RichText("")))
 
           processed :::= processFees(fees, poloniexConversion = true)
 
@@ -945,21 +960,23 @@ object Report {
       // Price we bought acquired currencies at, expressed in base currency
       val boughtBasisPriceInBaseCurrency = totalInBaseCurrency / totalBoughtAmount
 
+      val desc = linkToCurrentOperation("Exchange")
+
       // Add bought currencies (without paid fee) with their cost basis to our stock of assets
       if(!boughtBasisPriceInBaseCurrency.isNaN && boughtAmount > 0) {
-        state.allStocks.add(boughtCurrency, boughtAmount, boughtBasisPriceInBaseCurrency, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldCurrency, s"$operationNumber Exchange")(baseCurrency)
-        exchange.exchanger.ledgerPool.record(boughtCurrency)(exchange.date, boughtAmount, exchange.exchanger, s"$operationNumber Exchange")
+        state.allStocks.add(boughtCurrency, boughtAmount, boughtBasisPriceInBaseCurrency, exchange.exchanger, exchange.date, soldBoughtExchangeRate, soldCurrency, desc, operationNumber)(baseCurrency)
+        exchange.exchanger.ledgerPool.record(boughtCurrency)(exchange.date, boughtAmount, exchange.exchanger, desc)
       }
 
       // Get cost basis for total sold currencies from current stock
       val (totalSoldBasisInBaseCurrency, noBasis, usedStocks) =
         if(soldCurrency != baseCurrency) {
-          exchange.exchanger.ledgerPool.record(soldCurrency)(exchange.date, -totalSoldAmount, exchange.exchanger, s"$operationNumber Exchange")
-          state.allStocks.remove(soldCurrency, totalSoldAmount)(baseCurrency)(exchange.date, exchange.exchanger, s"$operationNumber Exchange")
+          exchange.exchanger.ledgerPool.record(soldCurrency)(exchange.date, -totalSoldAmount, exchange.exchanger, desc)
+          state.allStocks.remove(soldCurrency, totalSoldAmount)(baseCurrency)(exchange.date, exchange.exchanger, desc)
         } else {
           // If our base currency is Euro, cost basis is the amount of Euros involved
-          exchange.exchanger.ledgerPool.record(soldCurrency)(exchange.date, -totalSoldAmount, exchange.exchanger, s"$operationNumber Exchange")
-          val (_,_,usedStocks) = state.allStocks.remove(soldCurrency, totalSoldAmount)(baseCurrency)(exchange.date, exchange.exchanger, s"$operationNumber Exchange")
+          exchange.exchanger.ledgerPool.record(soldCurrency)(exchange.date, -totalSoldAmount, exchange.exchanger, desc)
+          val (_,_,usedStocks) = state.allStocks.remove(soldCurrency, totalSoldAmount)(baseCurrency)(exchange.date, exchange.exchanger, desc)
           (totalSoldAmount, 0.0, usedStocks)
         }
 
@@ -1048,7 +1065,7 @@ object Report {
 
         val stockContainer = Poloniex.marginShorts(currencyKey)(baseCurrency)
         if(stockContainer.nonEmpty) {
-          stockContainer.removeAndGetBasis(totalBoughtAmount)(exchange.date, exchange.exchanger, exchange.description)
+          stockContainer.removeAndGetBasis(totalBoughtAmount)(exchange.date, exchange.exchanger, linkToCurrentOperation(exchange.description.str))
           // We bought these to pay for fees and looses of a short that went against us.
           // We need to clear remaining margin sells
         }
@@ -1059,7 +1076,7 @@ object Report {
             , amount = totalBoughtAmount
             , currency = exchange.toCurrency
             , exchanger = exchange.exchanger
-            , description = ""
+            , description = RichText("")
           ))
         processed ::= processedLoss
       }
@@ -1075,7 +1092,7 @@ object Report {
               , amount = fee.amount
               , currency = fee.currency
               , exchanger = exchange.exchanger
-              , description = ""
+              , description = RichText("")
             ))
           processed ::= processedFee
       }
@@ -1083,8 +1100,6 @@ object Report {
       processed ::= processedExchange // order for a Composed is important. Exchange must be at front
       return simplify(processed)
     }
-
-    var currentYear: Int = -1
 
     var minBTC = Double.MaxValue
     var dateMinBTC = LocalDateTime()

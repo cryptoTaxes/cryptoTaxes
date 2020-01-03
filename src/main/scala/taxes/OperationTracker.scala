@@ -56,8 +56,7 @@ case class OperationTracker() extends Iterable[(Int,OperationTracker.CSVEntry)] 
     m.clear()
 
   def printToCSVFile(fileName: String, year: Int): Unit = {
-    val csvFileName = FileSystem.userOutputFolder(year)+s"/$fileName$year.csv"
-    val ps = FileSystem.PrintStream(csvFileName)
+    val ps = FileSystem.PrintStream(fileName)
 
     ps.println()
     ps.println(s"${Accounting.toString(Config.config.accountingMethod)} $year")

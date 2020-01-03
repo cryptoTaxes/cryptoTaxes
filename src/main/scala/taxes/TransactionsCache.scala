@@ -22,7 +22,7 @@ object TransactionsCache extends Initializable with Finalizable {
 
   def saveToDisk(): Unit = {
     FileSystem.withPrintStream(file){ ps =>
-      ps.println(map.toList.toJson.prettyPrint)
+      spray.json.PrintStream.prettyPrintOn(ps, map)
     }
   }
 
@@ -42,7 +42,7 @@ object TransactionsCache extends Initializable with Finalizable {
     map.get(TxKey(currency, txid, address)) match {
       case Some(txInfo) => txInfo
       case None =>
-        val searcher = BlockExplorerSearcher(currency, txid, address)
+        val searcher = BlockExplorer.Searcher(currency, txid, address)
         searcher.search match {
           case Some(_) =>
             val key = TxKey(currency, txid, address)

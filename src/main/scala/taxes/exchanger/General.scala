@@ -67,7 +67,7 @@ object General extends Exchanger {
           , toAmount = toAmount, toCurrency = Currency.normalize(toCurrency)
           , fees = List(FeePair(fee, Currency.normalize(feeCurrency)))
           , exchanger = Exchanger.parse(exchangerName)
-          , description = desc
+          , description = RichText(desc)
         )
       return CSVReader.Ok(exchange)
     }
@@ -86,7 +86,7 @@ object General extends Exchanger {
       val fee = scLn.nextDouble("Fee")
       val feeCurrency = scLn.next("feeCurrency")
       val exchangerName = scLn.next("Exchanger")
-      val desc = scLn.next("Description")
+      val desc = RichText(scLn.next("Description"))
 
       val op =
         if(amount>0) {

@@ -4,6 +4,8 @@
 // Normalized currency name on the right.
 
 BITCOIN       -> BTC
+BCHABC        -> BCH
+BCHSV         -> BSV
 EURO          -> EUR
 DOLAR, DOLLAR -> USD
 DOGES         -> DOGE

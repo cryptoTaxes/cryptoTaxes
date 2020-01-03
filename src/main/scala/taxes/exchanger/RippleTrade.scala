@@ -37,13 +37,23 @@ object RippleTrade extends Exchanger {
     val changes = json.getVector("balance_changes")
 
     val entries = for(change <- changes; changeJson = JsObjectAST.fromJsValue(change))
-      yield
+      yield {
+        // txs with exactly same date are sorted according to how they changed
+        // balance in XRP account so that they respect order of execution
+        val order =
+          scala.util.Try{
+              changeJson.getDouble("final_balance") *
+                1000 * // 3 digits in balance are taken into account
+                changeJson.getDouble("amount_change").signum
+          }.getOrElse(0.0)
+
         Entry(
-          date = LocalDateTime.parse(changeJson.getString("executed_time"), "yyyy-MM-dd'T'HH:mm:ssX")
+          date = LocalDateTime.parse(changeJson.getString("executed_time"), "yyyy-MM-dd'T'HH:mm:ssX").plusNanos(order.toLong)
           , hash = changeJson.getString("tx_hash")
           , amount = Parse.asDouble(changeJson.getString("amount_change"))
           , currency = changeJson.getString("currency")
         )
+      }
 
     var exchanges = List[Exchange]()
 
@@ -60,7 +70,7 @@ object RippleTrade extends Exchanger {
             case None =>
               Logger.fatal(s"RippleTrade.readFile ${FileSystem.pathFromData(fileName)}: could not find BTC value for hash $hash")
             case Some(entryBTC) => {
-              val desc = "Order: " + hash
+              val desc = RichText(s"Order: ${RichText.transaction(Currency.ripple, hash)}")
               val exchange =
                 if(entryXRP.amount < 0)
                   Exchange(
@@ -115,7 +125,7 @@ object RippleTrade extends Exchanger {
 
 
       if(what=="ACTIVATED" || what=="IN") {
-        val desc = "Deposit " + from + "\n" + txHash
+        val desc = RichText(s"Deposit ${RichText.util.transaction(Currency.ripple, txHash, from)}")
         val deposit = Deposit(
           date = date
           , id = txHash
@@ -126,7 +136,7 @@ object RippleTrade extends Exchanger {
         )
         return CSVReader.Ok(deposit)
       } else if(what=="OUT") {
-        val desc = "Withdrawal " + AddressBook.format(to) + "\n" + txHash
+        val desc = RichText(s"Withdrawal ${RichText.util.transaction(Currency.ripple, txHash, to)}")
         val withdrawal = Withdrawal(
           date = date
           , id = txHash

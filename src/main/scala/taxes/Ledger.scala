@@ -9,7 +9,7 @@ import spray.json.JsonProtocol._
 import taxes.io.FileSystem
 
 object Ledger {
-  case class Entry(date: LocalDateTime, amount: Double, exchanger: Exchanger, description: String)
+  case class Entry(date: LocalDateTime, amount: Double, exchanger: Exchanger, description: RichText)
 
   implicit val entryJson = jsonFormat4(Entry)
 
@@ -99,7 +99,7 @@ case class Ledger(currency: Currency, private var _initialBalance: Double = 0) {
           <th class='alignL paddingL'>Exchanger</th>
           <th class='alignL'>Description</th>
         </tr>
-        <caption>{currency}</caption>
+        <caption>{Currency.fullName(currency)}</caption>
         <tr>
           <th></th>
           <th>Initial balance:</th>
@@ -128,7 +128,7 @@ case class Ledger(currency: Currency, private var _initialBalance: Double = 0) {
                </td>
               }
               <td class='exchanger alignL paddingL'>{entry.exchanger}</td>
-              <td class='alignL'>{HTMLDoc.expandNewlines(entry.description)}</td>
+              <td class='alignL'>{entry.description.toHTML}</td>
             </tr>
           }
         }}
@@ -145,7 +145,7 @@ case class Ledger(currency: Currency, private var _initialBalance: Double = 0) {
         }
       </table>
     if(numEntries>0)
-      Some{table}
+      Some{<span id={currency}>{table}</span>}
     else
       None
   }
@@ -207,7 +207,7 @@ case class LedgerPool(id: String) extends Iterable[Ledger] {
     ledgers -= currency
   }
 
-  def record(currency: Currency)(date: LocalDateTime, amount: Double, exchanger: Exchanger, description: String): Unit = {
+  def record(currency: Currency)(date: LocalDateTime, amount: Double, exchanger: Exchanger, description: RichText): Unit = {
     val ledger = ledgers.getOrElse(currency, Ledger(currency))
     ledger += Ledger.Entry(date, amount, exchanger, description)
     ledgers(currency) = ledger
@@ -258,8 +258,7 @@ case class LedgerPool(id: String) extends Iterable[Ledger] {
     val nonEmpty = this.exists(balance(_) != 0)
     if(nonEmpty)
       Some{
-        <div>
-          <br></br>
+        <span id={id}>
           <table id='tableStyle1'>
             <tr>
               <th>Currency</th>
@@ -280,7 +279,7 @@ case class LedgerPool(id: String) extends Iterable[Ledger] {
             </tr>
           }}
           </table>
-        </div>}
+        </span>}
     else
       None
   }

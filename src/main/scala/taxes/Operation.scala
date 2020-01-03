@@ -11,15 +11,16 @@ sealed trait Operation {
   def date: LocalDateTime
   def id: String
   def exchanger: Exchanger
-  def description: String
+  def description: RichText
 
   protected def dateFormatted =
     java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(date)
 
   protected def shortDescription = {
+    val desc = description.toString
     val maxLen = 35
     val suffix = "..."
-    val str = util.parse.Parse.trimSpaces(description.replace("\n", " "))
+    val str = util.parse.Parse.trimSpaces(desc.replace("\n", " "))
     if(str.length > maxLen)
       str.take(maxLen-suffix.length) ++ suffix
     else
@@ -133,7 +134,7 @@ case class Exchange( date: LocalDateTime
                    , fees: Seq[FeePair]
                    , isSettlement: Boolean = false
                    , exchanger: Exchanger
-                   , description: String
+                   , description: RichText
                    ) extends Operation {
 
   override def toString: String =
@@ -158,7 +159,7 @@ case class Margin(date: LocalDateTime
                   , orderType: Operation.OrderType.Value
                   , pair: (Currency, Currency)
                   , exchanger: Exchanger
-                  , description: String
+                  , description: RichText
                   ) extends Operation {
 
   override def toString: String =
@@ -166,36 +167,36 @@ case class Margin(date: LocalDateTime
 }
 
 
-case class Fee(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: String, alt: Option[(Double, Currency)] = None) extends Operation {
+case class Fee(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: RichText, alt: Option[(Double, Currency)] = None) extends Operation {
   override def toString: String =
     f"Fee($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }
 
 
-case class Loss(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: String) extends Operation {
+case class Loss(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: RichText) extends Operation {
   override def toString: String =
     f"Lost($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }
 
 
 // amount is the real gain (fee has already been deducted)
-case class Gain(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: String) extends Operation {
+case class Gain(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: RichText) extends Operation {
   override def toString: String =
     f"Gain($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }
 
 
-case class Deposit(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: String) extends Operation {
+case class Deposit(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: RichText) extends Operation {
   override def toString: String =
     f"Deposit($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }
 
-case class Withdrawal(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: String) extends Operation {
+case class Withdrawal(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: RichText) extends Operation {
   override def toString: String =
     f"Withdrawal($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }
 
-case class NonTaxableFee(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: String) extends Operation {
+case class NonTaxableFee(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: RichText) extends Operation {
   override def toString: String =
     f"NonTaxableFee($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }

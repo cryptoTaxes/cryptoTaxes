@@ -40,7 +40,7 @@ object Idex extends Exchanger {
       val baseCurrency = Currency.normalize(_baseCurrency)
       val quoteCurrency = Currency.normalize(_quoteCurrency)
 
-      val desc = "Order: " + transactionId + " " + transactionHash
+      val desc = RichText(s"Order: $transactionId $transactionHash")
 
       /*
       https://idex.currency/faq

@@ -63,7 +63,7 @@ object Binance extends Exchanger {
             val feeAmount = scLn.nextDouble("Fee")
             val feeCurrency = Currency.normalize(scLn.next("Fee Coin"))
 
-            val desc = ""
+            val desc = RichText("")
 
             // Fee is 0.1% but can get deduced if BNB is used for paying fees.
             // It's applied over toCurrency
@@ -142,7 +142,7 @@ object Binance extends Exchanger {
         val completed = scLn.next("Status") == "Completed"
 
         if(completed) {
-          val desc = "Deposit " + address + "\n" + txid
+          val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txid, address)}")
           val deposit = Deposit(
             date = date
             , id = address
@@ -168,7 +168,7 @@ object Binance extends Exchanger {
         val completed = scLn.next("Status") == "Completed"
 
         if(completed) {
-          val desc = "Withdrawal " + address + "\n" + txid
+          val desc =  RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
           val withdrawal = Withdrawal(
             date = date
             , id = address

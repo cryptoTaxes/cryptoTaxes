@@ -127,9 +127,6 @@ object HTMLDoc {
       </div>
     </div>
   }
-
-  def expandNewlines(text: String): HTML =
-    <div>{text.split("\n").map(scala.xml.Text(_):scala.xml.NodeSeq).reduce(_ ++ <br/> ++ _)}</div>
 }
 
 
@@ -193,6 +190,9 @@ case class HTMLDoc(fileName: String, title: String) {
       | .header2 { width: 65%; display: inline-block; }
       | .header3 { width: 10%; display: inline-block; text-align: right; }
       | .currency { color: blue; }
+      | .addr { color: #0000b0; text-decoration: none; ; font-size: 85%; }
+      | .tx { color: green; text-decoration: none; font-size: 85%; }
+      | .opNumber { color: #0000b0; text-decoration: none; }
       | .exchanger { color: green; }
       | .operationNumber { color: navy; }
       | .boxBody { background-color: White;}
@@ -208,6 +208,7 @@ case class HTMLDoc(fileName: String, title: String) {
       | .darkBlue { color: #0000b0; }
       | .darkRed { color: #b00000; }
       | .darkMagenta { color: #a000a0; }
+      | .noDecor { color: black; text-decoration: none; }
       |
       | table#tableStyle1 { border: 1px solid black; border-collapse: collapse; margin-bottom: 20px; page-break-inside:avoid; }
       | table#tableStyle1 caption { border: 1px solid black; border-bottom: 0px solid black; font-weight: bold; text-align: left; }

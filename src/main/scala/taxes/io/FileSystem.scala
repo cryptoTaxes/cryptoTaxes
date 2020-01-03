@@ -57,23 +57,22 @@ object FileSystem {
       fullPath
   }
 
-  val prices = s"$data/prices"
+  val pricesFolder = s"$data/prices"
 
-  val coinCurrencyCap = s"$prices/coinmarketcap"
-
-  val euroUSDFile = s"$prices/euroUSD/tc_1_1.csv"
-
+  val coinMarketCap = s"$pricesFolder/coinmarketcap"
   val coinMarketCapExtension = ".json"
+
+  val euroUSDFile = s"$pricesFolder/euroUSD/tc_1_1.csv"
 
   def coinMarketCapExtension(year: Int): String = s".$year$coinMarketCapExtension"
 
   def coinMarketCapFolder(currency: Currency) =
-    s"$coinCurrencyCap/$currency"
+    s"$coinMarketCap/$currency"
 
   def coinMarketCapFile(currency: Currency, year: Int) =
     s"${coinMarketCapFolder(currency)}/$currency${coinMarketCapExtension(year)}"
 
-  lazy val userPersistenceFolder = s"$usr/${Config.config.user}/persistence"
+  lazy val userPersistenceFolder = s"$usrFolder/${Config.config.user}/persistence"
 
   lazy val transactionsCacheFile = s"$userPersistenceFolder/transactions.cache.json"
 
@@ -111,15 +110,26 @@ object FileSystem {
     s"${exchangerMarginLedgerFolder(year, exchanger, isBuys)}/$id$stockExtension"
 
 
-  val usr = s"$data/usr"
-  lazy val userInputFolder = s"$usr/${Config.config.user}/input"
-  lazy val userOutputFolder = s"$usr/${Config.config.user}/output"
+  val usrFolder = s"$data/usr"
+  lazy val userInputFolder = s"$usrFolder/${Config.config.user}/input"
+  lazy val userOutputFolder = s"$usrFolder/${Config.config.user}/output"
 
   def userOutputFolder(year: Int): String =
     s"$userOutputFolder/$year"
 
-  val readConfigFolder = s"$data/config"
-  def readConfigFile(fileName: String) = s"$readConfigFolder/$fileName"
+  private def reportName(year: Int, extension: String): String = {
+    val method = taxes.Accounting.toString(Config.config.accountingMethod)
+    s"$method$year.$extension"
+  }
+
+  def report(year: Int, extension: String = "html"): String =
+    s"${FileSystem.userOutputFolder(year)}/${reportName(year, extension)}"
+
+  def linkToReportHTML(year: Int, operationNumber: Int): String =
+    s"../$year/${reportName(year, "html")}#$operationNumber"
+
+  val configFolder = s"$data/config"
+  def inConfigFolder(fileName: String) = s"$configFolder/$fileName"
 
   val addressBookFile = s"$userInputFolder/addressBook.txt"
   val filtersFile = s"$userInputFolder/filters.txt"

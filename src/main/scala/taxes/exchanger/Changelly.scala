@@ -5,6 +5,8 @@ import taxes.date._
 import taxes.io.FileSystem
 import taxes.util.parse._
 
+import scala.collection.mutable.ListBuffer
+
 
 object Changelly extends Exchanger {
 
@@ -22,6 +24,12 @@ object Changelly extends Exchanger {
   override val sources = Seq(
     new UserInputFolderSource[Operation]("changelly", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
+    },
+    new UserInputFolderSource[Operation]("changelly/depositsWithdrawals", ".txt") {
+      def fileSource(fileName: String)= new FileSource[Operation](fileName) {
+        override def read(): Seq[Operation] =
+          readDepositsWithdrawals(fileName)
+      }
     }
   )
 
@@ -53,20 +61,21 @@ object Changelly extends Exchanger {
         val realFee = fromAmount * exchangeRate - toAmount
         val feePercent = realFee * 100 / (fromAmount * exchangeRate)
 
-        val desc = "Order: " + receiverWallet
+        val desc = RichText(s"Order: $receiverWallet")
 
         val fromCurrency = Currency.normalize(soldCurrency)
         val toCurrency = Currency.normalize(receivedCurrency)
 
+        /*
         val deposit = Deposit(
           date = date
           , id = receivedCurrency
           , amount = fromAmount
           , currency = fromCurrency
           , exchanger = Changelly
-          , description = "Deposit "
+          , description = RichText("Deposit")
         )
-
+        */
         val exchange =
           Exchange(
             date = date
@@ -77,19 +86,71 @@ object Changelly extends Exchanger {
             , exchanger = Changelly
             , description = desc
           )
-
+        /*
         val withdrawal = Withdrawal(
           date = date
           , id = receivedCurrency
           , amount = toAmount
           , currency = toCurrency
           , exchanger = Changelly
-          , description = "Withdrawal " + AddressBook.format(receiverWallet)
+          , description = RichText(s"Withdrawal ${RichText.util.address(toCurrency, receiverWallet)}")
         )
-
-        return CSVReader.Ok(List(deposit, exchange, withdrawal))
+        */
+        return CSVReader.Ok(List(exchange))
       } else
         return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: cannot parse this line: $line.")
+    }
+  }
+
+  private def readDepositsWithdrawals(fileName: String): Seq[Operation] = {
+    def parseDate(str: String) =
+      LocalDateTime.parseAsMyZoneId(str, "dd MMM yyyy, HH:mm:ss")
+
+    FileSystem.withSource(fileName) { src =>
+      val lines = src.getLines().filterNot(taxes.util.parse.Parse.isComment)
+      val operations = ListBuffer[Operation]()
+      while(lines.hasNext) {
+        val Array(_,id,_,inHash,_,inAmountLine,_,inDate,_,feeLine,_,_,_,receiver,_,outHash,_,outAmountLine,_,outDate) = lines.take(20).toArray
+
+        val (inAmount, inCurrency) = split(inAmountLine)
+        val (feeAmount, feeCurrency) = split(feeLine)
+        val (outAmount, outCurrency) = split(outAmountLine)
+
+        val deposit = Deposit(
+          parseDate(inDate)
+          , id
+          , inAmount
+          , inCurrency
+          , Changelly
+          , RichText(s"Deposit ${RichText.util.transaction(inCurrency, inHash)}")
+        )
+
+        /*
+        val exchange =
+          Exchange(
+            date = parseDate(inDate).minusSeconds(120)
+            , id = id
+            , fromAmount = inAmount, fromCurrency = inCurrency
+            , toAmount = outAmount, toCurrency = outCurrency
+            , fees = List(FeePair(feeAmount, Currency.normalize(feeCurrency)))
+            , exchanger = Changelly
+            , description = RichText(s"Order: $id")
+          )
+        */
+
+        val withdrawal = Withdrawal(
+          parseDate(outDate)
+          , id
+          , outAmount
+          , outCurrency
+          , Changelly
+          , RichText(s"Withdrawal ${RichText.util.transaction(outCurrency, outHash, receiver)}")
+        )
+        operations += deposit
+        //operations += exchange
+        operations += withdrawal
+      }
+      return operations.toList
     }
   }
 }

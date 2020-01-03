@@ -57,7 +57,7 @@ object Bitfinex extends Exchanger {
 
       val margin = scLn.next("Margin")
 
-      val desc = "Order: " + reference
+      val desc = s"Order: $reference"
 
       if(margin.toLowerCase == "false") { // exchange order
         val exchange =
@@ -71,7 +71,7 @@ object Bitfinex extends Exchanger {
               , toCurrency = quoteCurrency
               , fees = List(FeePair(fee.abs, feeCurrency))
               , exchanger = Bitfinex
-              , description = desc
+              , description = RichText(desc)
             )
           else
             Exchange( // we are buying BTC with $. Fee can be in BTC or in $
@@ -83,7 +83,7 @@ object Bitfinex extends Exchanger {
               , toCurrency = baseCurrency
               , fees = List(FeePair(fee.abs, feeCurrency))
               , exchanger = Bitfinex
-              , description = desc
+              , description = RichText(desc)
             )
         return CSVReader.Ok(exchange)
       } else if(margin.toLowerCase == "true") { // margin order
@@ -100,7 +100,7 @@ object Bitfinex extends Exchanger {
               , orderType = Operation.OrderType.Sell
               , pair = (baseCurrency, quoteCurrency)
               , exchanger = Bitfinex
-              , description = desc + " @ " + price
+              , description = RichText(s"$desc @ $price")
             )
           else
             Margin(
@@ -114,7 +114,7 @@ object Bitfinex extends Exchanger {
               , orderType = Operation.OrderType.Buy
               , pair = (baseCurrency, quoteCurrency)
               , exchanger = Bitfinex
-              , description = desc + " @ " + price
+              , description = RichText(s"$desc @ $price")
             )
 
           return CSVReader.Ok(margin)
@@ -151,7 +151,7 @@ object Bitfinex extends Exchanger {
 
       val status = scLn.next("Status")
 
-      val desc = "Order: " + reference
+      val desc = RichText(s"Order: $reference")
 
       if(amountExecuted != 0) { //status.startsWith("EXECUTED") || status.contains("PARTIALLY FILLED")) {
         if(orderType.contains("EXCHANGE")) {
@@ -236,7 +236,7 @@ object Bitfinex extends Exchanger {
         else
           LocalDateTime.parseAsUTC(scLn.next("Date Created"), "yyyy-MM-dd HH:mm:ss")
 
-      val desc = description
+      val desc = RichText(description)
 
       if(description.startsWith("Settlement") && currency == Currency.usd) {
         // USD settlements are really paid as BTC settlements
@@ -301,7 +301,7 @@ object Bitfinex extends Exchanger {
       val updated = LocalDateTime.parseAsUTC(scLn.next("Updated"), "yyyy-MM-dd HH:mm:ss")
 
       if(completed) {
-        val desc = "Deposit " + address + "\n" + txid
+        val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txid, address)}")
         val deposit = Deposit(
           date = created
           , id = txid
@@ -334,7 +334,7 @@ object Bitfinex extends Exchanger {
       val updated = LocalDateTime.parseAsUTC(scLn.next("Updated"), "yyyy-MM-dd HH:mm:ss")
 
       if(completed) {
-        val desc = "Withdrawal " + AddressBook.format(address) + "\n" + txid
+        val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
         val withdrawal = Withdrawal(
           date = created
           , id = txid

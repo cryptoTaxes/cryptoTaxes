@@ -58,7 +58,7 @@ object LocalBTC extends Exchanger {
           , amount = fiat_amount
           , currency = currency
           , exchanger = LocalBTC
-          , description = "Deposit: " + orderId + "/" + reference
+          , description = RichText(s"Deposit: $orderId / $reference")
         )
 
         val exchange = Exchange(
@@ -68,7 +68,7 @@ object LocalBTC extends Exchanger {
           , toAmount = btc_amount_less_fee, toCurrency = Currency.bitcoin
           , fees = List(FeePair(fee_btc, Currency.bitcoin))
           , exchanger = LocalBTC
-          , description = "Order: " + orderId + "/" + reference
+          , description = RichText(s"Order: $orderId / $reference")
         )
 
         return CSVReader.Ok(List(deposit,exchange))
@@ -94,18 +94,24 @@ object LocalBTC extends Exchanger {
       val txNotes = scLn.nextDouble("TXnotes")
 
       if(txType=="Withdraw") {
-        val desc = "Withdrawal"
-        val withdraw = Withdrawal(
-          date = created
-          , id = ""
-          , amount = util.parse.Parse.asDouble(sentStr)
-          , currency = Currency.bitcoin
-          , exchanger = LocalBTC
-          , description = desc
-        )
-        return CSVReader.Ok(withdraw)
-      } else
-        return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this line is not currently supported: $line.")
+            val desc = try {
+              val address = scLn.next("address")
+              val txHash = scLn.next("txHash")
+              RichText(s"Withdrawal ${RichText.util.transaction(Currency.bitcoin, txHash, address)}")
+            } catch {
+              case _:Exception => RichText("Withdrawal")
+            }
+            val withdraw = Withdrawal(
+              date = created
+              , id = ""
+              , amount = util.parse.Parse.asDouble(sentStr)
+              , currency = Currency.bitcoin
+              , exchanger = LocalBTC
+              , description = desc
+            )
+            return CSVReader.Ok(withdraw)
+          } else
+            return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this line is not currently supported: $line.")
       }
     }
 }

@@ -8,8 +8,8 @@ import spray.json.JsonProtocol._
 
 object Currency {
   private val conversions: Map[Currency, Currency] = {
-    Parse.readKeysValue ( FileSystem.readConfigFile("currencyNormalizations.txt")
-                        , "Reading currencies normalizations."
+    Parse.readKeysValue ( FileSystem.inConfigFolder("currencyNormalizations.txt")
+                        , "Reading currencies normalizations"
                         ).map{
       case (currency1, currency2) => (currency1.toUpperCase(), currency2.toUpperCase())
     }
@@ -25,6 +25,8 @@ object Currency {
 
   val bitcoin: Currency = normalize("BITCOIN")
 
+  val cardano: Currency = normalize("ADA")
+
   val euro: Currency = normalize("EURO")
 
   val usd: Currency = normalize("USD")
@@ -32,6 +34,8 @@ object Currency {
   val usdt: Currency = normalize("USDT")
 
   val ethereum: Currency = normalize("ETH")
+
+  val ethereumClassic: Currency = normalize("ETC")
 
   val nxt: Currency = normalize("NXT")
 
@@ -45,10 +49,11 @@ object Currency {
 
   val ripple: Currency = normalize("XRP")
 
+  val stratis: Currency = normalize("STRAT")
 
   private val priorities: Map[Currency, Int] = {
-    Parse.readKeysValue( FileSystem.readConfigFile(Config.config.parityPrioritiesFile)
-                       , "Reading currencies priorities."
+    Parse.readKeysValue( FileSystem.inConfigFolder(Config.config.parityPrioritiesFile)
+                       , "Reading currencies priorities"
                        ).map{
       case (currency, str) => (normalize(currency), Parse.asInt(str))
     }
@@ -65,6 +70,29 @@ object Currency {
 
     FileSystem.withPrintStream(path) {
       _.println(json.prettyPrint)
+    }
+  }
+
+  private val names: Map[Currency, String] = {
+    Parse.readKeysValue ( FileSystem.inConfigFolder("currencyNames.txt")
+                        , "Reading currency names"
+                        ).map{
+      case (currency, name) => (normalize(currency.toUpperCase()), name)
+    }
+  }
+
+  def nameOf(currency: Currency): Option[String] =
+    names.get(normalize(currency))
+
+  def fullName(currency: Currency): String = {
+    val normalized = normalize(currency)
+    nameOf(normalized) match {
+      case None => normalized
+      case Some(desc) =>
+        if(desc==normalized)
+          normalized
+        else
+          s"${normalize(currency)} - $desc"
     }
   }
 }

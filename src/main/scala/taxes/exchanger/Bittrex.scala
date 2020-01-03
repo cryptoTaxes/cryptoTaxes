@@ -73,7 +73,7 @@ object Bittrex extends Exchanger {
       val dateOpen = LocalDateTime.parseAsUTC(scLn.next("Opened"), fmt)   // Bittrex csv trade history uses UTC time zone
       val dateClose = LocalDateTime.parseAsUTC(scLn.next("Closed"), fmt) // but notice that the GUI uses your local time
 
-      val desc = "Order: " + orderId
+      val desc = RichText(s"Order: $orderId")
 
       // quoteCurrency is one of BTC, USDT or ETH.
       // quantity stands for the amount of baseCurrency coins you're either selling or buying.
@@ -138,7 +138,7 @@ object Bittrex extends Exchanger {
 
       val dateClose = LocalDateTime.parseAsUTC(scLn.next("Close Date"), fmt)
 
-      val desc = "Order: " + orderId
+      val desc = RichText(s"Order: $orderId")
 
       // quoteCurrency is one of BTC, USDT or ETH.
       // quantity - quantityRemaining stands for the amount of baseCurrency
@@ -197,10 +197,10 @@ object Bittrex extends Exchanger {
       val lastUpdatedDate = LocalDateTime.parseAsUTC(scLn.next("LastUpdatedDate"), fmt)
 
       val txid = scLn.next("TxId")
-      val cryptoAddress = scLn.next("CryptoAddress")
+      val address = scLn.next("CryptoAddress")
 
+      val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txid, address)}")
 
-      val desc = "Deposit " + cryptoAddress + "\n" + txid
       val deposit = Deposit(
         date = lastUpdatedDate
         , id = txid
@@ -236,7 +236,8 @@ object Bittrex extends Exchanger {
 
       if(authorized && !cancelled) {
         val txid = scLn.next("TxId")
-        val desc = "Withdrawal " + AddressBook.format(address) + "\n" + txid
+        val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
+
         val withdrawal = Withdrawal(
           date = dateOpen
           , id = txid
@@ -302,11 +303,11 @@ object Bittrex extends Exchanger {
 
             val paidFee = withdrawalFee(currency, date)
             if(status == "Completed" && paidFee > 0) {
-              val desc = id + " Withdrawal fee " + currency + " " + txid
+              val desc = RichText(s"$id Withdrawal fee $currency $txid")
 
               val fee = Fee(
                 date = date
-                , id = desc
+                , id = desc.toString
                 , amount = paidFee
                 , currency = currency
                 , exchanger = Bittrex

@@ -1,0 +1,129 @@
+ADA:address -> https://cardanoexplorer.com/address/*
+ADA:transaction -> https://cardanoexplorer.com/tx/*
+
+ADX:address -> https://etherscan.io/address/*
+ADX:transaction -> https://etherscan.io/tx/*
+
+ANT:address -> https://etherscan.io/address/*
+ANT:transaction -> https://etherscan.io/tx/*
+
+BCH:address -> https://blockchair.com/bitcoin-cash/address/*
+BCH:transaction -> https://blockchair.com/bitcoin-cash/transaction/*
+
+BSV:address -> https://blockchair.com/bitcoin-sv/address/*
+BSV:transaction -> https://blockchair.com/bitcoin-sv/transaction/*
+
+BCY:address -> https://xchain.io/address/*
+BCY:transaction -> https://xchain.io/tx/*
+
+BLK:address -> https://chainz.cryptoid.info/blk/address.dws?*
+BLK:transaction -> https://chainz.cryptoid.info/blk/tx.dws?*
+
+BNT:address -> https://etherscan.io/address/*
+BNT:transaction -> https://etherscan.io/tx/*
+
+BTC:address -> https://blockstream.info/address/*
+BTC:transaction -> https://blockstream.info/tx/*
+
+CANN:address -> https://chainz.cryptoid.info/cann/address.dws?*
+CANN:transaction -> https://chainz.cryptoid.info/cann/tx.dws?*
+
+CRYPT:address -> https://chainz.cryptoid.info/crypt/address.dws?*
+CRYPY:transaction -> https://chainz.cryptoid.info/crypt/tx.dws?*
+
+DASH:address -> https://abe.dash.org/address/*
+DASH:transaction -> https://abe.dash.org/tx/*
+
+DCR:address -> https://dcrdata.decred.org/address/*
+DCR:transaction -> https://dcrdata.decred.org/tx/*
+
+DGB:address -> https://chainz.cryptoid.info/dgb/address.dws?*
+DGB:transaction -> https://chainz.cryptoid.info/dgb/tx.dws?*
+
+DIME:address -> https://chainz.cryptoid.info/dime/address.dws?*
+DIME:transaction -> https://chainz.cryptoid.info/dime/tx.dws?*
+
+DOGE:address -> https://dogechain.info/address/*
+DOGE:transaction -> https://dogechain.info/tx/*
+
+ETH:address -> https://etherscan.io/address/*
+ETH:transaction -> https://etherscan.io/tx/*
+
+ETC:address -> https://gastracker.io/addr/*
+ETC:transaction -> https://gastracker.io/tx/*
+
+FLT:address -> http://explorer.fluttercoin.me:3001/address/*
+FLT:transaction -> http://explorer.fluttercoin.me:3001/tx/*
+
+GLIDE:address -> https://nxtportal.org/accounts/*
+GLIDE:transaction -> https://nxtportal.org/transactions/*
+
+GRS:address -> https://chainz.cryptoid.info/grs/address.dws?*
+GRS:transaction -> https://chainz.cryptoid.info/grs/tx.dws?*
+
+LBC:address -> https://explorer.lbry.com/address/*
+LBC:transaction -> https://explorer.lbry.com/tx/*
+
+LTC:address -> https://live.blockcypher.com/ltc/address/*
+LTC:transaction -> https://live.blockcypher.com/ltc/tx/*
+
+LUN:address -> https://etherscan.io/address/*
+LUN:transaction -> https://etherscan.io/tx/*
+
+MAID:address -> https://www.omniexplorer.info/address/*
+MAID:transaction -> https://www.omniexplorer.info/tx/*
+
+NLG:address -> https://nlg.tokenview.com/en/address/*
+NLG:transaction -> https://nlg.tokenview.com/en/tx/*
+
+NXT:address -> https://nxtportal.org/accounts/*
+NXT:transaction -> https://nxtportal.org/transactions/*
+
+PAY:address -> https://etherscan.io/address/*
+PAY:transaction -> https://etherscan.io/tx/*
+
+PIVX:address -> https://chainz.cryptoid.info/pivx/address.dws?*
+PIVX:transaction -> https://chainz.cryptoid.info/pivx/tx.dws?*
+
+STRAT:address -> https://stratisexplorer.stratisplatform.com/addresses/*
+STRAT:transaction -> https://stratisexplorer.stratisplatform.com/transactions/*
+
+UNO:address -> https://chainz.cryptoid.info/uno/address.dws?*
+UNO:transaction -> https://chainz.cryptoid.info/uno/tx.dws?*
+
+VIA:address -> https://explorer.viacoin.org/address/*
+VIA:transaction -> https://explorer.viacoin.org/tx/*
+
+VRC:address -> https://chainz.cryptoid.info/vrc/address.dws?*
+VRC:transaction -> https://chainz.cryptoid.info/vrc/tx.dws?*
+
+VTC:address -> http://explorer.vertcoin.info/address/*
+VTC:transaction -> http://explorer.vertcoin.info/tx/*
+
+WAVES:address -> https://wavesexplorer.com/address/*
+WAVES:transaction -> https://wavesexplorer.com/tx/*
+
+XEL:address -> https://explorer.xel.org/address/*
+XEL:transaction -> https://explorer.xel.org/transaction/*
+
+XCP:address -> https://xchain.io/address/*
+XCP:transaction -> https://xchain.io/tx/*
+
+XLM:address -> https://stellarchain.io/address/*
+XLM:transaction -> https://stellarchain.io/tx/*
+
+XMY:address -> https://chainz.cryptoid.info/xmy/address.dws?*
+XMY:transaction -> https://chainz.cryptoid.info/xmy/tx.dws?*
+
+XRP:address -> https://xrpcharts.ripple.com/#/graph/*
+XRP:transaction -> https://xrpcharts.ripple.com/#/transactions/*
+
+XTZ:address -> https://tzstats.com/*
+XTZ:transaction -> https://tzstats.com/*
+
+ZEC:address -> https://sochain.com/address/ZEC/*
+ZEC:transaction -> https://sochain.com/tx/ZEC/*
+
+ZET:address -> https://chainz.cryptoid.info/zet/address.dws?*
+ZET:transaction -> https://chainz.cryptoid.info/zet/tx.dws?*
+

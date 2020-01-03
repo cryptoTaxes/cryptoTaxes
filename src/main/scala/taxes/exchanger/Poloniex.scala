@@ -69,11 +69,12 @@ object Poloniex extends Exchanger {
       val baseTotalLessFee = scLn.nextDouble("Base Total Less Fee")
       val quoteTotalLessFee = scLn.nextDouble("Quote Total Less Fee")
 
-      val desc =
+      val desc = RichText(
         if(orderNumber.nonEmpty)
-          "Order: " + orderNumber
+          s"Order: $orderNumber"
         else
           ""
+      )
 
       if(amount==0 && total==0) // Must be a Poloniex error but I got an entry with no amount nor total
         return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
@@ -121,7 +122,7 @@ object Poloniex extends Exchanger {
           // Usually, quoteCurrency is BTC so we can set fee in BTC
           //, fee = amount*feePercent/100*price, feeCurrency = quoteCurrency
           , exchanger = Poloniex
-          , description = desc + " settlement"
+          , description = RichText(s"$desc settlement")
         )
         return CSVReader.Ok(settlement)
       } else if(category == "Margin trade") {
@@ -213,7 +214,7 @@ object Poloniex extends Exchanger {
         , amount = totalFee
         , currency = currency
         , exchanger = Poloniex
-        , description = desc
+        , description = RichText(desc)
       )
       return CSVReader.Ok(fee)
     }
@@ -236,14 +237,13 @@ object Poloniex extends Exchanger {
       val isFinalized = status.startsWith(tokenComplete)
 
       if(isFinalized) {
-        val desc = "Deposit " + address
         val deposit = Deposit(
           date = date
           , id = address
           , amount = amount
           , currency = currency
           , exchanger = Poloniex
-          , description = desc
+          , description = RichText(s"Deposit ${RichText.util.address(currency, address)}")
         )
         return CSVReader.Ok(deposit)
       } else
@@ -261,6 +261,9 @@ object Poloniex extends Exchanger {
       val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Poloniex csv withdrawal history uses UTC time zone
       val currency = Currency.normalize(scLn.next("Currency"))
       val amount = scLn.nextDouble("Amount")
+      val fee = scLn.nextDouble("Fee Deducted")
+      val amountMinusFee = scLn.nextDouble("Amount - Fee")
+
       val address = scLn.next("Address")
       val status = scLn.next("Status")
 
@@ -270,7 +273,7 @@ object Poloniex extends Exchanger {
       if(isFinalized) {
         val txid = status.drop(tokenComplete.length)
 
-        val desc = "Withdrawal " + AddressBook.format(address) + "\n" + txid
+        val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
         val withdrawal = Withdrawal(
           date = date
           , id = txid

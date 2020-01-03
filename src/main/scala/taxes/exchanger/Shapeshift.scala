@@ -40,7 +40,6 @@ object Shapeshift extends Exchanger {
           Logger.warning(s"$id. ${FileSystem.pathFromData(fileName)} Line $lnNumber: '$ln0' should start with $prefix0.")
         else {
           val orderId = ln0.drop(prefix0.length)
-          val desc = "Order: " + orderId
 
           val ln1 = nextLine()
           if(!ln1.startsWith(prefix1))
@@ -72,13 +71,15 @@ object Shapeshift extends Exchanger {
 
               val date = fromTxInfo.localDate
 
+              val desc = RichText(s"Order: ${RichText.url(orderId,s"https://shapeshift.io/txStat/$depositAddress")}")
+
               val deposit = Deposit(
                 date = date
                 , id = fromTxId
                 , amount = fromAmount + fromTxInfo.fee
                 , currency = fromCurrency
                 , exchanger = Shapeshift
-                , description = "Deposit " + AddressBook.format(depositAddress) + "\n" + fromTxId
+                , description = RichText(s"Deposit ${RichText.util.transaction(fromCurrency, fromTxId, depositAddress)}")
               )
 
               val exchange =
@@ -98,7 +99,7 @@ object Shapeshift extends Exchanger {
                 , amount = toAmount
                 , currency = toCurrency
                 , exchanger = Shapeshift
-                , description = "Withdrawal " + AddressBook.format(withdrawalAddress) + "\n" + toTxId
+                , description = RichText(s"Withdrawal ${RichText.util.transaction(toCurrency, toTxId, withdrawalAddress)}")
               )
 
               operations ++= List(deposit, exchange, withdrawal)
