@@ -111,7 +111,7 @@ object Kraken extends Exchanger {
       val (baseCurrency, quoteCurrency) = parsePair(pair) // already normalized
 
       val id = txid + "/" + ordertxid
-      val desc = RichText("Order: " + id)
+      val desc = RichText(s"Order: $id")
 
       val isSell = sellBuy == "sell"
       val isBuy = sellBuy == "buy"
@@ -139,6 +139,7 @@ object Kraken extends Exchanger {
       }
 
       if(isMargin) { // margin trade
+        val leverage = if (margin==0) 1 else (cost / margin).round.toInt
         if(isSell) {
           val margin =
             Margin(
