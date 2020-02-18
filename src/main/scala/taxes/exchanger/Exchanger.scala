@@ -62,6 +62,7 @@ object Exchanger {
       , Kucoin
       , LocalBTC
       , Poloniex
+      , QTrade
       , Shapeshift
       , RippleTrade
       , Yobit
