@@ -6,6 +6,8 @@ import taxes.io.FileSystem
 import taxes.util.Logger
 import taxes.util.parse._
 
+import scala.collection.mutable.ListBuffer
+
 
 object Bittrex extends Exchanger {
   override val id: String = "Bittrex"
@@ -19,10 +21,19 @@ object Bittrex extends Exchanger {
     },
     new UserInputFolderSource[Operation]("bittrex/withdrawals", ".csv") {
       def fileSource(fileName: String) = withdrawalsReader(fileName)
-    } /* ,
-    new UserInputFolderSource[Operation]("bittrex/withdrawals", ".csv") {
-      def fileSource(fileName: String) = withdrawalsReader2(fileName)
-    } */
+    },
+    new UserInputFolderSource[Operation]("bittrex/deposits/txt", ".txt") {
+      def fileSource(fileName: String)= new FileSource[Operation](fileName) {
+        override def read(): Seq[Operation] =
+          readTxtDeposits(fileName)
+      }
+    },
+    new UserInputFolderSource[Operation]("bittrex/withdrawals/txt", ".txt") {
+      def fileSource(fileName: String)= new FileSource[Operation](fileName) {
+        override def read(): Seq[Operation] =
+          readTxtWithdrawals(fileName)
+      }
+    }
   )
 
   // This is for the csv format used by Bittrex from 2014 till 2017
@@ -249,6 +260,88 @@ object Bittrex extends Exchanger {
         return CSVReader.Ok(withdrawal)
       } else
         CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was not completed: $line.")
+    }
+  }
+
+  object TxtUtils {
+    def parseDate(str: String): LocalDateTime =
+      LocalDateTime.parseAsMyZoneId(str, "yyyy/MM/dd HH:mm:ss")
+    def parseAmount(str: String): Double =
+      Parse.asDouble(str.filter(_ != ','))
+    def parseTxid(str: String): String = Parse.removeSuffix(str, "copy") match {
+      case None => str
+      case Some(txid) => txid
+    }
+
+  }
+  private def readTxtDeposits(fileName: String): Seq[Operation] = {
+    FileSystem.withSource(fileName) { src =>
+      val lines = src.getLines().filterNot(taxes.util.parse.Parse.isComment)
+      val operations = ListBuffer[Operation]()
+      while(lines.hasNext) {
+        val Array(_,txidStr,_,address,_,dateStr,_,currencyStr,_,amountStr,_,_) = lines.take(12).toArray
+
+        val txid = TxtUtils.parseTxid(txidStr)
+        val date = TxtUtils.parseDate(dateStr)
+        val currency = Currency.normalize(currencyStr)
+        val amount = TxtUtils.parseAmount(amountStr)
+
+        val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txid, address)}")
+
+        val deposit = Deposit(
+          date = date
+          , id = txid
+          , amount = amount
+          , currency = currency
+          , exchanger = Bittrex
+          , description = desc
+        )
+
+        operations += deposit
+      }
+      return operations.toList
+    }
+  }
+
+  private def readTxtWithdrawals(fileName: String): Seq[Operation] = {
+    FileSystem.withSource(fileName) { src =>
+      val lines = src.getLines().filterNot(taxes.util.parse.Parse.isComment)
+      val operations = ListBuffer[Operation]()
+      while(lines.hasNext) {
+        val Array(_,txidStr,_,address,_,dateStr,_,currencyStr,_,amountStr,_,feeStr,_,status,_,_) = lines.take(16).toArray
+
+        if(status=="Completed") {
+          val txid = TxtUtils.parseTxid(txidStr)
+          val date = TxtUtils.parseDate(dateStr)
+          val currency = Currency.normalize(currencyStr)
+          val amount = TxtUtils.parseAmount(amountStr)
+          val feeAmount = TxtUtils.parseAmount(feeStr)
+
+          val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
+
+          val withdrawal = Withdrawal(
+            date = date
+            , id = txid
+            , amount = amount
+            , currency = currency
+            , exchanger = Bittrex
+            , description = desc
+          )
+
+          val nonTaxableFee = NonTaxableFee(
+            date = date
+            , id = txid
+            , amount = feeAmount
+            , currency = currency
+            , exchanger = Bittrex
+            , description = RichText(s"Bittrex withdrawal non taxable fee $currency $txid")
+          )
+
+          operations += withdrawal
+          operations += nonTaxableFee
+        }
+      }
+      return operations.toList
     }
   }
 
