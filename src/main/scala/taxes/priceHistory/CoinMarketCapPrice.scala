@@ -46,6 +46,23 @@ object CoinMarketCapPrice {
     return contents
   }
 
+  private def downloadHtmlFor(currency: Currency, coinMarketCapId: String) {
+    for(year <- 2013 to LocalDateTime.now.getYear) {
+      val file = io.FileSystem.File(s"data/html/$currency.$year.html")
+      if(!file.exists()) {
+        Thread.sleep(5000) // to avoid Http 429 error
+        scala.util.Try{
+          val url = s"https://coinmarketcap.com/currencies/$coinMarketCapId/historical-data/?start=${year}0101&end=${year}1231"
+          Network.Http.withSource(url) { src =>
+            io.FileSystem.withPrintStream(file) { ps =>
+              ps.print(src.mkString)
+            }
+          }
+        }
+      }
+    }
+  }
+
   private def downloadPricesFor(currency: Currency, coinMarketCapId: String): List[DailyPrice] = {
     Logger.trace(s"Downloading prices for $currency from coinmarketcap.com.")
     val (yearBegin, yearEnd) = Config.config.filterYear match {
@@ -57,7 +74,7 @@ object CoinMarketCapPrice {
     }
 
     val url = s"https://coinmarketcap.com/currencies/$coinMarketCapId/historical-data/?start=${yearBegin}0101&end=${yearEnd}1231"
-    return Network.Http.withSource(url){src =>
+    return Network.Http.withSource(url){ src =>
       scrapPrices(currency, coinMarketCapId, src)
     }
   }

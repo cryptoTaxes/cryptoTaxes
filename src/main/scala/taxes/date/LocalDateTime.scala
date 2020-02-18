@@ -49,6 +49,9 @@ object LocalDateTime {
 
   def parseAsMyZoneId(str: String, format: String): LocalDateTime =
     parse(str+myZoneId, s"${format}VV")
+
+  def now:LocalDateTime =
+    java.time.LocalDateTime.now()
 }
 
 object LocalDateTimeJson extends JsonFormat[LocalDateTime] {
