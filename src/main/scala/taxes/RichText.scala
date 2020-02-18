@@ -15,6 +15,7 @@ object RichText {
   private val tkSep   = "|"
 
   private val tkAddress = "address"
+  private val tkBold = "bold"
   private val tkTransaction = "transaction"
   private val tkURL = "url"
   private val tkNl = "nl"
@@ -25,6 +26,9 @@ object RichText {
 
   def address(currency: Currency, addr: String): Elem =
     s"$tkBegin$tkAddress$tkSep$currency$tkSep$addr$tkEnd"
+
+  def bold(text: String): Elem =
+    s"$tkBegin$tkBold$tkSep$text$tkEnd"
 
   def transaction(currency: Currency, txid: String): Elem =
     s"$tkBegin$tkTransaction$tkSep$currency$tkSep$txid$tkEnd"
@@ -64,6 +68,8 @@ object RichText {
   private def elemToString(richElem: Elem): String = parseElem(richElem) match {
     case List(`tkAddress`, currency, addr) =>
       addr
+    case List(`tkBold`, text) =>
+      text
     case List(`tkTransaction`, currency, txid) =>
       txid
     case List(`tkURL`, text, url) =>
@@ -82,6 +88,8 @@ object RichText {
         case None => <span>{addr}</span>
         case Some(url) => <a href={s"$url"} class='addr'>{addr}</a>
       }
+    case List(`tkBold`, text) =>
+      <b>{text}</b>
     case List(`tkTransaction`, currency, txid) =>
       BlockExplorer.transactionURL(currency, txid) match {
         case None => <span>{txid}</span>
@@ -148,4 +156,10 @@ case class RichText(str: String) extends Iterable[Char] {
 
   override def iterator: Iterator[Char] =
     str.iterator
+
+  def +(that: RichText): RichText =
+    RichText(this.str + that.str)
+
+  def +(that: String): RichText =
+    RichText(this.str + that)
 }

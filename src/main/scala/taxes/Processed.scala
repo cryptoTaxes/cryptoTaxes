@@ -372,7 +372,7 @@ object Processed {
       <span>
         {if(Config.verbosity(Verbosity.showMoreDetails) && description.nonEmpty)
         <div class='desc'>
-          {description}
+          {description.toHTML}
         </div>
         }
         {if(Config.verbosity(Verbosity.showRates))
