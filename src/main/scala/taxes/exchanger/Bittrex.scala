@@ -252,11 +252,31 @@ object Bittrex extends Exchanger {
         val withdrawal = Withdrawal(
           date = dateOpen
           , id = txid
-          , amount = amount + txFee
+          , amount = amount
           , currency = currency
           , exchanger = Bittrex
           , description = desc
         )
+
+        val fee =
+          if(Config.config.fundingFees)
+            Fee(
+              date = dateOpen
+              , id = txid
+              , amount = txFee
+              , currency = currency
+              , exchanger = Bittrex
+              , description = RichText(s"Bittrex withdrawal fee $currency $txid")
+            )
+          else
+            NonTaxableFee(
+              date = dateOpen
+              , id = txid
+              , amount = txFee
+              , currency = currency
+              , exchanger = Bittrex
+              , description = RichText(s"Bittrex withdrawal non taxable fee $currency $txid")
+            )
         return CSVReader.Ok(withdrawal)
       } else
         CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was not completed: $line.")
@@ -328,17 +348,28 @@ object Bittrex extends Exchanger {
             , description = desc
           )
 
-          val nonTaxableFee = NonTaxableFee(
-            date = date
-            , id = txid
-            , amount = feeAmount
-            , currency = currency
-            , exchanger = Bittrex
-            , description = RichText(s"Bittrex withdrawal non taxable fee $currency $txid")
-          )
+          val fee =
+            if(Config.config.fundingFees)
+              Fee(
+                date = date
+                , id = txid
+                , amount = feeAmount
+                , currency = currency
+                , exchanger = Bittrex
+                , description = RichText(s"Bittrex withdrawal fee $currency $txid")
+              )
+            else
+              NonTaxableFee(
+                date = date
+                , id = txid
+                , amount = feeAmount
+                , currency = currency
+                , exchanger = Bittrex
+                , description = RichText(s"Bittrex withdrawal non taxable fee $currency $txid")
+              )
 
           operations += withdrawal
-          operations += nonTaxableFee
+          operations += fee
         }
       }
       return operations.toList

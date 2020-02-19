@@ -316,7 +316,7 @@ object Kraken extends Exchanger {
         )
 
         var results = List[Operation](withdrawal)
-        if((currency == Currency.bitcoin || currency == Currency.euro) && !Config.config.deprecatedUp2017Version) {
+        if((currency == Currency.bitcoin || currency == Currency.euro || Config.config.fundingFees) && !Config.config.deprecatedUp2017Version) {
           val fee = Fee(
             date = date
             , id = id
@@ -359,7 +359,7 @@ object Kraken extends Exchanger {
           , description = desc // RichText(s"Deposit $currency $id")
         )
         var results = List[Operation](deposit)
-        if((currency == Currency.bitcoin || currency == Currency.euro) && !Config.config.deprecatedUp2017Version) {
+        if((currency == Currency.bitcoin || currency == Currency.euro || Config.config.fundingFees) && !Config.config.deprecatedUp2017Version) {
           if(feeAmount > 0) {
             val fee = Fee(
               date = date

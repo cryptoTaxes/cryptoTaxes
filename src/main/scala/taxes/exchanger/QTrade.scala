@@ -87,14 +87,25 @@ object QTrade extends Exchanger {
 
         if(isWithdrawal) {
           val feeAmount = Parse.sepBy(lines.next(), " ").map(Parse.asDouble).sum
-          val nonTaxableFee = NonTaxableFee(
-            date = date.plusNanos(1) // to put it in order after withdrawal
-            , id = hash
-            , amount = feeAmount
-            , currency = currency
-            , exchanger = QTrade
-            , description = RichText(s"QTrade withdrawal non taxable fee $currency $hash")
-          )
+          val fee =
+            if(Config.config.fundingFees)
+              Fee(
+                date = date.plusNanos(1) // to put it in order after withdrawal
+                , id = hash
+                , amount = feeAmount
+                , currency = currency
+                , exchanger = QTrade
+                , description = RichText(s"QTrade withdrawal fee $currency $hash")
+              )
+            else
+              NonTaxableFee(
+                date = date.plusNanos(1) // to put it in order after withdrawal
+                , id = hash
+                , amount = feeAmount
+                , currency = currency
+                , exchanger = QTrade
+                , description = RichText(s"QTrade non taxable withdrawal fee $currency $hash")
+              )
 
           val withdrawal = Withdrawal(
             date = date
@@ -105,7 +116,7 @@ object QTrade extends Exchanger {
             , description = RichText(s"Withdrawal ${RichText.util.transaction(currency, hash, address)}")
           )
           operations += withdrawal
-          operations += nonTaxableFee
+          operations += fee
         } else {
           val deposit = Deposit(
             date = date

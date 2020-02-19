@@ -261,7 +261,7 @@ object Poloniex extends Exchanger {
       val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Poloniex csv withdrawal history uses UTC time zone
       val currency = Currency.normalize(scLn.next("Currency"))
       val amount = scLn.nextDouble("Amount")
-      val fee = scLn.nextDouble("Fee Deducted")
+      val feeDeducted = scLn.nextDouble("Fee Deducted")
       val amountMinusFee = scLn.nextDouble("Amount - Fee")
 
       val address = scLn.next("Address")
@@ -277,12 +277,32 @@ object Poloniex extends Exchanger {
         val withdrawal = Withdrawal(
           date = date
           , id = txid
-          , amount = amount
+          , amount = amountMinusFee
           , currency = currency
           , exchanger = Poloniex
           , description = desc
         )
-        return CSVReader.Ok(withdrawal)
+
+        val fee =
+          if(Config.config.fundingFees)
+            Fee(
+              date = date
+              , id = txid
+              , amount = feeDeducted
+              , currency = currency
+              , exchanger = Bittrex
+              , description = RichText(s"Poloniex withdrawal fee $currency $txid")
+            )
+          else
+            NonTaxableFee(
+              date = date
+              , id = txid
+              , amount = feeDeducted
+              , currency = currency
+              , exchanger = Bittrex
+              , description = RichText(s"Poloniex withdrawal non taxable fee $currency $txid")
+            )
+        return CSVReader.Ok(List(withdrawal,fee))
       } else
         CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was not completed: $line.")
     }

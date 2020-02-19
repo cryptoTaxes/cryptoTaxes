@@ -155,7 +155,10 @@ object ParseCommandLine {
             } else if(flag == "parity-priorities") {
               val fileName = value
               config = config.copy(parityPrioritiesFile = fileName)
-            } else
+            } else if(flag == "funding-fees") {
+              val account = toBool("funding fees flag", value)
+              config = config.copy(fundingFees = account)
+            }else
               failParse
           } else
             failParse

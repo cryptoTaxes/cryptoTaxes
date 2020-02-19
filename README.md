@@ -61,6 +61,8 @@ The following command line parameters can be written after the command:
 
 * `-parity-priorities=file` file (in `data/config` folder) defining priorities for choosing proxies in order to calculate prices in your base coin.
 
+* `-funding-fees=yes` to account for deposits and withdrawal fees on exchangers.
+
 After running the program, output reports will be produced in folder `data/usr/yourUser/output`.
 
 ## Configuration

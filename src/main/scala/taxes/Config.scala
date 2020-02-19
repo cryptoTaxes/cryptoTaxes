@@ -56,23 +56,24 @@ object Config {
   implicit val priceCalculationJson = jsonEnumFormat(PriceCalculation)
   implicit val accountingJson = jsonEnumFormat(Accounting)
 
-  implicit val configJson = jsonFormat12(Config.apply)
+  implicit val configJson = jsonFormat13(Config.apply)
 }
 
 
-case class Config( user: String
-                 , verbosityLevel: Verbosity.Level
-                 , baseCurrency: BaseCurrency
-                 , downloadPrices: Boolean
-                 , priceCalculation: PriceCalculation.Method
-                 , accountingMethod: Accounting.Method
-                 , decimalPlaces: Int
-                 , epsilon: Double
-                 , timeZone: ZoneId
-                 , filterYear: Option[Int]
-                 , parityPrioritiesFile: String // in readConfigFolder
-                 // internal flags, not for users
-                 , deprecatedUp2017Version: Boolean
+case class Config(user: String
+                  , verbosityLevel: Verbosity.Level
+                  , baseCurrency: BaseCurrency
+                  , downloadPrices: Boolean
+                  , priceCalculation: PriceCalculation.Method
+                  , accountingMethod: Accounting.Method
+                  , decimalPlaces: Int
+                  , epsilon: Double
+                  , timeZone: ZoneId
+                  , filterYear: Option[Int]
+                  , parityPrioritiesFile: String // in readConfigFolder
+                  , fundingFees: Boolean
+                  // internal flags, not for users
+                  , deprecatedUp2017Version: Boolean
                  ) {
 
   def saveToFile(path: String): Unit = {
@@ -94,6 +95,7 @@ object DefaultConfig extends Config( user = "demo"
                                    , timeZone = ZoneId.systemDefault()
                                    , filterYear = None
                                    , parityPrioritiesFile = "parityPriorities.txt"
+                                   , fundingFees = false
                                    , deprecatedUp2017Version = false
                                    )
 
