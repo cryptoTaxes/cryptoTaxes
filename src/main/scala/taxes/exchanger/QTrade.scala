@@ -78,7 +78,7 @@ object QTrade extends Exchanger {
       val lines = src.getLines().filterNot(taxes.util.parse.Parse.isComment)
       val operations = ListBuffer[Operation]()
       while(lines.hasNext) {
-        val array@Array(dateLine,whatLine,amountLine,currencyLine,address,hash) = lines.take(6).toArray
+        val array@Array(dateLine,whatLine,amountLine,currencyLine,address,hash) = lines.take(6).map(Parse.trimSpaces).toArray
 
         val date = LocalDateTime.parseAsMyZoneId(dateLine, "yyyy/MM/dd HH:mm")
         val isWithdrawal = whatLine == "WITHDRAW"
@@ -124,7 +124,7 @@ object QTrade extends Exchanger {
             , amount = amount
             , currency = currency
             , exchanger = QTrade
-            , description = RichText(s"Deposit ${RichText.util.transaction(currency, hash)}")
+            , description = RichText(s"Deposit ${RichText.util.transaction(currency, hash, address)}")
           )
           operations += deposit
         }

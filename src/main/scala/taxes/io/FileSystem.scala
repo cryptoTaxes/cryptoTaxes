@@ -59,18 +59,31 @@ object FileSystem {
 
   val pricesFolder = s"$data/prices"
 
+  val euroUSDFile = s"$pricesFolder/euroUSD/tc_1_1.csv"
+
   val coinMarketCap = s"$pricesFolder/coinmarketcap"
   val coinMarketCapExtension = ".json"
 
-  val euroUSDFile = s"$pricesFolder/euroUSD/tc_1_1.csv"
-
-  def coinMarketCapExtension(year: Int): String = s".$year$coinMarketCapExtension"
+  def coinMarketCapExtension(year: Int): String = s".USD.$year$coinMarketCapExtension"
 
   def coinMarketCapFolder(currency: Currency) =
     s"$coinMarketCap/$currency"
 
   def coinMarketCapFile(currency: Currency, year: Int) =
     s"${coinMarketCapFolder(currency)}/$currency${coinMarketCapExtension(year)}"
+
+
+  val coinGecko = s"$pricesFolder/coingecko"
+  val coinGeckoExtension = ".json"
+
+  def coinGeckoExtension(year: Int): String = s".USD.$year$coinGeckoExtension"
+
+  def coinGeckoFolder(currency: Currency) =
+    s"$coinGecko/$currency"
+
+  def coinGeckoFile(currency: Currency, year: Int) =
+    s"${coinGeckoFolder(currency)}/$currency${coinGeckoExtension(year)}"
+
 
   lazy val userPersistenceFolder = s"$usrFolder/${Config.config.user}/persistence"
 
@@ -131,7 +144,7 @@ object FileSystem {
   val configFolder = s"$data/config"
   def inConfigFolder(fileName: String) = s"$configFolder/$fileName"
 
-  val addressBookFile = s"$userInputFolder/addressBook.txt"
+  val addressBookFolder = s"$userInputFolder/addressBook"
   val filtersFile = s"$userInputFolder/filters.txt"
 
   def backup(file: File): Unit = {

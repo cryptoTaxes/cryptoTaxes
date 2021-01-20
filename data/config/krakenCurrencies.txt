@@ -7,6 +7,8 @@ ADA       -> ADA
 BCH       -> BCH
 DASH      -> DASH
 EUR, ZEUR -> EURO
+LINK      -> LINK
+NANO      -> NANO
 XBT, XXBT -> BTC
 XETC      -> ETC
 XETH      -> ETH

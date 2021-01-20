@@ -1,7 +1,7 @@
 package taxes
 
 import taxes.exchanger.Exchanger
-import taxes.priceHistory.{CoinMarketCapPrice, EuroUSDParity}
+import taxes.priceHistory.{CoinGeckoPriceProvider, CoinMarketCapPriceProvider, CryptoPriceProvider, EuroUSDParity}
 import taxes.util.Logger
 import taxes.util.parse.Parse
 
@@ -13,13 +13,15 @@ object Main extends App {
   val cmdLine = args.mkString(" ")
   Config.config = ParseCommandLine(cmdLine)
 
-  val version = "1.0.10"
+  val version = "1.0.12"
 
   Logger.trace(s"cryptoTaxes (ver $version) (https://github.com/cryptoTaxes/cryptoTaxes)\n")
   Logger.trace(s"Starting execution at ${java.time.LocalDateTime.now()}.")
 
+  Logger.trace(s"Using $CryptoPriceProvider as price provider.")
+
   if(Config.config.downloadPrices) {
-    CoinMarketCapPrice.downloadPrices()
+    CryptoPriceProvider.downloadPrices()
     EuroUSDParity.downloadPrices()
   }
 
@@ -99,6 +101,13 @@ object ParseCommandLine {
             } else if(flag == "download-prices") {
               val download = toBool("download prices flag", value)
               config = config.copy(downloadPrices = download)
+            } else if(flag == "price-provider") {
+              val source = value.toLowerCase match {
+                case "coinmarketcap" => PriceProvider.CoinMarketCap
+                case "coingecko"     => PriceProvider.CoinGecko
+                case _               => Logger.fatal(s"Unknown price provider source: $value")
+              }
+              config = config.copy(priceProvider = source)
             } else if(flag == "price-calculation") {
               val method = value match {
                 case "open"      => PriceCalculation.open

@@ -49,6 +49,7 @@ object Exchanger {
   val allExchangers: List[Exchanger] =
     List[Exchanger](
         Binance
+      , BitcoinCom
       , Bitfinex
       , Bittrex
       , CCEX

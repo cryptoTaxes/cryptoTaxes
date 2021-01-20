@@ -45,6 +45,12 @@ object Accounting extends Enumeration {
     }
 }
 
+object PriceProvider extends Enumeration {
+  type Source = Int
+
+  val CoinMarketCap: Source = 0
+  val CoinGecko: Source = 1
+}
 
 object Config {
   var config: Config = DefaultConfig
@@ -55,8 +61,10 @@ object Config {
   implicit val verbosityJson = jsonEnumFormat(Verbosity)
   implicit val priceCalculationJson = jsonEnumFormat(PriceCalculation)
   implicit val accountingJson = jsonEnumFormat(Accounting)
+  implicit val priceProviderJson = jsonEnumFormat(PriceProvider)
 
-  implicit val configJson = jsonFormat13(Config.apply)
+
+  implicit val configJson = jsonFormat14(Config.apply)
 }
 
 
@@ -64,6 +72,7 @@ case class Config(user: String
                   , verbosityLevel: Verbosity.Level
                   , baseCurrency: BaseCurrency
                   , downloadPrices: Boolean
+                  , priceProvider: PriceProvider.Source
                   , priceCalculation: PriceCalculation.Method
                   , accountingMethod: Accounting.Method
                   , decimalPlaces: Int
@@ -81,6 +90,24 @@ case class Config(user: String
       _.println(this.toJson.prettyPrint)
     }
   }
+
+  def yearRange(): (Int, Int) = {
+    val (yearBegin, yearEnd) = filterYear match {
+      case None =>
+        import java.util.Calendar
+        val thisYear = Calendar.getInstance.get(Calendar.YEAR)
+        (2010, thisYear)
+      case Some(year) => (year, year)
+    }
+    (yearBegin, yearEnd)
+  }
+
+  def relevantYear(year: Int):Boolean = filterYear match {
+    case None =>
+      true
+    case Some(y) =>
+      year == y
+  }
 }
 
 
@@ -88,6 +115,7 @@ object DefaultConfig extends Config( user = "demo"
                                    , verbosityLevel = Verbosity.none
                                    , baseCurrency = EuroBaseCurrency
                                    , downloadPrices = false
+                                   , priceProvider = PriceProvider.CoinMarketCap
                                    , priceCalculation = PriceCalculation.open
                                    , accountingMethod = Accounting.FIFO
                                    , decimalPlaces = 2

@@ -52,10 +52,11 @@ object Bittrex extends Exchanger {
 
     private val header2014_2017 = "OrderUuid,Exchange,Type,Quantity,Limit,CommissionPaid,Price,Opened,Closed"
     private val header2018 = "Uuid,Exchange,TimeStamp,OrderType,Limit,Quantity,QuantityRemaining,Commission,Price,PricePerUnit,IsConditional,Condition,ConditionTarget,ImmediateOrCancel,Closed"
+    private val header2020 = "Uuid,Exchange,TimeStamp,OrderType,Limit,Quantity,QuantityRemaining,Commission,Price,PricePerUnit,IsConditional,Condition,ConditionTarget,ImmediateOrCancel,Closed,TimeInForceTypeId,TimeInForce"
 
     // these must be lazy as we don't want to check them until lines have been already skipped
     private lazy val is2014_2017Format = skippedLines(0) == header2014_2017
-    private lazy val is2018Format = skippedLines(0) == header2018
+    private lazy val is2018Format = skippedLines(0) == header2018 || skippedLines(0) == header2020
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] =
       if(is2014_2017Format)
@@ -299,7 +300,7 @@ object Bittrex extends Exchanger {
       val lines = src.getLines().filterNot(taxes.util.parse.Parse.isComment)
       val operations = ListBuffer[Operation]()
       while(lines.hasNext) {
-        val Array(_,txidStr,_,address,_,dateStr,_,currencyStr,_,amountStr,_,_) = lines.take(12).toArray
+        val Array(_,txidStr,_,address,_,dateStr,_,currencyStr,_,amountStr,_,_) = lines.take(12).map(Parse.trimSpaces).toArray
 
         val txid = TxtUtils.parseTxid(txidStr)
         val date = TxtUtils.parseDate(dateStr)

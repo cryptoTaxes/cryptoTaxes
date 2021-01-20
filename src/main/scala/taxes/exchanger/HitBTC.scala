@@ -25,7 +25,10 @@ object HitBTC extends Exchanger {
       QuotedScanner(line, '\"', ',')
 
     // HitBTC shows time offset used for dates in csv header line. We take it from there
-    private lazy val offset = skippedLines(0).dropWhile(_ != '(').tail.takeWhile(_ != ')')
+    private lazy val offset = {
+      val str = skippedLines(0).dropWhile(_ != '(').tail.takeWhile(_ != ')')
+      if(str=="UTC") "+00" else str
+    }
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = LocalDateTime.parse(scLn.next("Date")+offset, "yyyy-MM-dd [H][HH]:mm:ssX")
@@ -72,7 +75,10 @@ object HitBTC extends Exchanger {
       QuotedScanner(line, '\"', ',')
 
     // HitBTC shows time offset used for dates in csv header line. We take it from there
-    private lazy val offset = skippedLines(0).dropWhile(_ != '(').tail.takeWhile(_ != ')')
+    private lazy val offset = {
+      val str = skippedLines(0).dropWhile(_ != '(').tail.takeWhile(_ != ')')
+      if(str=="UTC") "+00" else str
+    }
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = LocalDateTime.parse(scLn.next("Date")+offset, "yyyy-MM-dd [H][HH]:mm:ssX")

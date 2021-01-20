@@ -271,6 +271,7 @@ object Kraken extends Exchanger {
 
   private def ledgerReader(fileName: String) = new CSVReader[Operation](fileName) {
     override val linesToSkip = 1
+    lazy val header = skippedLines(0)
 
     override def lineScanner(line: String): Scanner =
       QuotedScanner(line, '\"', ',')
@@ -280,6 +281,11 @@ object Kraken extends Exchanger {
       val refid = scLn.next("Reference ID")
       val time = scLn.next("Time")
       val txType = scLn.next("Transaction Type")
+      val txSubtype =
+        if(header.contains("subtype"))
+          scLn.next("Transaction Subtype")
+        else
+          ""
       val aclass = scLn.next("Class")
       val asset = scLn.next("Asset")
       val amount = scLn.nextDouble("Amount")

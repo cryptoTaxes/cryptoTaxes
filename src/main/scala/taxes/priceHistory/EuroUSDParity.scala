@@ -49,7 +49,7 @@ object EuroUSDParity {
 
           val day = strDate.take(2)
           val month = parseMonth(strDate.slice(3, 6))
-          val year = strDate.slice(6, 10)
+          val year = strDate.slice(7, 11)
           val date = LocalDate.apply(year.toInt, month, day.toInt)
 
           try {
