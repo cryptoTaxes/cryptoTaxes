@@ -325,10 +325,10 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
     </table>
   }
 
-  def printToCSVFile(csvFileName: String, year: Int): Unit = {
+  def printToCSVFile(csvFileName: String, year: Int, title: String): Unit = {
     FileSystem.withPrintStream(csvFileName) { ps =>
       ps.println()
-      ps.println(s"$year Final Portfolio")
+      ps.println(title)
       ps.println("")
 
       val sep = ";"

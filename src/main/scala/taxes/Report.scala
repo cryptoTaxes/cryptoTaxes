@@ -138,12 +138,13 @@ object Report {
 
     def reportPortfolio(year: Int, beginOfYear: Boolean = false): Unit = {
       val when = if(beginOfYear) "Beginning" else "End"
+      val title = s"$year $when of year portfolio"
 
       val csvFileName = FileSystem.userOutputFolder(year)+s"/Portfolio.$when.$year.csv"
-      state.allStocks.printToCSVFile(csvFileName, year)
+      state.allStocks.printToCSVFile(csvFileName, year, title)
 
       val htmlPortfolioFile = s"${FileSystem.userOutputFolder(year)}/Portfolio.$when.$year.html"
-      val htmlPortfolioTitle = s"$year $when of year portfolio"
+      val htmlPortfolioTitle = title
       val htmlPortfolio = HTMLDoc(htmlPortfolioFile, htmlPortfolioTitle)
 
       htmlPortfolio += state.allStocks.toHTML(htmlPortfolioTitle)
