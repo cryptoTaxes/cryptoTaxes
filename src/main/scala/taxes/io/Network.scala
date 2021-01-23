@@ -23,6 +23,10 @@ object Network {
     }
 
     def withSource[A](url: String, requestMethod: String = "GET", charset: Charset = StandardCharsets.UTF_8, requestProperties: Map[String,String] = Map(), output: Output = Output.None)(p: scala.io.Source => A): A = {
+      withSourceAndConnection(url, requestMethod, charset, requestProperties, output){(src,conn) => p(src)}
+    }
+
+    def withSourceAndConnection[A](url: String, requestMethod: String = "GET", charset: Charset = StandardCharsets.UTF_8, requestProperties: Map[String,String] = Map(), output: Output = Output.None)(p: (scala.io.Source, HttpURLConnection) => A): A = {
       var conn: HttpURLConnection = null
       var src: scala.io.Source = null
 
@@ -36,7 +40,6 @@ object Network {
 
         conn.setRequestMethod(requestMethod)
         conn.setDoInput(true)
-
         output match {
           case Output.None =>
             conn.connect()
@@ -67,7 +70,7 @@ object Network {
 
         val is = conn.getInputStream
         src = scala.io.Source.fromInputStream(is, charset.name)
-        val x = p(src)
+        val x = p(src, conn)
         return x
       } finally {
         // toDo if src escapes p procedure scope, we will close connection before reading from it

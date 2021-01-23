@@ -79,6 +79,23 @@ object Parse {
     else
       None
 
+  def unquote(str: String, delimiter: String): Option[String] =
+    for {
+      str1 <- removePrefix(str, delimiter)
+    ; str2 <- {
+        val idx = str1.indexOf(delimiter)
+        if(idx < 0) None else Some(str1.take(idx))
+      }
+    } yield (str2)
+
+  def skipUntil(str: String, prefix: String): Option[String] = {
+    val idx = str.indexOf(prefix)
+    if(idx < 0)
+      None
+    else
+      Parse.removePrefix(str.drop(idx), prefix)
+  }
+
   private val arrowToken = "->"
   private val commaToken = ","
 

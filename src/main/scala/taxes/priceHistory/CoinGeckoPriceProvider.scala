@@ -17,17 +17,13 @@ object CoinGeckoPriceProvider extends CryptoPriceProvider {
   case class DailyPrice(date: LocalDate, open: Double)
   implicit val dailyPriceJson = jsonFormat2(DailyPrice)
 
-  // private val currenciesToIndexes = Map("BTC" -> 1, "ETH" -> 279, "ZEC" -> 486, "USDT" -> 325)
-
-  private lazy val allPairs = Parse.readKeyValues(
+  private lazy val allPairs = Parse.readKeysValue(
     FileSystem.inConfigFolder("coingeckoCurrencies.txt")
     , "Reading coingecko currencies").map{
-    case (currency, iterable) =>
-      iterable.toSeq match {
-        case Seq(url, idx) =>
-          (Currency.normalize(currency), (url, Parse.asInt(idx)))
-      }
-  }
+      case (currency, coinGeckoId) =>
+          (Currency.normalize(currency), coinGeckoId)
+    }
+
 
   private def scrapPrices(currency: taxes.Currency, source: Source): List[DailyPrice] = {
     val lines = source.getLines().drop(1) // skip header
@@ -48,12 +44,46 @@ object CoinGeckoPriceProvider extends CryptoPriceProvider {
     return dailyPrices.toList
   }
 
-  private def downloadPricesFor(currency: Currency, coinGeckoIdx: Int): List[DailyPrice] = {
+  private def downloadPricesForOLD(currency: Currency, coinGeckoIdx: Int): List[DailyPrice] = {
     Logger.trace(s"Downloading prices for $currency from coingecko.com.")
     val (yearBegin, yearEnd) = Config.config.yearRange()
 
     val url = s"https://www.coingecko.com/price_charts/export/$coinGeckoIdx/usd.csv"
     return Network.Http.withSource(url){ src =>
+      scrapPrices(currency, src)
+    }
+  }
+
+  private def downloadPricesFor(currency: Currency, coinGeckoId: String): List[DailyPrice] = {
+    Logger.trace(s"Downloading prices for $currency from coingecko.com.")
+    val (yearBegin, yearEnd) = Config.config.yearRange()
+
+    val suffix = "/usd.csv"
+    val historicalDataUrl = s"https://www.coingecko.com/coins/$coinGeckoId/historical_data/usd"
+
+    val usdCsvUrl = Network.Http.withSource(historicalDataUrl) { src =>
+      val matchingLines = src.getLines().filter(_.contains(suffix))
+      if(matchingLines.isEmpty)
+        Logger.fatal(s"CoinGeckoProvider.downloadPricesFor $currency $coinGeckoId. Cannot find csv file.")
+      else {
+        val line = matchingLines.next()
+
+        val tkBefore = "href="
+        val delimiter = "\""
+        val Some(str) = Parse.skipUntil(line, tkBefore)
+        val Some(fullSuffix) = Parse.unquote(str, delimiter)
+        s"https://www.coingecko.com$fullSuffix"
+      }
+    }
+    return Network.Http.withSourceAndConnection(usdCsvUrl){ (src, conn) =>
+      val fieldValue = conn.getHeaderField("Content-Disposition")
+      val Some(str) = Parse.skipUntil(fieldValue, "filename=")
+      val Some(fileName) = Parse.unquote(str, "\"")
+      Logger.trace(s"Downloading file $fileName.")
+      val fileCurrency = fileName.takeWhile(_ != '-')
+      if(Currency.normalize(fileCurrency) != currency)
+        Logger.warning(s"CoinGeckoPriceProvider.downloadPricesFor: looks like downloaded price file ($fileName) doesn't match $currency")
+
       scrapPrices(currency, src)
     }
   }
@@ -99,9 +129,9 @@ object CoinGeckoPriceProvider extends CryptoPriceProvider {
     return map
   }
   def downloadPrices(): Unit = {
-    for((currency, (coinGeckoId, coinGeckoIdx)) <- allPairs) {
+    for((currency, coinGeckoId) <- allPairs) {
       Thread.sleep(500) // to avoid Http 429 error
-      val dailyPrices = downloadPricesFor(currency, coinGeckoIdx)
+      val dailyPrices = downloadPricesFor(currency, coinGeckoId)
       saveToDisk(currency, dailyPrices)
     }
   }
@@ -119,7 +149,7 @@ object CoinGeckoPriceProvider extends CryptoPriceProvider {
   }
 
   private lazy val currencies2CoinGeckoPrices = {
-    for((currency, (coinGeckoId, coinGeckoIdx)) <- allPairs)
+    for((currency, coinGeckoId) <- allPairs)
       yield (currency, CoinGeckoPrice(currency))
   }
 
