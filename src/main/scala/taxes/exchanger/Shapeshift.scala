@@ -71,7 +71,8 @@ object Shapeshift extends Exchanger {
 
               val date = fromTxInfo.localDate
 
-              val desc = RichText(s"Order: ${RichText.url(orderId,s"https://shapeshift.io/txStat/$depositAddress")}")
+              // val desc = RichText(s"Order: ${RichText.url(orderId,s"https://shapeshift.io/txStat/$depositAddress")}")
+              val desc = RichText(s"Order: ${RichText.url(orderId,s"https://shapeshift.io/orderInfo/$orderId")}")
 
               val deposit = Deposit(
                 date = date
