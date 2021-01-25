@@ -39,9 +39,11 @@ object RichText {
   def nl: Elem =
     s"$tkBegin$tkNl$tkEnd"
 
-  def report(year: Int, operationNumber: Int): Elem =
-    s"$tkBegin$tkReport$tkSep$year$tkSep$operationNumber$tkEnd"
-
+  def report(year: Int, operationNumber: Int, showYear: Boolean=false): Elem =
+    if(showYear)
+      s"$tkBegin$tkReport$tkSep$year$tkSep$operationNumber$tkSep$showYear$tkEnd"
+    else
+      s"$tkBegin$tkReport$tkSep$year$tkSep$operationNumber$tkEnd"
 
   private def parseElem(richElem: Elem): List[String] = {
     Parse.removePrefix(richElem, tkBegin) match {
@@ -78,6 +80,8 @@ object RichText {
       "\n"
     case List(`tkReport`, year, operationNumber) =>
       operationNumber.toString
+    case List(`tkReport`, year, operationNumber, showYear) =>
+      if(showYear=="true") operationNumber.toString+s"($year)" else operationNumber.toString
     case _ =>
       richElem
   }
@@ -103,6 +107,12 @@ object RichText {
       val year = Parse.asInt(_year)
       val operationNumber = Parse.asInt(_operationNumber)
       <a href={s"${FileSystem.linkToReportHTML(year, operationNumber)}"} class='opNumber'>{operationNumber}</a>
+    case List(`tkReport`, _year, _operationNumber, showYear) =>
+      val year = Parse.asInt(_year)
+      val operationNumber = Parse.asInt(_operationNumber)
+      <a href={s"${FileSystem.linkToReportHTML(year, operationNumber)}"} class='opNumber'>
+        {if(showYear=="true") s"$operationNumber ($year)" else operationNumber}
+      </a>
     case _ =>
       <span>{richElem}</span>
   }

@@ -11,7 +11,6 @@ object Stock {
   implicit val stockJson = jsonFormat7(Stock.apply)
 }
 
-
 // basis is expressed in base unit. exchanger is where it was bought
 case class Stock(var amount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeCurrency: Currency, operationNumber: Int) {
   override def toString: String =
@@ -95,6 +94,9 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
 
   def copy: StockContainer
 
+  lazy val disposals: DisposedStocksQueue =
+    new DisposedStocksQueue(currency, baseCurrency)
+
   val eps: Double =
     if(Config.config.deprecatedUp2017Version) {
       // this is really a bug, fixed below for non-deprecated version
@@ -130,15 +132,20 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
         basis += toRemove * stock.costBasis
         stock.amount -= toRemove
         usedStocks.insert(stock.copy(amount = toRemove))
-        toRemove = 0
-        if(stock.amount < eps)
+        var remaining = stock.amount
+        if(stock.amount < eps) {
           this.removeFirst()
+          remaining = 0
+        }
+        disposals.insert(DisposedStock(date, toRemove, exchanger, description, stock.date, remaining, stock.exchanger, stock.costBasis, stock.operationNumber))
+        toRemove = 0
         done = true
       } else {
         basis += stock.amount * stock.costBasis
         toRemove -= stock.amount
         this.removeFirst()
         usedStocks.insert(stock.copy())
+        disposals.insert(DisposedStock(date, stock.amount, exchanger, description, stock.date, 0, stock.exchanger, stock.costBasis, stock.operationNumber))
       }
     }
     val removed = amount - toRemove
@@ -201,10 +208,24 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
     FileSystem.withPrintStream(path) { ps =>
       ps.println(this.toJson.prettyPrint)
     }
+
     val (folder, name, ext) = FileSystem.decompose(path)
+
+    // this looks useless as ledgers are already included
+    // in StockContainer's json and looks like we later only
+    // read from there
+    /*
     val path2 = FileSystem.compose(Seq(folder,"ledger"), name, ext)
     FileSystem.withPrintStream(path2) { ps =>
       ps.println(this.ledger.toJson.prettyPrint)
+    }
+    */
+
+    if(disposals.nonEmpty) {
+      val disposedPath = FileSystem.compose(Seq(folder,"disposed"), name, ext)
+      FileSystem.withPrintStream(disposedPath) { ps =>
+        ps.println(this.disposals.toJson.prettyPrint)
+      }
     }
   }
 }
@@ -282,13 +303,6 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
   def toHTML(caption: String = ""): HTML = {
     var totalCost = 0.0
     <table id='tableStyle1'>
-      <tr>
-        <th>Currency</th>
-        <th>Units</th>
-        <th>Total cost</th>
-        <th>Average cost</th>
-        <th>Stock</th>
-      </tr>
       {if(caption.nonEmpty)
         <caption>{caption}</caption>
       }
@@ -301,8 +315,18 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
         }
         totalCost += cost
         if(totalCost > 0) {
+          <tr class='caption'>
+            <td colspan='4'>
+            <span id={stockContainer.currency}>{Currency.fullName(stockContainer.currency)}</span>
+            </td>
+          </tr>
           <tr>
-            <td ><span class='currency' id={stockContainer.currency}>{stockContainer.currency}</span></td>
+            <th>Units</th>
+            <th>Total cost</th>
+            <th>Average cost</th>
+            <th>Stock</th>
+          </tr>
+          <tr>
             <td>{HTMLDoc.asCurrency(amount, stockContainer.currency, decimals = 4.max(Config.config.decimalPlaces))}</td>
             <td>{HTMLDoc.asCurrency(cost, stockContainer.baseCurrency)}</td>
             <td class='noLineBreak'>{HTMLDoc.asCurrency(cost / amount, stockContainer.baseCurrency)} / <span class='currency'>{stockContainer.currency}</span></td>
@@ -314,12 +338,11 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
     {val baseCurrencies = this.map(_.baseCurrency)
      val sameBaseCurrencies = baseCurrencies.nonEmpty && baseCurrencies.tail.forall(_ == baseCurrencies.head)
      if(sameBaseCurrencies)
-        <tr>
-          <th>Total:</th>
-          <th></th>
-          <th>{HTMLDoc.asCurrency(totalCost, baseCurrencies.head)}</th>
-          <th></th>
-          <th></th>
+        <tr class='caption'>
+          <td>Total:</td>
+          <td>{HTMLDoc.asCurrency(totalCost, baseCurrencies.head)}</td>
+          <td></td>
+          <td></td>
         </tr>
     }
     </table>
@@ -336,8 +359,8 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
 
       toList.filter(_.nonEmpty).sortBy(_.currency).foreach { stockContainer =>
         val baseCurrency = stockContainer.baseCurrency
-        val header = List("date", "exchanger", "amount", s"cost basis ($baseCurrency)", s"subtotal ($baseCurrency)", "total amount", s"total cost ($baseCurrency)", s"average cost ($baseCurrency)")
-        ps.println(stockContainer.currency)
+        val header = List("Date", "Exchanger", "Amount", s"Cost Basis ($baseCurrency)", s"Subtotal ($baseCurrency)", "Total Amount", s"Total Cost ($baseCurrency)", s"Average Cost ($baseCurrency)")
+        ps.println(Currency.fullName(stockContainer.currency))
         ps.println(header.mkString(sep))
 
         var amount = 0.0

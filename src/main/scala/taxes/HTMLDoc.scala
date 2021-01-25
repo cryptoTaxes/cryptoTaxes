@@ -179,6 +179,7 @@ case class HTMLDoc(fileName: String, title: String) {
     """
       |  body {font-family: 'Open Sans', sans-serif; -webkit-print-color-adjust: exact; }
       | .back1, .boxHeader, table#tableStyle1 caption, table#tableStyle1 tr:last-child {  background-color: #e0e0e0; }
+      | .barL { border-left: 1px solid blue; }
       | .boxPadding, .boxBody, .boxHeader, table#tableStyle1 caption, table#tableStyle1 td, th { padding-top: 0.2em; padding-bottom: 0.2em; padding-left: 0.2em; padding-right: 0.2em; }
       |
       | .header { font-size: 130%; margin-bottom: 20px; font-weight: bold; }
@@ -212,12 +213,14 @@ case class HTMLDoc(fileName: String, title: String) {
       |
       | table#tableStyle1 { border: 1px solid black; border-collapse: collapse; margin-bottom: 20px; page-break-inside:avoid; }
       | table#tableStyle1 caption { border: 1px solid black; border-bottom: 0px solid black; font-weight: bold; text-align: left; }
+      | table#tableStyle1 tr.caption { border: 1px solid black; border-bottom: 0px solid black; font-weight: bold; text-align: left; }
       | table#tableStyle1 tr:nth-child(odd) { background-color: #f0f0f0;  }
       | table#tableStyle1 tr:hover { background-color: #c5c5c5; }
       | table#tableStyle1 td, th { text-align: right; vertical-align: top; }
       | table#tableStyle1 td:first-child, th:first-child { text-align: left; }
       | table#tableStyle1 td.alignL, th.alignL { text-align: left; }
       | table#tableStyle1 td.alignR, th.alignR { text-align: right; }
+      | table#tableStyle1 td.caption { border: 1px solid black; border-bottom: 0px solid black; font-weight: bold; text-align: left; }
       | table#tableStyle1 td.paddingL, th.paddingL { padding-left: 15px }
       |
       | @media print {

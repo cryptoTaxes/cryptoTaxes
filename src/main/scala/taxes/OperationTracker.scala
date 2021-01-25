@@ -55,21 +55,21 @@ case class OperationTracker() extends Iterable[(Int,OperationTracker.CSVEntry)] 
   def clear(): Unit =
     m.clear()
 
-  def printToCSVFile(fileName: String, year: Int): Unit = {
-    val ps = FileSystem.PrintStream(fileName)
+  def printToCSVFile(fileName: String, year: Int, baseCurrency: Currency): Unit = {
+    FileSystem.withPrintStream(fileName) { ps =>
 
-    ps.println()
-    ps.println(s"${Accounting.toString(Config.config.accountingMethod)} $year")
-    ps.println("")
+      ps.println()
+      ps.println(s"${Accounting.toString(Config.config.accountingMethod)} $year")
+      ps.println("")
 
-    val sep = ";"
-    val header = List("order", "date", "exchanger", "description", "cost basis/loss", "proceeds/gain", "fee")
+      val sep = ";"
+      val header = List("Order", "Date", "Exchanger", "Description"
+        , s"Cost basis/Loss ($baseCurrency)", s"Proceeds/Gain ($baseCurrency)", s"Fee ($baseCurrency)")
 
-    ps.println(header.mkString(sep))
-    for((operationNumber,entry) <- this)
-      ps.println(List[Any](operationNumber, entry.date.format(Format.shortDf), entry.exchanger, entry.description, entry.costBasis, entry.proceeds, entry.fee).mkString(sep))
-
-    ps.close()
+      ps.println(header.mkString(sep))
+      for ((operationNumber, entry) <- this)
+        ps.println(List[Any](operationNumber, entry.date.format(Format.shortDf), entry.exchanger, entry.description, entry.costBasis, entry.proceeds, entry.fee).mkString(sep))
+    }
   }
 }
 
