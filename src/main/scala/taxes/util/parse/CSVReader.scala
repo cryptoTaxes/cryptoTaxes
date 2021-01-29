@@ -55,7 +55,7 @@ abstract class CSVReader[A](fileName: String) extends FileSource[A](fileName) {
     while(sc.hasNextLine) {
       lnNumber += 1
       val ln = Parse.trimSpaces(sc.nextLine())
-      if(ln.nonEmpty) {
+      if(!Parse.isComment(ln)) {
         val scLn = lineScanner(ln)
         try {
           readLine(ln, scLn) match {
