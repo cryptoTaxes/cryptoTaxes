@@ -21,6 +21,9 @@ object General extends Exchanger {
     , new UserInputFolderSource[Operation]("general/gainslosses", ".csv") {
        def fileSource(fileName: String) = gainsLossesReader(fileName)
       }
+    , new UserInputFolderSource[Operation]("general/networkfees", ".csv") {
+      def fileSource(fileName: String) = networkFeesReader(fileName)
+    }
   )
 
   // we assume all dates are in our time zone
@@ -121,6 +124,44 @@ object General extends Exchanger {
         return CSVReader.Ok(List(op, f))
       } else
         return CSVReader.Ok(op)
+    }
+  }
+
+  private def networkFeesReader(fileName: String) = new CSVSortedOperationReader(fileName) {
+    override val linesToSkip = 1
+
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[,]+")
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val date = parseDate(scLn.next())
+      val amount = scLn.nextDouble("Amount")
+      val currency = scLn.next("Currency")
+      val hash = scLn.next("Hash")
+      val desc = scLn.next("Description")
+
+      val richDesc = RichText(s"$desc fee ${RichText.transaction(currency, hash)}")
+
+      val fee =
+        if(Config.config.fundingFees)
+          Fee(
+            date = date
+            , id = hash
+            , amount = amount
+            , currency = currency
+            , exchanger = General("Network fee")
+            , description = richDesc
+          )
+        else
+          NonTaxableFee(
+            date = date
+            , id = hash
+            , amount = amount
+            , currency = currency
+            , exchanger = General("Network fee")
+            , description = richDesc
+          )
+      return CSVReader.Ok(fee)
     }
   }
 }
