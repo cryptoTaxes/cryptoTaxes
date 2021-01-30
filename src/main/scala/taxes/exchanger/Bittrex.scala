@@ -278,7 +278,7 @@ object Bittrex extends Exchanger {
               , exchanger = Bittrex
               , description = RichText(s"Bittrex withdrawal non taxable fee $currency $txid")
             )
-        return CSVReader.Ok(withdrawal)
+        return CSVReader.Ok(List(withdrawal, fee))
       } else
         CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was not completed: $line.")
     }

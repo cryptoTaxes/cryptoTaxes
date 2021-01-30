@@ -94,13 +94,20 @@ object LocalBTC extends Exchanger {
       val txNotes = scLn.nextDouble("TXnotes")
 
       if(txType=="Withdraw") {
-            val desc = try {
-              val address = scLn.next("address")
-              val txHash = scLn.next("txHash")
-              RichText(s"Withdrawal ${RichText.util.transaction(Currency.bitcoin, txHash, address)}")
-            } catch {
-              case _:Exception => RichText("Withdrawal")
-            }
+        val amount = util.parse.Parse.asDouble(sentStr)
+
+        val opt = try {
+          val address = scLn.next("address")
+          val txHash = scLn.next("txHash")
+          Some((address, txHash))
+        } catch {
+          case _:Exception =>
+            None
+        }
+
+        val operation = opt match {
+          case Some((address, txHash)) =>
+            val desc = RichText(s"Withdrawal ${RichText.util.transaction(Currency.bitcoin, txHash, address)}")
             val withdraw = Withdrawal(
               date = created
               , id = ""
@@ -109,9 +116,33 @@ object LocalBTC extends Exchanger {
               , exchanger = LocalBTC
               , description = desc
             )
-            return CSVReader.Ok(withdraw)
-          } else
-            return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this line is not currently supported: $line.")
+            withdraw
+
+          case None =>
+            val fee =
+              if (Config.config.fundingFees)
+                Fee(
+                  date = created
+                  , id = ""
+                  , amount = util.parse.Parse.asDouble(sentStr)
+                  , currency = Currency.bitcoin
+                  , exchanger = LocalBTC
+                  , description = RichText(s"$id withdrawal fee")
+                )
+              else
+                NonTaxableFee(
+                  date = created
+                  , id = ""
+                  , amount = util.parse.Parse.asDouble(sentStr)
+                  , currency = Currency.bitcoin
+                  , exchanger = LocalBTC
+                  , description = RichText(s"$id withdrawal fee")
+                )
+            fee
+        }
+        return CSVReader.Ok(operation)
+      } else
+         return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this line is not currently supported: $line.")
       }
     }
 }

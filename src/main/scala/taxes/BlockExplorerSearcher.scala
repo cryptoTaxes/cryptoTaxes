@@ -244,6 +244,34 @@ private object BlockExplorerSearcher {
     val date = LocalDateTime.parse(dateStr.replace(" at ", ""), "yyyy-MM-dd hh:mm:ss z")
     return (date, 0, fee)
   }
+
+  def xrpScrap(txid: String, address: String): (LocalDateTime, Double, Double) = {
+    import spray.json._
+    import spray.json.JsonProtocol._
+
+    val url = s"https://data.ripple.com/v2/transactions/$txid"
+    val resp = Network.Http.withSource(url){_.mkString}
+    println(resp)
+
+    case class Tx(/*Amount: String,*/ Fee: String)
+    implicit val txJson = jsonFormat1(Tx)
+
+    case class Transaction(tx: Tx, date: String)
+    implicit val transactionJson = jsonFormat2(Transaction)
+
+    case class Response(result: String, transaction: Transaction)
+    implicit val responseJson = jsonFormat2(Response)
+
+    val json = resp.parseJson
+    val response = json.convertTo[Response]
+    val transaction = response.transaction
+
+    val date = LocalDateTime.parse(transaction.date, "yyyy-MM-dd'T'HH:mm:ssXXX")
+    val fee = Parse.asLong(transaction.tx.Fee) / 100000.0
+    val amount = 0 // Parse.asLong(transaction.tx.Amount) / 1000000
+
+    return (date, amount, fee)
+  }
 }
 
 class BlockExplorerSearcher(currency: Currency, txid: String, address: String) {
@@ -253,6 +281,7 @@ class BlockExplorerSearcher(currency: Currency, txid: String, address: String) {
     case Currency.etc      => Some(BlockExplorerSearcher.etcScrap(txid, address))
     case Currency.litecoin => Some(BlockExplorerSearcher.ltcScrap(txid, address))
     case Currency.vertcoin => Some(BlockExplorerSearcher.vtcScrap(txid, address))
+    case Currency.ripple   => Some(BlockExplorerSearcher.xrpScrap(txid, ""))
     case _                 => None
   }
 

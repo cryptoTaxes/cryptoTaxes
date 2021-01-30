@@ -5,6 +5,8 @@ import taxes.date._
 import taxes.io.FileSystem
 import taxes.util.parse.{Scanner, SeparatedScanner, _}
 
+import scala.collection.mutable.ListBuffer
+
 
 object Poloniex extends Exchanger {
   override val id: String = "Poloniex"
@@ -272,41 +274,48 @@ object Poloniex extends Exchanger {
 
       if(isFinalized) {
         val txid = status.drop(tokenComplete.length)
+        if(txid != "ERROR") {
 
-        val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
-        val withdrawal = Withdrawal(
-          date = date
-          , id = txid
-          , amount = amountMinusFee
-          , currency = currency
-          , exchanger = Poloniex
-          , description = desc
-        )
+          val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
+          val withdrawal = Withdrawal(
+            date = date
+            , id = txid
+            , amount = amountMinusFee
+            , currency = currency
+            , exchanger = Poloniex
+            , description = desc
+          )
+          var operations = ListBuffer[Operation]()
+          operations += withdrawal
 
-        val fee =
-          if(Config.config.fundingFees)
-            Fee(
-              date = date
-              , id = txid
-              , amount = feeDeducted
-              , currency = currency
-              , exchanger = Bittrex
-              , description = RichText(s"Poloniex withdrawal fee $currency $txid")
-            )
-          else
-            NonTaxableFee(
-              date = date
-              , id = txid
-              , amount = feeDeducted
-              , currency = currency
-              , exchanger = Bittrex
-              , description = RichText(s"Poloniex withdrawal non taxable fee $currency $txid")
-            )
-        return CSVReader.Ok(List(withdrawal,fee))
+          if (feeDeducted > 0) {
+            val fee =
+              if (Config.config.fundingFees)
+                Fee(
+                  date = date
+                  , id = txid
+                  , amount = feeDeducted
+                  , currency = currency
+                  , exchanger = Poloniex
+                  , description = RichText(s"Poloniex withdrawal fee $currency $txid")
+                )
+              else
+                NonTaxableFee(
+                  date = date
+                  , id = txid
+                  , amount = feeDeducted
+                  , currency = currency
+                  , exchanger = Poloniex
+                  , description = RichText(s"Poloniex withdrawal non taxable fee $currency $txid")
+                )
+            operations += fee
+          }
+          return CSVReader.Ok(operations.toList)
+        } else
+          return CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was not completed: $line.")
       } else
-        CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was not completed: $line.")
+        return CSVReader.Warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was not completed: $line.")
     }
   }
-
 }
 
