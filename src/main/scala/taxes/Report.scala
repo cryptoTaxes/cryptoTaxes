@@ -175,7 +175,7 @@ object Report {
 
 
       val csvlReportFile = FileSystem.report(year, "csv")
-      operationTracker.printToCSVFile(csvlReportFile, year)
+      operationTracker.printToCSVFile(csvlReportFile, year, baseCurrency)
 
       reportPortfolio(year)
 
@@ -249,9 +249,29 @@ object Report {
         }
       htmlLedgers.close()
 
+      val htmlDisposedStocksFile = s"${FileSystem.userOutputFolder(year)}/DisposedStocks$year.html"
+      val htmlDisposedStocksTitle = s"Disposed Stocks $year"
+      val htmlDisposedStocks = HTMLDoc(htmlDisposedStocksFile, htmlDisposedStocksTitle)
+
+      htmlDisposedStocks += <div class='header'>{htmlDisposedStocksTitle}</div>
+      for(stock <- state.allStocks.toList.sortBy(_.currency))
+        stock.disposals.toHTML match {
+          case None => ;
+          case Some(html) => htmlDisposedStocks += html
+        }
+      htmlDisposedStocks.close()
+
+      val csvDisposedStocksFile = s"${FileSystem.userOutputFolder(year)}/DisposedStocks$year.csv"
+      val csvDisposedStocksTitle = s"Disposed Stocks $year"
+      FileSystem.withPrintStream(csvDisposedStocksFile) { ps =>
+        ps.println(csvDisposedStocksTitle)
+        ps.println()
+        for(stock <- state.allStocks.toList.sortBy(_.currency))
+          stock.disposals.printToCSV(ps)
+      }
 
       for(exchanger <- Exchanger.allExchangers) {
-        val htmlExchangerLedgersFile = s"${FileSystem.userOutputFolder(year)}/$exchanger.Ledgers$year.html"
+        val htmlExchangerLedgersFile = s"${FileSystem.userOutputFolder(year)}/Exchanger.$exchanger.Ledgers$year.html"
         val htmlExchangerLedgersTitle = s"$exchanger Ledgers $year"
         val htmlExchangerLedgers = HTMLDoc(htmlExchangerLedgersFile, htmlExchangerLedgersTitle)
 
