@@ -91,17 +91,6 @@ case class Config(user: String
     }
   }
 
-  def yearRange(): (Int, Int) = {
-    val (yearBegin, yearEnd) = filterYear match {
-      case None =>
-        import java.util.Calendar
-        val thisYear = Calendar.getInstance.get(Calendar.YEAR)
-        (2010, thisYear)
-      case Some(year) => (year, year)
-    }
-    (yearBegin, yearEnd)
-  }
-
   def relevantYear(year: Int):Boolean = filterYear match {
     case None =>
       true

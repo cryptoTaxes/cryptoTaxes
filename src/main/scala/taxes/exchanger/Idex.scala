@@ -11,7 +11,7 @@ object Idex extends Exchanger {
   override val id: String = "Idex"
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("idex", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("idex", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
     }
   )

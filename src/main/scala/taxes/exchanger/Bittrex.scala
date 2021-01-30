@@ -13,22 +13,22 @@ object Bittrex extends Exchanger {
   override val id: String = "Bittrex"
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("bittrex", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("bittrex", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
     },
-    new UserInputFolderSource[Operation]("bittrex/deposits", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("bittrex/deposits", ".csv") {
       def fileSource(fileName: String) = depositsReader(fileName)
     },
-    new UserInputFolderSource[Operation]("bittrex/withdrawals", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("bittrex/withdrawals", ".csv") {
       def fileSource(fileName: String) = withdrawalsReader(fileName)
     },
-    new UserInputFolderSource[Operation]("bittrex/deposits/txt", ".txt") {
+    new FilteredUserInputFolderSource[Operation]("bittrex/deposits/txt", ".txt") {
       def fileSource(fileName: String)= new FileSource[Operation](fileName) {
         override def read(): Seq[Operation] =
           readTxtDeposits(fileName)
       }
     },
-    new UserInputFolderSource[Operation]("bittrex/withdrawals/txt", ".txt") {
+    new FilteredUserInputFolderSource[Operation]("bittrex/withdrawals/txt", ".txt") {
       def fileSource(fileName: String)= new FileSource[Operation](fileName) {
         override def read(): Seq[Operation] =
           readTxtWithdrawals(fileName)

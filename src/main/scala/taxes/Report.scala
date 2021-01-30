@@ -30,17 +30,21 @@ object Report {
 
     def saveToDisk(year: Int): Unit = {
       val path = FileSystem.stocksFolder(year)
+      Logger.trace(s"Writing end of $year stocks.")
       allStocks.saveToDisk(path)
 
+      Logger.trace(s"Writing end of $year exchangers' state.")
       for(exchanger <- Exchanger.allExchangers)
         exchanger.saveToDisk(year)
     }
 
     def loadFromDisk(year: Int): Unit = {
+      Logger.trace(s"Reading end of $year stocks.")
       allStocks.loadFromDisk(FileSystem.stocksFolder(year))
       for(stock <- allStocks)
         stock.ledger.prune()
 
+      Logger.trace(s"Reading end of $year exchangers' state.")
       for(exchanger <- Exchanger.allExchangers)
         exchanger.loadFromDisk(year)
     }
@@ -73,12 +77,7 @@ object Report {
           Logger.fatal(s"Unknown accounting method: ${Accounting.toString(accountingMethod)}")
     }
 
-    def relevant(operation: Operation): Boolean = config.filterYear match {
-      case None =>
-        true
-      case Some(year) =>
-        operation.date.getYear == year
-    }
+    def relevant(operation: Operation): Boolean = config.relevantYear(operation.date.getYear)
 
     val operations = Exchanger.preprocessAndReadAllSources().filter(relevant).sortBy(_.date)
 
@@ -1158,7 +1157,13 @@ object Report {
     }
     finalizeYear(currentYear)
 
-    Logger.trace(s"Output generated in ${FileSystem.userOutputFolder} folder.")
+    val outFolder = Config.config.filterYear match {
+      case None =>
+        FileSystem.userOutputFolder
+      case Some(year) =>
+        FileSystem.userOutputFolder(year)
+    }
+    Logger.trace(s"Output generated in $outFolder folder.")
 
     println(minBTC, dateMinBTC)
   }

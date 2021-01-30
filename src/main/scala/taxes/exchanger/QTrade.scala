@@ -12,10 +12,10 @@ object QTrade extends Exchanger {
   override val id: String = "QTrade"
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("qtrade", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("qtrade", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
     },
-    new UserInputFolderSource[Operation]("qtrade/depositsWithdrawals", ".txt") {
+    new FilteredUserInputFolderSource[Operation]("qtrade/depositsWithdrawals", ".txt") {
       def fileSource(fileName: String)= new FileSource[Operation](fileName) {
         override def read(): Seq[Operation] =
           readDepositsWithdrawals(fileName)

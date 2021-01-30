@@ -113,5 +113,6 @@ object Exchanger {
   }
 }
 
-
 abstract case class UserInputFolderSource[+A](folderPath: String, extension: String) extends FolderSource[A](s"${FileSystem.userInputFolder}/$folderPath", extension)
+
+abstract case class FilteredUserInputFolderSource[+A](folderPath: String, extension: String) extends FolderSource[A](s"${FileSystem.userInputFolder}/$folderPath", extension, Config.config.filterYear)

@@ -14,19 +14,19 @@ object RippleTrade extends Exchanger {
 
   override val sources = {
     var srcs = Seq(
-      new UserInputFolderSource[Operation]("xrptrade", ".json") {
+      new FilteredUserInputFolderSource[Operation]("xrptrade", ".json") {
         def fileSource(fileName: String) = new FileSource[Operation](fileName) {
           override def read(): Seq[Operation] =
             readFile(fileName)
         }
       },
-      new UserInputFolderSource[Operation]("xrptrade/depositsWithdrawals", ".csv") {
+      new FilteredUserInputFolderSource[Operation]("xrptrade/depositsWithdrawals", ".csv") {
         def fileSource(fileName: String) = depositsWithdrawalsReader(fileName)
       }
     )
     if(!Config.config.deprecatedUp2017Version)
       srcs ++= Seq(
-        new UserInputFolderSource[Operation]("xrptrade/fees", ".csv") {
+        new FilteredUserInputFolderSource[Operation]("xrptrade/fees", ".csv") {
           def fileSource(fileName: String) = feesReader(fileName)
         })
     srcs
@@ -201,7 +201,6 @@ object RippleTrade extends Exchanger {
               , description = RichText(s"$id non taxable fee ${RichText.util.transaction(Currency.ripple, hash)}")
             )
         }
-        println(fee)
         CSVReader.Ok(fee)
       } else
         CSVReader.Warning(s"$id. Read deposit/withdrawal ${FileSystem.pathFromData(fileName)}: This line could not be read: $line.")

@@ -13,7 +13,7 @@ object Main extends App {
   val cmdLine = args.mkString(" ")
   Config.config = ParseCommandLine(cmdLine)
 
-  val version = "1.0.12"
+  val version = "1.0.13"
 
   Logger.trace(s"cryptoTaxes (ver $version) (https://github.com/cryptoTaxes/cryptoTaxes)\n")
   Logger.trace(s"Starting execution at ${java.time.LocalDateTime.now()}.")

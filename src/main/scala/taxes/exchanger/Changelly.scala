@@ -22,19 +22,19 @@ object Changelly extends Exchanger {
   }
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("changelly/2017", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("changelly/2017", ".csv") {
       def fileSource(fileName: String) = operationsReader2017(fileName)
     },
-    new UserInputFolderSource[Operation]("changelly/2017/depositsWithdrawals", ".txt") {
+    new FilteredUserInputFolderSource[Operation]("changelly/2017/depositsWithdrawals", ".txt") {
       def fileSource(fileName: String)= new FileSource[Operation](fileName) {
         override def read(): Seq[Operation] =
           readDepositsWithdrawals2017(fileName)
       }
     }, /* Exchanges can be properly obtained from deposits/withdrawals text file
-    new UserInputFolderSource[Operation]("changelly/2020", ".csv") {
+    new UserInputYearFolderSource[Operation]("changelly/2020", ".csv") {
       def fileSource(fileName: String) = operationsReader2020(fileName)
     }, */
-    new UserInputFolderSource[Operation]("changelly/2020/depositsWithdrawals", ".txt") {
+    new FilteredUserInputFolderSource[Operation]("changelly/2020/depositsWithdrawals", ".txt") {
       def fileSource(fileName: String)= new FileSource[Operation](fileName) {
         override def read(): Seq[Operation] =
           readDepositsWithdrawals2020(fileName)

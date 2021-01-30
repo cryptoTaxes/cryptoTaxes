@@ -46,7 +46,6 @@ object CoinGeckoPriceProvider extends CryptoPriceProvider {
 
   private def downloadPricesForOLD(currency: Currency, coinGeckoIdx: Int): List[DailyPrice] = {
     Logger.trace(s"Downloading prices for $currency from coingecko.com.")
-    val (yearBegin, yearEnd) = Config.config.yearRange()
 
     val url = s"https://www.coingecko.com/price_charts/export/$coinGeckoIdx/usd.csv"
     return Network.Http.withSource(url){ src =>
@@ -56,7 +55,6 @@ object CoinGeckoPriceProvider extends CryptoPriceProvider {
 
   private def downloadPricesFor(currency: Currency, coinGeckoId: String): List[DailyPrice] = {
     Logger.trace(s"Downloading prices for $currency from coingecko.com.")
-    val (yearBegin, yearEnd) = Config.config.yearRange()
 
     val suffix = "/usd.csv"
     val historicalDataUrl = s"https://www.coingecko.com/coins/$coinGeckoId/historical_data/usd"
@@ -102,14 +100,9 @@ object CoinGeckoPriceProvider extends CryptoPriceProvider {
   private def loadFromDisk(currency: Currency): scala.collection.mutable.Map[LocalDate, Price] = {
     Logger.trace(s"Loading CoinGecko prices for $currency.")
 
-    val ext = Config.config.filterYear match {
-      case None => FileSystem.coinGeckoExtension
-      case Some(year) => FileSystem.coinGeckoExtension(year)
-    }
-
     val path = FileSystem.coinGeckoFolder(currency)
 
-    val src = new FolderSource[DailyPrice](path, ext) {
+    val src = new FolderSource[DailyPrice](path, FileSystem.coinGeckoExtension, Config.config.filterYear) {
       override def fileSource(fileName: String): FileSource[DailyPrice] =
         new FileSource[DailyPrice](fileName) {
           override def read(): Seq[DailyPrice] =

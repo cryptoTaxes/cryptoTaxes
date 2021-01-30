@@ -2,7 +2,7 @@ package taxes
 
 object AddressBook extends Initializable {
 
-  private val folderSource = new FolderSource[(String,String)](io.FileSystem.addressBookFolder, ".txt") {
+  private val folderSource = new FolderSource[(String,String)](io.FileSystem.addressBookFolder, ".txt", Config.config.filterYear) {
     def fileSource(fileName: String) = new FileSource[(String, String)](fileName) {
       override def read(): Seq[(String, String)] =
         util.parse.Parse.readKeysValue(fileName, s"Reading address book").toSeq

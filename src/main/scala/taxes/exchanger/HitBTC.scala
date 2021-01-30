@@ -10,10 +10,10 @@ object HitBTC extends Exchanger {
   override val id: String = "HitBTC"
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("hitbtc", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("hitbtc", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
     },
-    new UserInputFolderSource[Operation]("hitbtc/payments", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("hitbtc/payments", ".csv") {
       def fileSource(fileName: String) = paymentsReader(fileName)
     }
   )

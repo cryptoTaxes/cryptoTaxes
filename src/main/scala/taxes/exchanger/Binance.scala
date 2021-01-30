@@ -11,13 +11,13 @@ object Binance extends Exchanger {
   override val id: String = "Binance"
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("binance", ".xlsx") {
+    new FilteredUserInputFolderSource[Operation]("binance", ".xlsx") {
       def fileSource(xlsxFileName: String) = operationsReader(xlsxFileName)
     },
-    new UserInputFolderSource[Operation]("binance/deposits", ".xlsx") {
+    new FilteredUserInputFolderSource[Operation]("binance/deposits", ".xlsx") {
       def fileSource(xlsxFileName: String) = depositsReader(xlsxFileName)
     },
-    new UserInputFolderSource[Operation]("binance/withdrawals", ".xlsx") {
+    new FilteredUserInputFolderSource[Operation]("binance/withdrawals", ".xlsx") {
       def fileSource(xlsxFileName: String) = withdrawalsReader(xlsxFileName)
     }
   )

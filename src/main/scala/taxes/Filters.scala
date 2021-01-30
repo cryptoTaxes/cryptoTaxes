@@ -24,7 +24,7 @@ object Filters extends Initializable {
     else
       Currency(taxes.Currency.normalize(str))
 
-  private def parseLine(left: String, rights: Iterable[taxes.Currency]): Iterable[Filter] = {
+  private def parseLine(fileName: String, left: String, rights: Iterable[taxes.Currency]): Iterable[Filter] = {
     import util.parse.Parse._
 
     val tokens = sepBy(left, sepToken).map(trimSpaces)
@@ -46,18 +46,25 @@ object Filters extends Initializable {
         val exchanger = taxes.exchanger.Exchanger.parse(str2)
         val margin = str3
         if(margin != marginToken)
-          Logger.fatal(s"Error parsing file ${io.FileSystem.filtersFile}: 'margin' expected but found $margin.")
+          Logger.fatal(s"Error parsing file $fileName: 'margin' expected but found $margin.")
         rights.map(str => Margin(year, exchanger, parseWhat(str)))
 
       case _ =>
-        Logger.fatal(s"Error parsing file ${io.FileSystem.filtersFile}: 'margin' expected  $left.")
+        Logger.fatal(s"Error parsing file $fileName: 'margin' expected  $left.")
     }
   }
 
-  private val filters: Map[Int, Iterable[Filter]] = // from year to filters
-    util.parse.Parse.readKeyValues(io.FileSystem.filtersFile, "Reading filters list.").flatMap{
-      case (what, currencies) => parseLine(what, currencies)
-    }.groupBy(_.year)
+  private val folderSource = new FolderSource[Filter](io.FileSystem.filtersFolder, ".txt", Config.config.filterYear) {
+    def fileSource(fileName: String) = new FileSource[Filter](fileName) {
+      override def read(): Seq[Filter] =
+        util.parse.Parse.readKeyValues(fileName, "Reading filters list").flatMap{
+          case (what, currencies) => parseLine(fileName, what, currencies)
+        }.toSeq
+    }
+  }
+
+  private val filters: Map[Int, Iterable[Filter]] =  // from year to filters
+      folderSource.read().groupBy(_.year)
 
   def applyFilters(year: Int, allStocks: StockPool): Unit = {
     for(filter <- filters.getOrElse(year, Seq())) {

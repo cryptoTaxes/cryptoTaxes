@@ -12,16 +12,16 @@ object Poloniex extends Exchanger {
   override val id: String = "Poloniex"
 
   override val sources = Seq(
-      new UserInputFolderSource[Operation]("poloniex", ".csv") {
+      new FilteredUserInputFolderSource[Operation]("poloniex", ".csv") {
         def fileSource(fileName: String) = operationsReader(fileName)
       }
     /* , new UserFolderSource[Operation]("poloniex/borrowing") {
         def fileSource(fileName: String) = borrowingFeesReader(fileName)
       } */
-    , new UserInputFolderSource[Operation]("poloniex/deposits", ".csv") {
+    , new FilteredUserInputFolderSource[Operation]("poloniex/deposits", ".csv") {
         def fileSource(fileName: String) = depositsReader(fileName)
       }
-    , new UserInputFolderSource[Operation]("poloniex/withdrawals", ".csv") {
+    , new FilteredUserInputFolderSource[Operation]("poloniex/withdrawals", ".csv") {
         def fileSource(fileName: String) = withdrawalsReader(fileName)
       }
     )

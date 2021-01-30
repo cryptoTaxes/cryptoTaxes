@@ -64,17 +64,17 @@ object Kraken extends Exchanger {
     val tradesFolder = "kraken/trades"
     Seq(
       // reads extra on-chain information for deposits and withdrawals and populates depositsWithdrawalsInfo
-      new UserInputFolderSource[Operation]("kraken/ledgers/depositsWithdrawals", ".txt") {
+      new FilteredUserInputFolderSource[Operation]("kraken/ledgers/depositsWithdrawals", ".txt") {
         def fileSource(fileName: String)= new FileSource[Nothing](fileName) {
           override def read(): Seq[Nothing] =
             readDepositsWithdrawals(fileName)
         }
       },
       // Reads deposits/withdrawals but also populates ledgersCache
-      new UserInputFolderSource[Operation]("kraken/ledgers", ".csv") {
+      new FilteredUserInputFolderSource[Operation]("kraken/ledgers", ".csv") {
         def fileSource(fileName: String) = ledgerReader(fileName)
       },
-      new UserInputFolderSource[Operation](tradesFolder, ".csv") {
+      new FilteredUserInputFolderSource[Operation](tradesFolder, ".csv") {
         def fileSource(fileName: String) = operationsReader(fileName)
       }
     )

@@ -14,15 +14,16 @@ trait Source[+A] {
 
 abstract case class FileSource[+A](fileName: String) extends Source[A]
 
-abstract class FolderSource[+A](folderPath: String, extension: String) extends Source[A] {
+abstract class FolderSource[+A](folderPath: String, extension: String, yearOpt: Option[Int] = None) extends Source[A] {
   def fileSource(fileName: String): FileSource[A]
 
   private def doWithAllFiles(procedure: String => Unit) {
     val files = FileSystem.findFilesAt(folderPath, extension)
     if(files != null)
       for(file <- files) {
-        val fileName = file.getPath
-        procedure(fileName)
+        val path = file.getPath
+        if(FileSystem.matchesYear(path, yearOpt))
+          procedure(path)
       }
   }
 

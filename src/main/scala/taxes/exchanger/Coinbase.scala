@@ -10,7 +10,7 @@ object Coinbase extends Exchanger {
   override val id: String = "Coinbase"
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("coinbase/transfers", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("coinbase/transfers", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
     }
   )

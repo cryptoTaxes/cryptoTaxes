@@ -10,10 +10,10 @@ object BitcoinCom extends Exchanger {
   override val id: String = "Bitcoin.com"
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("bitcoin.com", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("bitcoin.com", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
     },
-    new UserInputFolderSource[Operation]("bitcoin.com/transactions", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("bitcoin.com/transactions", ".csv") {
       def fileSource(fileName: String) = paymentsReader(fileName)
     }
   )

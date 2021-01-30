@@ -145,7 +145,8 @@ object FileSystem {
   def inConfigFolder(fileName: String) = s"$configFolder/$fileName"
 
   val addressBookFolder = s"$userInputFolder/addressBook"
-  val filtersFile = s"$userInputFolder/filters.txt"
+
+  val filtersFolder = s"$userInputFolder/filters"
 
   def backup(file: File): Unit = {
     val (folder, name, ext) = decompose(file)
@@ -196,7 +197,10 @@ object FileSystem {
   def decompose(file: File): (String, String, String) = {
     val name = file.getName
     val idx = name.lastIndexOf(".")
-    return(file.getParent, name.substring(0, idx), name.substring(idx))
+    if(idx<0)
+      (file.getParent, name, "")
+    else
+      (file.getParent, name.substring(0, idx), name.substring(idx))
   }
 
   def decompose(path: String): (String, String, String) =
@@ -206,6 +210,38 @@ object FileSystem {
     val ext1 = if(ext.head=='.') ext else "."+ext
     return s"${paths.mkString("/")}/$name$ext1"
   }
+
+  def matchesYear(path: String, yearFilter: Option[Int]): Boolean =
+    yearFilter match {
+      case None =>
+        true // no filter; anyone matches
+      case Some(year) =>
+        val (_, name, ext) = FileSystem.decompose(path)
+        val (_, _, ext2) = FileSystem.decompose(name)
+        if(ext2.isEmpty)
+          true // no year in file name
+        else {
+          val ext3 = ext2.tail
+          if (ext3.contains("-")) {
+            val (str1, str2) = taxes.util.parse.Parse.split(ext3, "-")
+            try {
+              val yearBegin = taxes.util.parse.Parse.asInt(str1)
+              val yearEnd = taxes.util.parse.Parse.asInt(str2)
+              // filter in file name is a range
+              yearBegin <= year && year <= yearEnd
+            } catch {
+              case _ => true // it's not a range
+            }
+          } else
+            try {
+              val fileYear = taxes.util.parse.Parse.asInt(ext3)
+              // filter in file name is a single year
+              fileYear == year
+            } catch {
+              case _ => true // it's something else
+            }
+        }
+    }
 
   type PrintStream = java.io.PrintStream
 

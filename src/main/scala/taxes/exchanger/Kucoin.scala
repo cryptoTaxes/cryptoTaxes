@@ -9,7 +9,7 @@ object Kucoin extends Exchanger {
   override val id: String = "Kucoin"
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("kucoin", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("kucoin", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
     }
   )

@@ -10,16 +10,16 @@ object Bitfinex extends Exchanger {
   override val id: String = "Bitfinex"
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("bitfinex/ledger", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("bitfinex/ledger", ".csv") {
       def fileSource(fileName: String) = ledgerReader(fileName)
     },
-    new UserInputFolderSource[Operation]("bitfinex/trades", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("bitfinex/trades", ".csv") {
       def fileSource(fileName: String) = tradesReader(fileName)
     },
-    new UserInputFolderSource[Operation]("bitfinex/deposits", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("bitfinex/deposits", ".csv") {
       def fileSource(fileName: String) = depositsReader(fileName)
     },
-    new UserInputFolderSource[Operation]("bitfinex/withdrawals", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("bitfinex/withdrawals", ".csv") {
       def fileSource(fileName: String) = withdrawalsReader(fileName)
     }
   )

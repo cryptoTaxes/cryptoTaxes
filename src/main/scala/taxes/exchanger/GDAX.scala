@@ -10,13 +10,13 @@ object GDAX extends Exchanger {
   override val id: String = "GDAX"
 
   override val sources = Seq(
-    new UserInputFolderSource[Operation]("gdax", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("gdax", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
     }, /*
-    new UserInputFolderSource[Operation]("gdax/accounts", ".csv") {
+    new UserInputYearFolderSource[Operation]("gdax/accounts", ".csv") {
       def fileSource(fileName: String) = depositsWithdrawalsReader(fileName)
     },*/
-    new UserInputFolderSource[Operation]("gdax/transactionHistories", ".csv") {
+    new FilteredUserInputFolderSource[Operation]("gdax/transactionHistories", ".csv") {
       def fileSource(fileName: String) = transactionHistoriesReader(fileName)
     }
   )

@@ -9,7 +9,7 @@ import spray.json.JsonProtocol._
 object Currency {
   private val conversions: Map[Currency, Currency] = {
     Parse.readKeysValue ( FileSystem.inConfigFolder("currencyNormalizations.txt")
-                        , "Reading currencies normalizations"
+                        , "Reading currency normalizations"
                         ).map{
       case (currency1, currency2) => (currency1.toUpperCase(), currency2.toUpperCase())
     }
@@ -53,7 +53,7 @@ object Currency {
 
   private val priorities: Map[Currency, Int] = {
     Parse.readKeysValue( FileSystem.inConfigFolder(Config.config.parityPrioritiesFile)
-                       , "Reading currencies priorities"
+                       , "Reading currency priorities"
                        ).map{
       case (currency, str) => (normalize(currency), Parse.asInt(str))
     }

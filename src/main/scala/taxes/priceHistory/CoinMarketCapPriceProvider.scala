@@ -65,9 +65,20 @@ object CoinMarketCapPriceProvider extends CryptoPriceProvider {
     }
   }
 
+  private def yearRange(): (Int, Int) = {
+    val (yearBegin, yearEnd) = Config.config.filterYear match {
+      case None =>
+        import java.util.Calendar
+        val thisYear = Calendar.getInstance.get(Calendar.YEAR)
+        (2010, thisYear)
+      case Some(year) => (year, year)
+    }
+    (yearBegin, yearEnd)
+  }
+
   private def downloadPricesFor(currency: Currency, coinMarketCapId: String): List[DailyPrice] = {
     Logger.trace(s"Downloading prices for $currency from coinmarketcap.com.")
-    val (yearBegin, yearEnd) = Config.config.yearRange()
+    val (yearBegin, yearEnd) = yearRange()
 
     val url = s"https://coinmarketcap.com/currencies/$coinMarketCapId/historical-data/?start=${yearBegin}0101&end=${yearEnd}1231"
     return Network.Http.withSource(url){ src =>
@@ -238,14 +249,9 @@ object CoinMarketCapPriceProvider extends CryptoPriceProvider {
   private def loadFromDisk(currency: Currency): scala.collection.mutable.Map[LocalDate, Price] = {
     Logger.trace(s"Loading CoinMarketCap prices for $currency.")
 
-    val ext = Config.config.filterYear match {
-      case None => FileSystem.coinMarketCapExtension
-      case Some(year) => FileSystem.coinMarketCapExtension(year)
-    }
-
     val path = FileSystem.coinMarketCapFolder(currency)
 
-    val src = new FolderSource[DailyPrice](path, ext) {
+    val src = new FolderSource[DailyPrice](path, FileSystem.coinMarketCapExtension, Config.config.filterYear) {
       override def fileSource(fileName: String): FileSource[DailyPrice] =
         new FileSource[DailyPrice](fileName) {
           override def read(): Seq[DailyPrice] =
