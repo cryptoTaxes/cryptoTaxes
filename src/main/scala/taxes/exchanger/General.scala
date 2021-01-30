@@ -24,6 +24,9 @@ object General extends Exchanger {
     , new UserInputFolderSource[Operation]("general/networkfees", ".csv") {
       def fileSource(fileName: String) = networkFeesReader(fileName)
     }
+    , new UserInputFolderSource[Operation]("general/ledger", ".csv") {
+      def fileSource(fileName: String) = ledgerReader(fileName)
+    }
   )
 
   // we assume all dates are in our time zone
@@ -134,7 +137,7 @@ object General extends Exchanger {
       SeparatedScanner(line, "[,]+")
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = parseDate(scLn.next())
+      val date = parseDate(scLn.next("Date"))
       val amount = scLn.nextDouble("Amount")
       val currency = scLn.next("Currency")
       val hash = scLn.next("Hash")
@@ -162,6 +165,72 @@ object General extends Exchanger {
             , description = richDesc
           )
       return CSVReader.Ok(fee)
+    }
+  }
+
+  private def ledgerReader(fileName: String) = new CSVSortedOperationReader(fileName) {
+    override val linesToSkip = 1
+
+    override def lineScanner(line: String) =
+      SeparatedScanner(line, "[,]")
+
+    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
+      val date = LocalDateTime.parse(scLn.next("Operation Date"), "yyyy-MM-dd'T'HH:mm:ss.SSSX")
+      val currency = scLn.next("Currency ticker")
+      val opType = scLn.next("Operation type")
+      val amount = scLn.nextDouble("Operation amount")
+      val feeAmount =
+        try {
+          scLn.nextDouble("Operation fee")
+        } catch {
+          case _ => 0
+        }
+      val hash = scLn.next("Operation Hash")
+      var desc =
+        try {
+          scLn.next("Description")
+        } catch {
+          case _ => ""
+        }
+
+      val isOut = opType == "OUT"
+      val isFee = opType == "FEES"
+      if((isOut || isFee) && feeAmount>0) {
+        val placeholder = "*"
+        if (desc.contains(placeholder)) {
+          desc =
+            if(isOut)
+              desc.replace(placeholder, Format.asCurrency(amount - feeAmount, currency))
+            else
+              desc.replace(placeholder, currency)
+          if (desc.last != ' ')
+            desc += " "
+        }
+        val richDesc = RichText(s"$desc fee ${RichText.transaction(currency, hash)}")
+
+        val fee =
+          if (Config.config.fundingFees)
+            Fee(
+              date = date
+              , id = hash
+              , amount = feeAmount
+              , currency = currency
+              , exchanger = General("Network fee")
+              , description = richDesc
+            )
+          else
+            NonTaxableFee(
+              date = date
+              , id = hash
+              , amount = feeAmount
+              , currency = currency
+              , exchanger = General("Network fee")
+              , description = richDesc
+            )
+        return CSVReader.Ok(fee)
+      } else
+        return CSVReader.Ignore
+
     }
   }
 }
