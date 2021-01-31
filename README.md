@@ -35,13 +35,13 @@ The following command line parameters can be written after the command:
 
 * `-currency=curr`       your base coin, where `curr` can be `euro`, `btc` or `usd`.
 
-* `-price-provider=provider` to use different price provider, where `provider` is one of:
+* `-price-provider=provider` to use different price providers, where `provider` is one of:
 
     * `coinmarketcap`, to use CoinMarketcCap (mostly outdated).
 
     * `coingecko`, to use CoinGecko (recommended).
   
-* `-download-prices=yes` in order to update prices from [Coinmarketcap](coinmarketcap.com) and [BDE](www.bde.es).
+* `-download-prices=yes` in order to update prices from [Coinmarketcap](coinmarketcap.com), [Coingecko](coingecko.com) and [BDE](www.bde.es).
 
 * `-accounting-method=method` where `method` is either `fifo` or `lifo`.
 

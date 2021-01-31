@@ -1,45 +1,47 @@
 package taxes.util.parse
 
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+
 
 case class ScannerException(msg: String) extends RuntimeException(msg)
 
 
 trait Scanner {
-  def next(): String
-  def nextDouble(): Double
-  def nextInt(): Int
   def close(): Unit
 
-  def next(what: String): String = {
-    try {
-      next()
-    } catch {
-      case _: Exception => throw ScannerException(s"Error reading $what")
-    }
-  }
+  def next(what: String): String
 
-  def nextDouble(what: String): Double = {
+  def nextOrElse(what: String, orElse: => String): String =
     try {
-      nextDouble()
+      next(what)
     } catch {
-      case _: Exception => throw ScannerException(s"Error reading $what")
+      case _: Exception => orElse
     }
-  }
 
-  def nextInt(what: String): Int = {
+  def nextDouble(what: String): Double
+
+  def nextDoubleOrElse(what: String, orElse: =>  Double): Double =
     try {
-      nextInt()
+      nextDouble(what)
     } catch {
-      case _: Exception => throw ScannerException(s"Error reading $what")
+      case _: Exception => orElse
     }
-  }
+
+  def nextInt(what: String): Int
+
+  def nextIntOrElse(what: String, orElse: =>  Int): Int =
+    try {
+      nextInt(what)
+    } catch {
+      case _: Exception => orElse
+    }
 }
 
 
 case class QuotedScanner(str: String, delimiter: Char, sep: Char) extends Scanner {
   private var string = str
 
-  def next(): String = {
+  override def next(what: String): String = {
     var token = ""
 
     if(string.nonEmpty && string.head == sep)
@@ -68,11 +70,11 @@ case class QuotedScanner(str: String, delimiter: Char, sep: Char) extends Scanne
     return token
   }
 
-  def nextDouble(): Double =
-    Parse.asDouble(next())
+  override def nextDouble(what: String): Double =
+    Parse.asDouble(next(what))
 
-  def nextInt(): Int =
-    Parse.asInt(next())
+  override def nextInt(what: String): Int =
+    Parse.asInt(next(what))
 
   def close(): Unit = {}
 }
@@ -81,11 +83,71 @@ case class QuotedScanner(str: String, delimiter: Char, sep: Char) extends Scanne
 case class SeparatedScanner(str: String, separatorRegex: String) extends Scanner {
   private val sc = new java.util.Scanner(str).useDelimiter(separatorRegex)
 
-  def next(): String = sc.next()
+  override def next(what: String): String = sc.next()
 
-  def nextDouble(): Double = sc.nextDouble()
+  override def nextDouble(what: String): Double = sc.nextDouble()
 
-  def nextInt(): Int = sc.nextInt()
+  override def nextInt(what: String): Int = sc.nextInt()
 
   def close(): Unit = sc.close()
+}
+
+
+object AssociativeSeparatedScanner {
+  def apply(keys: String, separatorRegex: String): String => Scanner = {
+    val indexOf = {
+      val keysSc = new java.util.Scanner(keys).useDelimiter(separatorRegex)
+      val indexes = ListBuffer[String]()
+      while(keysSc.hasNext())
+        indexes += keysSc.next()
+      keysSc.close()
+      indexes.zipWithIndex.toMap
+    }
+
+    return (line: String) => new Scanner {
+      val array = {
+        val sc = new java.util.Scanner(line).useDelimiter(separatorRegex)
+        val arrayBuffer = new ArrayBuffer[String]()
+        while (sc.hasNext())
+          arrayBuffer += sc.next()
+        sc.close()
+        arrayBuffer.toArray
+      }
+
+      override def close(): Unit = {}
+
+      private def value(what: String, method: String): String = {
+        val idx = try {
+          indexOf(what)
+        } catch {
+          case _ => throw ScannerException(s"AssociativeSeparatedScanner.$method($what). Key not defined")
+        }
+        try {
+          array(idx)
+        } catch {
+          case _ => throw ScannerException(s"AssociativeSeparatedScanner.$method($what). value not defined")
+        }
+      }
+
+      override def next(what: String): String = value(what, "next")
+
+      override def nextDouble(what: String): Double = {
+        val v = value(what, "nextDouble")
+        try {
+          Parse.asDouble(v)
+        } catch {
+          case _ => throw ScannerException(s"AssociativeSeparatedScanner.nextDouble($what). value is not a Double")
+        }
+      }
+
+      override def nextInt(what: String): Int = {
+        val v = value(what, "nextInt")
+        try {
+          Parse.asInt(v)
+        } catch {
+          case _ => throw ScannerException(s"AssociativeSeparatedScanner.nextInt($what). value is not an Int")
+        }
+      }
+    }
+  }
 }

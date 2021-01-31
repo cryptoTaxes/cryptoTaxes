@@ -15,8 +15,8 @@ object Changelly extends Exchanger {
   private def split(str: String): (Double, Currency) = {
     val token = str.filter(_ != ',')
     val sc = SeparatedScanner(token, "[ ]")
-    val amount = sc.nextDouble()
-    val currency = Currency.normalize(sc.next())
+    val amount = sc.nextDouble("amount")
+    val currency = Currency.normalize(sc.next("currency"))
     sc.close()
     return (amount, currency)
   }

@@ -46,7 +46,7 @@ abstract class CSVReader[A](fileName: String) extends FileSource[A](fileName) {
     while(skipped < linesToSkip) {
       lnNumber += 1
       val ln = Parse.trimSpaces(sc.nextLine())
-      if(ln.nonEmpty) {
+      if(!Parse.isComment(ln)) {
         skippedLines(skipped) = ln
         skipped += 1
       }

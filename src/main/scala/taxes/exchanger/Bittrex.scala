@@ -48,7 +48,7 @@ object Bittrex extends Exchanger {
         "UTF-8"
 
     override def lineScanner(line: String) =
-      SeparatedScanner(line, "[,]")
+      AssociativeSeparatedScanner(skippedLines(0), "[,]")(line)
 
     private val header2014_2017 = "OrderUuid,Exchange,Type,Quantity,Limit,CommissionPaid,Price,Opened,Closed"
     private val header2018 = "Uuid,Exchange,TimeStamp,OrderType,Limit,Quantity,QuantityRemaining,Commission,Price,PricePerUnit,IsConditional,Condition,ConditionTarget,ImmediateOrCancel,Closed"
@@ -74,15 +74,23 @@ object Bittrex extends Exchanger {
       val quoteCurrency = Currency.normalize(currency1)
       val baseCurrency = Currency.normalize(currency2)
 
-      val isSell = scLn.next("Type") == "LIMIT_SELL"
+      val isSell = {
+        val orderType = scLn.next("Type")
+        if(orderType == "LIMIT_SELL")
+          true
+        else if(orderType == "LIMIT_BUY")
+          false
+        else
+          Logger.fatal(s"Bittrex.readLine2014_2017: Error reading this line: $line\nOrder type unknown $orderType")
+      }
       val quantity = scLn.nextDouble("Quantity")
-      val limit = scLn.nextDouble("Limit")
-      val comissionPaid = scLn.nextDouble("Commission Paid")
+      // val limit = scLn.nextDouble("Limit")
+      val comissionPaid = scLn.nextDouble("CommissionPaid")
 
       val price = scLn.nextDouble("Price")
 
       val fmt = "[M][MM]/[d][dd]/yyyy [h][hh]:mm:ss a"
-      val dateOpen = LocalDateTime.parseAsUTC(scLn.next("Opened"), fmt)   // Bittrex csv trade history uses UTC time zone
+      // val dateOpen = LocalDateTime.parseAsUTC(scLn.next("Opened"), fmt)   // Bittrex csv trade history uses UTC time zone
       val dateClose = LocalDateTime.parseAsUTC(scLn.next("Closed"), fmt) // but notice that the GUI uses your local time
 
       val desc = RichText(s"Order: $orderId")
@@ -133,22 +141,30 @@ object Bittrex extends Exchanger {
       val baseCurrency = Currency.normalize(m2)
 
       val fmt = "[M][MM]/[d][dd]/yyyy [h][hh]:mm:ss a"
-      val dateOpen = LocalDateTime.parseAsUTC(scLn.next("TimeStamp"), fmt)   // Bittrex csv trade history uses UTC time zone
+      // val dateOpen = LocalDateTime.parseAsUTC(scLn.next("TimeStamp"), fmt)   // Bittrex csv trade history uses UTC time zone
       // but notice that the GUI uses your local time
-      val isSell = scLn.next("Order Type") == "LIMIT_SELL"
-      val limit = scLn.nextDouble("Limit")
+      val isSell = {
+        val orderType = scLn.next("OrderType")
+        if(orderType == "LIMIT_SELL")
+          true
+        else if(orderType == "LIMIT_BUY")
+          false
+        else
+          Logger.fatal(s"Bittrex.readLine2018: Error reading this line: $line\nOrder type unknown $orderType")
+      }
+      //val limit = scLn.nextDouble("Limit")
       val quantity = scLn.nextDouble("Quantity")
       val quantityRemaining = scLn.nextDouble("QuantityRemaining")
-      val comission = scLn.nextDouble("Commission")
+      val commission = scLn.nextDouble("Commission")
       val price = scLn.nextDouble("Price")
-      val pricePerUnit = scLn.nextDouble("PricePerUnit")
-      val isConditional = scLn.next("IsConditional") == "True"
+      //val pricePerUnit = scLn.nextDouble("PricePerUnit")
+      //val isConditional = scLn.next("IsConditional") == "True"
 
-      val condition = scLn.next("Condition")
-      val conditionTarget = scLn.next("ConditionTarget")
-      val immediateOrCancel = scLn.next("ImmediateOrCancel") == "True"
+      //val condition = scLn.next("Condition")
+      //val conditionTarget = scLn.next("ConditionTarget")
+      //val immediateOrCancel = scLn.next("ImmediateOrCancel") == "True"
 
-      val dateClose = LocalDateTime.parseAsUTC(scLn.next("Close Date"), fmt)
+      val dateClose = LocalDateTime.parseAsUTC(scLn.next("Closed"), fmt)
 
       val desc = RichText(s"Order: $orderId")
 
@@ -172,8 +188,8 @@ object Bittrex extends Exchanger {
             date = dateClose // if(Config.config.deprecatedUp2017Version) dateClose else dateOpen
             , id = orderId
             , fromAmount = quantity - quantityRemaining, fromCurrency = baseCurrency
-            , toAmount = price - comission, toCurrency = quoteCurrency
-            , fees = List(FeePair(comission, quoteCurrency))
+            , toAmount = price - commission, toCurrency = quoteCurrency
+            , fees = List(FeePair(commission, quoteCurrency))
             , exchanger = Bittrex
             , description = desc
           )
@@ -183,7 +199,7 @@ object Bittrex extends Exchanger {
             , id = orderId
             , fromAmount = price, fromCurrency = quoteCurrency
             , toAmount = quantity - quantityRemaining, toCurrency = baseCurrency
-            , fees = List(FeePair(comission, quoteCurrency))
+            , fees = List(FeePair(commission, quoteCurrency))
             , exchanger = Bittrex
             , description = desc
           )
@@ -415,16 +431,16 @@ object Bittrex extends Exchanger {
         if(ok) {
           val scLn = opts.map { case Some(ln) => SeparatedScanner(ln, "[ \t]+") }
           try {
-            val date = LocalDateTime.parseAsMyZoneId(scLn(0).next()+" 00:00:00", "MM/dd/yyyy HH:mm:ss") // this is local time as it's taken from the GUI
-            val currency = Currency.normalize(scLn(0).next())
-            val amount = scLn(0).nextDouble()
-            val status = scLn(0).next()
+            val date = LocalDateTime.parseAsMyZoneId(scLn(0).next("date")+" 00:00:00", "MM/dd/yyyy HH:mm:ss") // this is local time as it's taken from the GUI
+            val currency = Currency.normalize(scLn(0).next("currency"))
+            val amount = scLn(0).nextDouble("amount")
+            val status = scLn(0).next("status")
 
-            scLn(1).next()
-            val address = scLn(1).next()
+            scLn(1).next("")
+            val address = scLn(1).next("address")
 
-            scLn(2).next()
-            val txid = scLn(2).next()
+            scLn(2).next("")
+            val txid = scLn(2).next("txid")
 
             val paidFee = withdrawalFee(currency, date)
             if(status == "Completed" && paidFee > 0) {

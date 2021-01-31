@@ -245,7 +245,7 @@ object Bitfinex extends Exchanger {
         val token1 = description.dropWhile(_ != '@').tail.tail
         val token2 = token1.takeWhile(_ != ' ')
         val sc = SeparatedScanner(token2, "[ ]")
-        val price = sc.nextDouble()
+        val price = sc.nextDouble("price")
         sc.close()
 
         val settlement = {

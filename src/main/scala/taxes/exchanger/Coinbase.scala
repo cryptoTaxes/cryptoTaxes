@@ -23,9 +23,9 @@ object Coinbase extends Exchanger {
 
     lazy val baseCurrency = {
       val sc = SeparatedScanner(skippedLines(2), "[,]")
-      sc.next()
-      sc.next()
-      Currency.normalize(sc.next())
+      sc.next("")
+      sc.next("")
+      Currency.normalize(sc.next("baseCurrency"))
     }
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {

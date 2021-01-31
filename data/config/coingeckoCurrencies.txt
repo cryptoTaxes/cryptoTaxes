@@ -1,14 +1,14 @@
 // Different names for currencies at coingecko.com
 // One line for each currency.
-// Short currency on the left
-// Full currency and index for currency on right
-// Indexes can be obtained by searching for CSV download link in
-// https://www.coingecko.com/en/coins/$currency/historical_data/usd#panel
-// Used to download historical prices.
+// Short currency id on the left
+// Full currency id in url on right as used in
+// https://www.coingecko.com/en/coins/$currency/historical_data/usd
+// (can also be obtained from id field in https://api.coingecko.com/api/v3/coins/list)
+// These are used to download historical prices.
 
 
-BTC   -> bitcoin,1
-ETH   -> ethereum,279
-ZEC   -> zcash,486
-USDT  -> tether,325
+BTC   -> bitcoin
+ETH   -> ethereum
+ZEC   -> zcash
+USDT  -> tether
 

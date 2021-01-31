@@ -155,9 +155,9 @@ object CoinMarketCapPriceProvider extends CryptoPriceProvider {
        val dateStr = getToken(tokenBeginRow, tokenEnd)
 
        val sc = SeparatedScanner(dateStr, "[\t ,]+")
-       val month = sc.next()
-       val day = sc.nextInt()
-       val year = sc.nextInt()
+       val month = sc.next("month")
+       val day = sc.nextInt("day")
+       val year = sc.nextInt("year")
        sc.close()
 
        val date = LocalDate.apply(year, parseMonth(month), day)
@@ -195,9 +195,9 @@ object CoinMarketCapPriceProvider extends CryptoPriceProvider {
         val dateStr = scrapContents(inLines.next())
 
         val sc = SeparatedScanner(dateStr, "[\t ,]+")
-        val month = sc.next()
-        val day = sc.nextInt()
-        val year = sc.nextInt()
+        val month = sc.next("month")
+        val day = sc.nextInt("day")
+        val year = sc.nextInt("year")
         sc.close()
 
         val date = LocalDate.apply(year, parseMonth(month), day)

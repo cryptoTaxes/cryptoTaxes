@@ -2,7 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
-import taxes.util.parse.{CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
+import taxes.util.parse.{AssociativeSeparatedScanner, CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 
 
 case class General(name: String) extends Exchanger {
@@ -52,16 +52,16 @@ object General extends Exchanger {
     override val linesToSkip = 1
 
     override def lineScanner(line: String) =
-      SeparatedScanner(line, "[,]+")
+      AssociativeSeparatedScanner(skippedLines(0), "[,]")(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = parseDate(scLn.next())
-      val fromAmount = scLn.nextDouble("soldAmount")
-      val fromCurrency = scLn.next("soldCurrency")
-      val toAmount = scLn.nextDouble("boughtAmount")
-      val toCurrency = scLn.next("boughtCurrency")
+      val date = parseDate(scLn.next("Date"))
+      val fromAmount = scLn.nextDouble("Sold Amount")
+      val fromCurrency = scLn.next("Sold Currency")
+      val toAmount = scLn.nextDouble("Bought Amount")
+      val toCurrency = scLn.next("Bought Currency")
       val fee = scLn.nextDouble("Fee")
-      val feeCurrency = scLn.next("feeCurrency")
+      val feeCurrency = scLn.next("Fee Currency")
       val exchangerName = scLn.next("Exchanger")
       val desc = scLn.next("Description")
 
@@ -83,14 +83,14 @@ object General extends Exchanger {
     override val linesToSkip = 1
 
     override def lineScanner(line: String) =
-      SeparatedScanner(line, "[,]+")
+      AssociativeSeparatedScanner(skippedLines(0), "[,]")(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val date = parseDate(scLn.next())
+      val date = parseDate(scLn.next("Date"))
       val amount = scLn.nextDouble("Amount")
       val currency = scLn.next("Currency")
       val fee = scLn.nextDouble("Fee")
-      val feeCurrency = scLn.next("feeCurrency")
+      val feeCurrency = scLn.next("Fee Currency")
       val exchangerName = scLn.next("Exchanger")
       val desc = RichText(scLn.next("Description"))
 
@@ -134,7 +134,7 @@ object General extends Exchanger {
     override val linesToSkip = 1
 
     override def lineScanner(line: String) =
-      SeparatedScanner(line, "[,]+")
+      AssociativeSeparatedScanner(skippedLines(0), "[,]")(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = parseDate(scLn.next("Date"))
@@ -172,26 +172,16 @@ object General extends Exchanger {
     override val linesToSkip = 1
 
     override def lineScanner(line: String) =
-      SeparatedScanner(line, "[,]")
+      AssociativeSeparatedScanner(skippedLines(0), "[,]")(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = LocalDateTime.parse(scLn.next("Operation Date"), "yyyy-MM-dd'T'HH:mm:ss.SSSX")
-      val currency = scLn.next("Currency ticker")
-      val opType = scLn.next("Operation type")
-      val amount = scLn.nextDouble("Operation amount")
-      val feeAmount =
-        try {
-          scLn.nextDouble("Operation fee")
-        } catch {
-          case _ => 0
-        }
+      val currency = scLn.next("Currency Ticker")
+      val opType = scLn.next("Operation Type")
+      val amount = scLn.nextDouble("Operation Amount")
+      val feeAmount = scLn.nextDoubleOrElse("Operation Fees", 0)
       val hash = scLn.next("Operation Hash")
-      var desc =
-        try {
-          scLn.next("Description")
-        } catch {
-          case _ => ""
-        }
+      var desc = scLn.nextOrElse("Description", "")
 
       val isOut = opType == "OUT"
       val isFee = opType == "FEES"
