@@ -5,6 +5,31 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 case class ScannerException(msg: String) extends RuntimeException(msg)
 
+object Scanner {
+  def asDouble[T](what: String, str: String, c: Class[T]): Double = {
+    try {
+      Parse.asDouble(str)
+    } catch {
+      case _ => throw ScannerException(s"${c.getSimpleName}.nextDouble($what). token $str is not a Double")
+    }
+  }
+
+  def asInt[T](what: String, str: String, c: Class[T]): Int = {
+    try {
+      Parse.asInt(str)
+    } catch {
+      case _ => throw ScannerException(s"${c.getSimpleName}.nextInt($what). token $str is not an Int")
+    }
+  }
+
+  def orElse[T](get: => T, orElse: => T): T =
+    try {
+      get
+    } catch {
+      case _: Exception => orElse
+    }
+}
+
 
 trait Scanner {
   def close(): Unit
@@ -12,142 +37,139 @@ trait Scanner {
   def next(what: String): String
 
   def nextOrElse(what: String, orElse: => String): String =
-    try {
-      next(what)
-    } catch {
-      case _: Exception => orElse
-    }
+    Scanner.orElse(next(what), orElse)
 
-  def nextDouble(what: String): Double
+  def nextDouble(what: String): Double =
+    Scanner.asDouble(what, next(what), this.getClass)
 
   def nextDoubleOrElse(what: String, orElse: =>  Double): Double =
-    try {
-      nextDouble(what)
-    } catch {
-      case _: Exception => orElse
-    }
+    Scanner.orElse(nextDouble(what), orElse)
 
-  def nextInt(what: String): Int
+  def nextInt(what: String): Int =
+    Scanner.asInt(what, next(what), this.getClass)
 
   def nextIntOrElse(what: String, orElse: =>  Int): Int =
-    try {
-      nextInt(what)
-    } catch {
-      case _: Exception => orElse
-    }
+    Scanner.orElse(nextInt(what), orElse)
 }
 
 
-case class QuotedScanner(str: String, delimiter: Char, sep: Char) extends Scanner {
-  private var string = str
+trait SequentialScanner extends Scanner {
+  def hasNext(): Boolean
+}
+
+case class QuotedScanner(input: String, delimiter: Char, sep: Char) extends SequentialScanner {
+  private val end = input.length
+  private var i = 0
+  private var firstToken = true
+
+  override def hasNext(): Boolean =
+    i < end
 
   override def next(what: String): String = {
-    var token = ""
+    if(!hasNext())
+      throw new ScannerException(s"${this.getClass.getSimpleName}: no more tokens scanning for $what")
 
-    if(string.nonEmpty && string.head == sep)
-      string = string.tail
+    // skip separator before token, except for first token
+    if(!firstToken)
+      i += 1
 
-    val isDelimited = string.nonEmpty && string.head == delimiter
+    firstToken = false
+
+    val isDelimited = i < end && input(i) == delimiter
 
     if(isDelimited) {
-      if(string.nonEmpty && string.head == delimiter)
-        string = string.tail
+      val begin = i
+      var closed = false
 
-      while(string.nonEmpty && string.head != delimiter) {
-        token += string.head
-        string = string.tail
+      while(!closed) {
+        val j = input.indexOf(delimiter, i+1)
+        if(j < 0) // closing delimiter not found
+          throw new ScannerException(s"${this.getClass.getSimpleName}: non-closed delimited token ${input.substring(begin)} scanning for $what")
+        else if(input(j-1) == '\\') // escaped delimiter
+          i = j+1
+        else if (j+1 < end && input(j+1) == delimiter) // two consecutive delimiters
+          i = j+1
+        else {
+          i = j+1
+          closed = true
+        }
       }
-
-      if(string.nonEmpty && string.head == delimiter)
-        string = string.tail
+      return input.substring(begin+1, i-1) // do not include quotes
     } else {
-      while(string.nonEmpty && string.head != sep) {
-        token += string.head
-        string = string.tail
-      }
+      val begin = i
+      val j = input.indexOf(sep, i)
+      i = if(j < 0) end else j
+      return input.substring(begin, i)
     }
-
-    return token
   }
-
-  override def nextDouble(what: String): Double =
-    Parse.asDouble(next(what))
-
-  override def nextInt(what: String): Int =
-    Parse.asInt(next(what))
-
-  def close(): Unit = {}
+  override def close(): Unit = {}
 }
 
-
-case class SeparatedScanner(str: String, separatorRegex: String) extends Scanner {
+case class SeparatedScanner(str: String, separatorRegex: String) extends SequentialScanner {
   private val sc = new java.util.Scanner(str).useDelimiter(separatorRegex)
 
   override def next(what: String): String = sc.next()
 
-  override def nextDouble(what: String): Double = sc.nextDouble()
-
-  override def nextInt(what: String): Int = sc.nextInt()
+  override def hasNext(): Boolean = sc.hasNext()
 
   def close(): Unit = sc.close()
 }
 
+trait AssociativeScannerProvider {
+  def baseScannerFor(input: String): SequentialScanner
 
-object AssociativeSeparatedScanner {
-  def apply(keys: String, separatorRegex: String): String => Scanner = {
-    val indexOf = {
-      val keysSc = new java.util.Scanner(keys).useDelimiter(separatorRegex)
-      val indexes = ListBuffer[String]()
-      while(keysSc.hasNext())
-        indexes += keysSc.next()
-      keysSc.close()
-      indexes.zipWithIndex.toMap
+  def keys: String
+
+  private val indexOfKey = {
+    var map = collection.immutable.Map[String, Int]()
+    val sc = baseScannerFor(keys)
+    var i = 0
+    while(sc.hasNext()) {
+      val key = sc.next("key")
+      map = map + (key -> i)
+      i += 1
+    }
+    sc.close()
+    map
+  }
+
+
+  def scannerFor(input: String): Scanner = new Scanner {
+    private val array = {
+      val arrayBuffer = new ArrayBuffer[String]()
+      val sc = baseScannerFor(input)
+      var i = 0
+      while (sc.hasNext()) {
+        arrayBuffer += sc.next(s"value at column $i")
+        i += 1
+      }
+      sc.close()
+      arrayBuffer.toArray
     }
 
-    return (line: String) => new Scanner {
-      val array = {
-        val sc = new java.util.Scanner(line).useDelimiter(separatorRegex)
-        val arrayBuffer = new ArrayBuffer[String]()
-        while (sc.hasNext())
-          arrayBuffer += sc.next()
-        sc.close()
-        arrayBuffer.toArray
+    override def close(): Unit = {}
+
+    override def next(what: String): String = {
+      val idx = try {
+        indexOfKey(what)
+      } catch {
+        case _ => throw ScannerException(s"${this.getClass.getSimpleName}. Key $what is not defined")
       }
-
-      override def close(): Unit = {}
-
-      private def value(what: String, method: String): String = {
-        val idx = try {
-          indexOf(what)
-        } catch {
-          case _ => throw ScannerException(s"AssociativeSeparatedScanner.$method($what). Key not defined")
-        }
-        try {
-          array(idx)
-        } catch {
-          case _ => throw ScannerException(s"AssociativeSeparatedScanner.$method($what). value not defined")
-        }
-      }
-
-      override def next(what: String): String = value(what, "next")
-
-      override def nextDouble(what: String): Double = {
-        val v = value(what, "nextDouble")
-        try {
-          Parse.asDouble(v)
-        } catch {
-          case _ => throw ScannerException(s"AssociativeSeparatedScanner.nextDouble($what). value is not a Double")
-        }
-      }
-
-      override def nextInt(what: String): Int = {
-        val v = value(what, "nextInt")
-        try {
-          Parse.asInt(v)
-        } catch {
-          case _ => throw ScannerException(s"AssociativeSeparatedScanner.nextInt($what). value is not an Int")
-        }
+      try {
+        array(idx)
+      } catch {
+        case _ => throw ScannerException(s"${this.getClass.getSimpleName}. value for key $what is not defined")
       }
     }
   }
+}
+
+case class AssociativeQuotedScannerProvider(keys: String, delimiter: Char, sep: Char) extends AssociativeScannerProvider {
+  override def baseScannerFor(input: String): SequentialScanner =
+    QuotedScanner(input, delimiter, sep)
+}
+
+case class AssociativeSeparatedScannerProvider(keys: String, separatorRegex: String) extends AssociativeScannerProvider {
+  override def baseScannerFor(input: String): SequentialScanner =
+    SeparatedScanner(input, separatorRegex)
 }
