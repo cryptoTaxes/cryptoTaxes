@@ -70,9 +70,7 @@ object Shapeshift extends Exchanger {
               val fromTxInfo = TransactionsCache.lookup(fromCurrency, fromTxId, depositAddress)
 
               val date = fromTxInfo.localDate
-
-              // val desc = RichText(s"Order: ${RichText.url(orderId,s"https://shapeshift.io/txStat/$depositAddress")}")
-              val desc = RichText(s"Order: ${RichText.url(orderId,s"https://shapeshift.io/orderInfo/$orderId")}")
+              val orderUrl = s"https://shapeshift.io/orderInfo/$orderId"
 
               val deposit = Deposit(
                 date = date
@@ -80,8 +78,11 @@ object Shapeshift extends Exchanger {
                 , amount = fromAmount + fromTxInfo.fee
                 , currency = fromCurrency
                 , exchanger = Shapeshift
-                , description = RichText(s"Deposit ${RichText.util.transaction(fromCurrency, fromTxId, depositAddress)}")
+                , description = RichText(s"Deposit ${RichText.url(orderId,orderUrl)}${RichText.nl}${RichText.util.transaction(fromCurrency, fromTxId, depositAddress)}")
               )
+
+              val exchUrl = RichText.util.onlineExchange(fromCurrency, fromTxId, toCurrency, toTxId)
+              val desc = RichText(s"Order: ${RichText.url(orderId,orderUrl)} $exchUrl")
 
               val exchange =
                 Exchange(
@@ -100,7 +101,7 @@ object Shapeshift extends Exchanger {
                 , amount = toAmount
                 , currency = toCurrency
                 , exchanger = Shapeshift
-                , description = RichText(s"Withdrawal ${RichText.util.transaction(toCurrency, toTxId, withdrawalAddress)}")
+                , description = RichText(s"Withdrawal ${RichText.url(orderId,orderUrl)}${RichText.nl}${RichText.util.transaction(toCurrency, toTxId, withdrawalAddress)}")
               )
 
               operations ++= List(deposit, exchange, withdrawal)

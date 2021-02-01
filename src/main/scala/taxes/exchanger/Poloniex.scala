@@ -297,7 +297,7 @@ object Poloniex extends Exchanger {
                   , amount = feeDeducted
                   , currency = currency
                   , exchanger = Poloniex
-                  , description = RichText(s"Poloniex withdrawal fee $currency $txid")
+                  , description = RichText(s"Poloniex withdrawal of ${Format.asCurrency(withdrawal.amount, withdrawal.currency)} fee")
                 )
               else
                 NonTaxableFee(
@@ -306,7 +306,7 @@ object Poloniex extends Exchanger {
                   , amount = feeDeducted
                   , currency = currency
                   , exchanger = Poloniex
-                  , description = RichText(s"Poloniex withdrawal non taxable fee $currency $txid")
+                  , description = RichText(s"Poloniex withdrawal of ${Format.asCurrency(withdrawal.amount, withdrawal.currency)} non taxable fee")
                 )
             operations += fee
           }

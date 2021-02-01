@@ -85,13 +85,10 @@ object Bittrex extends Exchanger {
           Logger.fatal(s"Bittrex.readLine2014_2017: Error reading this line: $line\nOrder type unknown $orderType")
       }
       val quantity = scLn.nextDouble("Quantity")
-      // val limit = scLn.nextDouble("Limit")
-      val comissionPaid = scLn.nextDouble("CommissionPaid")
-
+      val commissionPaid = scLn.nextDouble("CommissionPaid")
       val price = scLn.nextDouble("Price")
 
       val fmt = "[M][MM]/[d][dd]/yyyy [h][hh]:mm:ss a"
-      // val dateOpen = LocalDateTime.parseAsUTC(scLn.next("Opened"), fmt)   // Bittrex csv trade history uses UTC time zone
       val dateClose = LocalDateTime.parseAsUTC(scLn.next("Closed"), fmt) // but notice that the GUI uses your local time
 
       val desc = RichText(s"Order: $orderId")
@@ -115,8 +112,8 @@ object Bittrex extends Exchanger {
             date = dateClose
             , id = orderId
             , fromAmount = quantity, fromCurrency = baseCurrency
-            , toAmount = price - comissionPaid, toCurrency = quoteCurrency
-            , fees = List(FeePair(comissionPaid, quoteCurrency))
+            , toAmount = price - commissionPaid, toCurrency = quoteCurrency
+            , fees = List(FeePair(commissionPaid, quoteCurrency))
             , exchanger = Bittrex
             , description = desc
           )
@@ -126,7 +123,7 @@ object Bittrex extends Exchanger {
             , id = orderId
             , fromAmount = price, fromCurrency = quoteCurrency
             , toAmount = quantity, toCurrency = baseCurrency
-            , fees = List(FeePair(comissionPaid, quoteCurrency))
+            , fees = List(FeePair(commissionPaid, quoteCurrency))
             , exchanger = Bittrex
             , description = desc
           )
@@ -136,14 +133,11 @@ object Bittrex extends Exchanger {
     // This is for the csv format used by Bittrex from 2018 onwards
     def readLine2018(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val orderId = scLn.next("Uuid")
-      val (m1, m2) = Parse.split(scLn.next("Exchange"), "-")
+      val (currency1, currency2) = Parse.split(scLn.next("Exchange"), "-")
 
-      val quoteCurrency = Currency.normalize(m1)
-      val baseCurrency = Currency.normalize(m2)
+      val quoteCurrency = Currency.normalize(currency1)
+      val baseCurrency = Currency.normalize(currency2)
 
-      val fmt = "[M][MM]/[d][dd]/yyyy [h][hh]:mm:ss a"
-      // val dateOpen = LocalDateTime.parseAsUTC(scLn.next("TimeStamp"), fmt)   // Bittrex csv trade history uses UTC time zone
-      // but notice that the GUI uses your local time
       val isSell = {
         val orderType = scLn.next("OrderType")
         if(orderType == "LIMIT_SELL")
@@ -153,18 +147,14 @@ object Bittrex extends Exchanger {
         else
           Logger.fatal(s"Bittrex.readLine2018: Error reading this line: $line\nOrder type unknown $orderType")
       }
-      //val limit = scLn.nextDouble("Limit")
       val quantity = scLn.nextDouble("Quantity")
       val quantityRemaining = scLn.nextDouble("QuantityRemaining")
       val commission = scLn.nextDouble("Commission")
       val price = scLn.nextDouble("Price")
-      //val pricePerUnit = scLn.nextDouble("PricePerUnit")
-      //val isConditional = scLn.next("IsConditional") == "True"
 
-      //val condition = scLn.next("Condition")
-      //val conditionTarget = scLn.next("ConditionTarget")
-      //val immediateOrCancel = scLn.next("ImmediateOrCancel") == "True"
-
+      // Bittrex csv trade history uses UTC time zone
+      // but notice that the GUI uses your local time
+      val fmt = "[M][MM]/[d][dd]/yyyy [h][hh]:mm:ss a"
       val dateClose = LocalDateTime.parseAsUTC(scLn.next("Closed"), fmt)
 
       val desc = RichText(s"Order: $orderId")
@@ -206,21 +196,20 @@ object Bittrex extends Exchanger {
           )
       return CSVReader.Ok(exchange)
     }
-
     // toDo some bittrex operations have same close date so their order will depend on order in csv file which can change for different downloads
   }
 
   private def depositsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
-    override def lineScanner(line: String): Scanner =
-      SeparatedScanner(line, "[,]")
+    private lazy val provider = AssociativeSeparatedScannerProvider(skippedLines(0), "[,]")
+    override def lineScanner(line: String) =
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val id = scLn.next("Id")
+      val depositId = scLn.next("Id")
       val currency = Currency.normalize(scLn.next("Currency"))
       val amount = scLn.nextDouble("Amount")
-      val confirmations = scLn.nextInt("Confirmations")
 
       val fmt = "yyyy-[M][MM]-[d][dd] [H][HH]:mm:ssX"
       val lastUpdatedDate = LocalDateTime.parseAsUTC(scLn.next("LastUpdatedDate"), fmt)
@@ -228,7 +217,7 @@ object Bittrex extends Exchanger {
       val txid = scLn.next("TxId")
       val address = scLn.next("CryptoAddress")
 
-      val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txid, address)}")
+      val desc = RichText(s"Deposit ${RichText.small(depositId)}${RichText.nl}${RichText.util.transaction(currency, txid, address)}")
 
       val deposit = Deposit(
         date = lastUpdatedDate
@@ -245,11 +234,12 @@ object Bittrex extends Exchanger {
   private def withdrawalsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
-    override def lineScanner(line: String): Scanner =
-      SeparatedScanner(line, "[,]")
+    private lazy val provider = AssociativeSeparatedScannerProvider(skippedLines(0), "[,]")
+    override def lineScanner(line: String) =
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val paymentUuid = scLn.next("PaymentUuid")
+
       val currency = Currency.normalize(scLn.next("Currency"))
       val amount = scLn.nextDouble("Amount")
       val address = scLn.next("Address")
@@ -258,14 +248,14 @@ object Bittrex extends Exchanger {
       val dateOpen = LocalDateTime.parseAsUTC(scLn.next("OpenedDate"), fmt)
 
       val authorized = scLn.next("Authorized") == "true"
-      val pending = scLn.next("Pending") == "true"
       val txFee = scLn.nextDouble("TxFee")
-      val cancelled = scLn.next("Cancelled") == "true"
+      val cancelled = scLn.next("Canceled") == "true"
 
+      val paymentUuid = scLn.next("PaymentUuid")
 
       if(authorized && !cancelled) {
         val txid = scLn.next("TxId")
-        val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
+        val desc = RichText(s"Withdrawal ${RichText.small(paymentUuid)}${RichText.nl}${RichText.util.transaction(currency, txid, address)}")
 
         val withdrawal = Withdrawal(
           date = dateOpen
@@ -284,7 +274,7 @@ object Bittrex extends Exchanger {
               , amount = txFee
               , currency = currency
               , exchanger = Bittrex
-              , description = RichText(s"Bittrex withdrawal fee $currency $txid")
+              , description = RichText(s"Bittrex withdrawal of ${Format.asCurrency(amount, currency)} fee ${RichText.small(paymentUuid)}")
             )
           else
             NonTaxableFee(
@@ -293,7 +283,7 @@ object Bittrex extends Exchanger {
               , amount = txFee
               , currency = currency
               , exchanger = Bittrex
-              , description = RichText(s"Bittrex withdrawal non taxable fee $currency $txid")
+              , description = RichText(s"Bittrex withdrawal of ${Format.asCurrency(amount, currency)} non taxable fee${RichText.nl}${RichText.small(paymentUuid)}")
             )
         return CSVReader.Ok(List(withdrawal, fee))
       } else
@@ -374,7 +364,7 @@ object Bittrex extends Exchanger {
                 , amount = feeAmount
                 , currency = currency
                 , exchanger = Bittrex
-                , description = RichText(s"Bittrex withdrawal fee $currency $txid")
+                , description = RichText(s"Bittrex withdrawal of ${Format.asCurrency(amount, currency)} fee")
               )
             else
               NonTaxableFee(
@@ -383,7 +373,7 @@ object Bittrex extends Exchanger {
                 , amount = feeAmount
                 , currency = currency
                 , exchanger = Bittrex
-                , description = RichText(s"Bittrex withdrawal non taxable fee $currency $txid")
+                , description = RichText(s"Bittrex withdrawal of ${Format.asCurrency(amount, currency)} non taxable fee")
               )
 
           operations += withdrawal
@@ -391,81 +381,6 @@ object Bittrex extends Exchanger {
         }
       }
       return operations.toList
-    }
-  }
-
-  private def withdrawalsReader2(fileName: String) = new FileSource[Operation](fileName) {
-    def withdrawalFee(currency: Currency, date: LocalDateTime): Double = {
-      currency match {
-        case Currency.bitcoin =>
-          if(date.getYear<2017)
-            0.0002
-          else
-            0.001
-        case _ => 0
-      }
-    }
-
-    def read(): Seq[Operation] = {
-      val f = FileSystem.File(fileName)
-      val sc = new java.util.Scanner(f)
-
-      def getNextLine(): Option[String] = {
-        while(sc.hasNextLine) {
-          val ln = Parse.trimSpaces(sc.nextLine())
-          if(ln.nonEmpty)
-            return Some(ln)
-        }
-        return None
-      }
-
-      var operations = List[Operation]()
-
-      getNextLine() // skip header
-
-      var ok = true
-      while(sc.hasNextLine) {
-        val opts = (0 to 2).map(_ => getNextLine())
-
-        ok = opts.forall(_.isDefined)
-
-        if(ok) {
-          val scLn = opts.map { case Some(ln) => SeparatedScanner(ln, "[ \t]+") }
-          try {
-            val date = LocalDateTime.parseAsMyZoneId(scLn(0).next("date")+" 00:00:00", "MM/dd/yyyy HH:mm:ss") // this is local time as it's taken from the GUI
-            val currency = Currency.normalize(scLn(0).next("currency"))
-            val amount = scLn(0).nextDouble("amount")
-            val status = scLn(0).next("status")
-
-            scLn(1).next("")
-            val address = scLn(1).next("address")
-
-            scLn(2).next("")
-            val txid = scLn(2).next("txid")
-
-            val paidFee = withdrawalFee(currency, date)
-            if(status == "Completed" && paidFee > 0) {
-              val desc = RichText(s"$id Withdrawal fee $currency $txid")
-
-              val fee = Fee(
-                date = date
-                , id = desc.toString
-                , amount = paidFee
-                , currency = currency
-                , exchanger = Bittrex
-                , description = desc
-              )
-              operations ::= fee
-            } else
-              Logger.warning(s"$id. Read withdrawal ${FileSystem.pathFromData(fileName)}: This withdrawal was ignored: ${opts(0).get}.")
-          } catch {
-            case e => Logger.fatal(s"Something went wrong reading csv file $fileName. $e")
-          } finally
-            scLn.foreach(_.close())
-        }
-      }
-      sc.close()
-      return operations
     }
   }
 }

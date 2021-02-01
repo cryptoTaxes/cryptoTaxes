@@ -1,5 +1,6 @@
 package taxes.util.parse
 
+import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 
@@ -118,11 +119,11 @@ case class SeparatedScanner(str: String, separatorRegex: String) extends Sequent
 trait AssociativeScannerProvider {
   def baseScannerFor(input: String): SequentialScanner
 
-  def keys: String
+  def keysLine: String
 
   private val indexOfKey = {
     var map = collection.immutable.Map[String, Int]()
-    val sc = baseScannerFor(keys)
+    val sc = baseScannerFor(keysLine)
     var i = 0
     while(sc.hasNext()) {
       val key = sc.next("key")
@@ -133,6 +134,7 @@ trait AssociativeScannerProvider {
     map
   }
 
+  def keys: Iterable[String] = indexOfKey.keys
 
   def scannerFor(input: String): Scanner = new Scanner {
     private val array = {
@@ -153,7 +155,7 @@ trait AssociativeScannerProvider {
       val idx = try {
         indexOfKey(what)
       } catch {
-        case _ => throw ScannerException(s"${this.getClass.getSimpleName}. Key $what is not defined")
+        case _ => throw ScannerException(s"${this.getClass.getSimpleName}. Key $what is not defined. Defined keys are ${keys.mkString(", ")}")
       }
       try {
         array(idx)
@@ -164,12 +166,12 @@ trait AssociativeScannerProvider {
   }
 }
 
-case class AssociativeQuotedScannerProvider(keys: String, delimiter: Char, sep: Char) extends AssociativeScannerProvider {
+case class AssociativeQuotedScannerProvider(keysLine: String, delimiter: Char, sep: Char) extends AssociativeScannerProvider {
   override def baseScannerFor(input: String): SequentialScanner =
     QuotedScanner(input, delimiter, sep)
 }
 
-case class AssociativeSeparatedScannerProvider(keys: String, separatorRegex: String) extends AssociativeScannerProvider {
+case class AssociativeSeparatedScannerProvider(keysLine: String, separatorRegex: String) extends AssociativeScannerProvider {
   override def baseScannerFor(input: String): SequentialScanner =
     SeparatedScanner(input, separatorRegex)
 }

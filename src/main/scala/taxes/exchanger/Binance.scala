@@ -36,9 +36,10 @@ object Binance extends Exchanger {
 
     override val linesToSkip = 1
 
-    override def lineScanner(line: String): Scanner =
-      QuotedScanner(line, '\"', csvSeparator)
-  }
+    private lazy val provider = AssociativeSeparatedScannerProvider(skippedLines(0), s"[$csvSeparator]")
+    override def lineScanner(line: String) =
+      provider.scannerFor(line)
+}
 
   private def operationsReader(xlsxFileName: String) =
     new BinanceReader(xlsxFileName) {

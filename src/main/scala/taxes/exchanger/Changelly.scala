@@ -144,21 +144,6 @@ object Changelly extends Exchanger {
     }
   }
 
-  private def makeDescription(orderId: String, inCurrency: Currency, inHash: String, outCurrency: Currency, outHash: String): RichText = {
-    var desc = RichText(s"Order: $orderId")
-
-    BlockExplorer.transactionURL(inCurrency, inHash) match {
-      case None => ;
-      case Some(url) => desc = desc + " " + RichText.url("in ", url)
-    }
-
-    BlockExplorer.transactionURL(outCurrency, outHash) match {
-      case None => ;
-      case Some(url) => desc = desc + " " + RichText.url("out ", url)
-    }
-    return desc
-  }
-
   private def readDepositsWithdrawals2020(fileName: String): Seq[Operation] = {
     def parseDate(str: String) =
       LocalDateTime.parseAsMyZoneId(str, "dd MMM yyyy, HH:mm:ss")
@@ -191,10 +176,10 @@ object Changelly extends Exchanger {
           , amount = inAmount
           , currency = inCurrency
           , exchanger = Changelly
-          , description = RichText(s"Deposit ${RichText.util.transaction(inCurrency, inHash)}")
+          , description = RichText(s"Deposit ${RichText.small(orderId)}${RichText.nl}${RichText.util.transaction(inCurrency, inHash)}")
         )
 
-        val desc = makeDescription(orderId, inCurrency, inHash, outCurrency, outHash)
+        val desc = RichText(s"Order: $orderId ${RichText.util.onlineExchange(inCurrency, inHash, outCurrency, outHash)}")
 
         val exchange = Exchange(
             date = depositDate.plusNanos(1) // to keep proper order for deposit/exchange/withdrawal
@@ -212,7 +197,7 @@ object Changelly extends Exchanger {
           , amount = outAmount
           , currency = outCurrency
           , exchanger = Changelly
-          , description = RichText(s"Withdrawal ${RichText.util.transaction(outCurrency, outHash, receiver)}")
+          , description = RichText(s"Withdrawal ${RichText.small(orderId)}${RichText.nl}${RichText.util.transaction(outCurrency, outHash, receiver)}")
         )
         operations += deposit
         operations += exchange
@@ -260,7 +245,7 @@ object Changelly extends Exchanger {
 
         val depositDate = parseDate(inDate)
 
-        val desc = makeDescription(orderId, inCurrency, inHash, outCurrency, outHash)
+        val desc = RichText(s"Order: $orderId ${RichText.util.onlineExchange(inCurrency, inHash, outCurrency, outHash)}")
         descriptions += (Key(fromAmount, toAmount, txCounter) -> desc)
         txCounter += 1
 
@@ -270,7 +255,7 @@ object Changelly extends Exchanger {
           , amount = inAmount
           , currency = inCurrency
           , exchanger = Changelly
-          , description = RichText(s"Deposit ${RichText.util.transaction(inCurrency, inHash)}")
+          , description = RichText(s"Deposit ${RichText.small(orderId)}${RichText.nl}${RichText.util.transaction(inCurrency, inHash)}")
         )
         /*
         val exchange = Exchange(
@@ -289,7 +274,7 @@ object Changelly extends Exchanger {
           , amount = outAmount
           , currency = outCurrency
           , exchanger = Changelly
-          , description = RichText(s"Withdrawal ${RichText.util.transaction(outCurrency, outHash, receiver)}")
+          , description = RichText(s"Withdrawal ${RichText.small(orderId)}${RichText.nl}${RichText.util.transaction(outCurrency, outHash, receiver)}")
         )
         operations += deposit
         operations += withdrawal

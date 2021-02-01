@@ -65,7 +65,7 @@ object CCEX extends Exchanger {
         val txid = scLn.next("txid").init.tail
 
 
-        val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txid)}")
+        val desc = RichText(s"Deposit${RichText.nl}${RichText.util.transaction(currency, txid)}")
         val deposit = Deposit(
           date = date
           , id = txid

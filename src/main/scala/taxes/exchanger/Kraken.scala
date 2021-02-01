@@ -298,9 +298,9 @@ object Kraken extends Exchanger {
 
         val desc = depositsWithdrawalsInfo.get(refid) match {
           case None =>
-            RichText(s"Withdrawal $currency $id")
+            RichText(s"$currency withdrawal${RichText.nl}${RichText.small(id)}")
           case Some(Kraken.OnChainInfo(address, tx)) =>
-            RichText(s"Withdrawal ${RichText.util.transaction(currency, tx, address)}")
+            RichText(s"Withdrawal ${RichText.small(id)}${RichText.nl}${RichText.util.transaction(currency, tx, address)}")
         }
 
         val withdrawal = Withdrawal(
@@ -309,7 +309,7 @@ object Kraken extends Exchanger {
           , amount = amount.abs
           , currency = currency
           , exchanger = Kraken
-          , description = desc // RichText(s"Withdrawal $currency $id")
+          , description = desc
         )
 
         var results = List[Operation](withdrawal)
@@ -320,7 +320,7 @@ object Kraken extends Exchanger {
             , amount = feeAmount
             , currency = currency
             , exchanger = Kraken
-            , description = RichText(s"Kraken withdrawal fee $currency $id")
+            , description = RichText(s"Kraken withdrawal of ${Format.asCurrency(withdrawal.amount, currency)} fee ${RichText.small(id)}")
           )
           results ++= List(fee)
         } else {
@@ -330,7 +330,7 @@ object Kraken extends Exchanger {
             , amount = feeAmount
             , currency = currency
             , exchanger = Kraken
-            , description = RichText(s"Kraken withdrawal non taxable fee $currency $id")
+            , description = RichText(s"Kraken withdrawal of ${Format.asCurrency(withdrawal.amount, currency)} non taxable fee ${RichText.nl}${RichText.small(id)}")
           )
           results ++= List(nonTaxableFee)
         }
@@ -342,9 +342,9 @@ object Kraken extends Exchanger {
 
         val desc = depositsWithdrawalsInfo.get(refid) match {
           case None =>
-            RichText(s"Deposit $currency $id")
+            RichText(s"$currency deposit${RichText.nl}${RichText.small(id)}")
           case Some(Kraken.OnChainInfo(address, tx)) =>
-            RichText(s"Deposit ${RichText.util.transaction(currency, tx, address)}")
+            RichText(s"Deposit ${RichText.small(id)}${RichText.nl}${RichText.util.transaction(currency, tx, address)}")
         }
 
         val deposit = Deposit(
@@ -353,7 +353,7 @@ object Kraken extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = Kraken
-          , description = desc // RichText(s"Deposit $currency $id")
+          , description = desc
         )
         var results = List[Operation](deposit)
         if((currency == Currency.bitcoin || currency == Currency.euro || Config.config.fundingFees) && !Config.config.deprecatedUp2017Version) {
@@ -364,7 +364,7 @@ object Kraken extends Exchanger {
               , amount = feeAmount
               , currency = currency
               , exchanger = Kraken
-              , description = RichText(s"Kraken Deposit fee $currency $id")
+              , description = RichText(s"Kraken $currency deposit fee ${RichText.small(id)}")
             )
             results ++= List(fee)
           } else if(feeAmount < 0) {
@@ -374,7 +374,7 @@ object Kraken extends Exchanger {
               , amount = -feeAmount
               , currency = currency
               , exchanger = Kraken
-              , description = RichText(s"Deposit $currency $id")
+              , description = RichText(s"$currency deposit${RichText.nl}${RichText.small(id)}")
             )
             results ++= List(deposit)
           }
@@ -390,7 +390,7 @@ object Kraken extends Exchanger {
           , amount = feeAmount
           , currency = currency
           , exchanger = Kraken
-          , description = RichText(s"Non Taxable Fee $currency $id")
+          , description = RichText(s"Non Taxable $currency Fee${RichText.nl}${RichText.small(id)}")
         )
         return CSVReader.Ok(nonTaxableFee)
       } else if(txType == "transfer") {
@@ -403,7 +403,7 @@ object Kraken extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = Kraken
-          , description = RichText(s"Transfer $currency $id")
+          , description = RichText(s"$currency Transfer ${RichText.small(id)}")
         )
         return CSVReader.Ok(deposit)
       } else

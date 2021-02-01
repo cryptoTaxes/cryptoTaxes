@@ -12,10 +12,7 @@ object GDAX extends Exchanger {
   override val sources = Seq(
     new FilteredUserInputFolderSource[Operation]("gdax", ".csv") {
       def fileSource(fileName: String) = operationsReader(fileName)
-    }, /*
-    new UserInputYearFolderSource[Operation]("gdax/accounts", ".csv") {
-      def fileSource(fileName: String) = depositsWithdrawalsReader(fileName)
-    },*/
+    },
     new FilteredUserInputFolderSource[Operation]("gdax/transactionHistories", ".csv") {
       def fileSource(fileName: String) = transactionHistoriesReader(fileName)
     }
@@ -24,20 +21,20 @@ object GDAX extends Exchanger {
   private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
-    override def lineScanner(line: String): Scanner =
-      SeparatedScanner(line, "[,]")
+    private lazy val provider = AssociativeSeparatedScannerProvider(skippedLines(0), "[,]")
+    override def lineScanner(line: String) =
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val tradeID = scLn.next("Trade ID")
-      val product = scLn.next("Product")
-      val side = scLn.next("Side")
-      val createdAt = scLn.next("Created At")
-      val size = scLn.nextDouble("Size")
-      val sizeUnit = scLn.next("Size Unit")
-      val price = scLn.nextDouble("Price")
-      val fee = scLn.nextDouble("Fee")
-      val total = scLn.nextDouble("Total")
-      val priceFeeTotalUnit = scLn.next("Price/Total Unit")
+      val tradeID = scLn.next("trade id")
+      val product = scLn.next("product")
+      val side = scLn.next("side")
+      val createdAt = scLn.next("created at")
+      val size = scLn.nextDouble("size")
+      val sizeUnit = scLn.next("size unit")
+      val fee = scLn.nextDouble("fee")
+      val total = scLn.nextDouble("total")
+      val priceFeeTotalUnit = scLn.next("price/fee/total unit")
 
       val desc = RichText(s"Order: $tradeID")
       val date = LocalDateTime.parse(createdAt, "yyyy-MM-dd'T'HH:mm:ss.SSSX") // GDAX includes a zone-offset 'Z' at the end
@@ -81,76 +78,22 @@ object GDAX extends Exchanger {
     }
   }
 
-  private def depositsWithdrawalsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
-    override val linesToSkip = 1
-
-    override def lineScanner(line: String): Scanner =
-      SeparatedScanner(line, "[,]")
-
-    override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val profile = scLn.next("profile")
-      val what = scLn.next("type")
-      val time = LocalDateTime.parse(scLn.next("time"), "yyyy-MM-dd'T'HH:mm:ss.SSSX") // GDAX includes a zone-offset 'Z' at the end
-      val amount = scLn.nextDouble("amount")
-      val balance = scLn.nextDouble("balance")
-      val unit = Currency.normalize(scLn.next("amount/balance unit"))
-      val id = scLn.next("transfer id,trade id,order id")
-
-      if(what=="deposit") {
-        val deposit = Deposit(
-          date = time
-          , id = id
-          , amount = amount
-          , currency = unit
-          , exchanger = GDAX
-          , description = RichText(s"Deposit $id")
-        )
-        return CSVReader.Ok(deposit)
-      } else if(what=="withdrawal") {
-        val withdrawal = Withdrawal(
-          date = time
-          , id = id
-          , amount = amount.abs
-          , currency = unit
-          , exchanger = GDAX
-          , description = RichText(s"Withdrawal $id")
-        )
-        return CSVReader.Ok(withdrawal)
-      } else
-        return CSVReader.Warning(s"$id. Read file ${FileSystem.pathFromData(fileName)}: Reading this transaction is not currently supported: $line.")
-    }
-  }
-
   private def transactionHistoriesReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 4
 
+    private lazy val provider = AssociativeQuotedScannerProvider(skippedLines(linesToSkip-1), '\"', ',')
     override def lineScanner(line: String): Scanner =
-      parse.QuotedScanner(line, '\"', ',')
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = LocalDateTime.parse(scLn.next("Timestamp"), "yyyy-MM-dd HH:mm:ss Z")
-      val balance = scLn.nextDouble("Balance")
       val amount = scLn.nextDouble("Amount")
       val currency = Currency.normalize(scLn.next("Currency"))
       val to = scLn.next("To")
 
-      val _0 = scLn.next("Notes")
-      val _1 = scLn.next("Instantly Exchanged")
-      val _2 = scLn.next("Transfer Total")
-      val _3 = scLn.next("Transfer Total Currency")
-      val _4 = scLn.next("Transfer Fee")
-      val _5 = scLn.next("Transfer Fee Currency")
       val transferPaymentMethod = scLn.next("Transfer Payment Method")
-      val _7 = scLn.next("Transfer ID")
-      val _8 = scLn.next("Order Price")
-      val _9 = scLn.next("Order Currency")
-      val _10 = scLn.next("Order Total")
-      val _11 = scLn.next("Order Tracking Code")
-      val _12 = scLn.next("Order Custom Parameter")
-      val _13 = scLn.next("Order Paid Out")
-      val _14 = scLn.next("Recurring Payment ID")
 
-      val id = scLn.next("Coinbase ID")
+      val coinbaseId = scLn.next("Coinbase ID")
 
       val _txHash = scLn.next("Transaction Hash")
       val relevant = (currency==Currency.euro && transferPaymentMethod.nonEmpty) || _txHash.nonEmpty
@@ -165,13 +108,13 @@ object GDAX extends Exchanger {
         if(amount > 0) {
           val desc =
             if(currency==Currency.euro)
-              s"Deposit ${transferPaymentMethod.take(20)}..."
+              s"Deposit ${RichText.small(coinbaseId)}${RichText.nl}${RichText.small(transferPaymentMethod.take(40))}..."
             else
-              s"Deposit ${RichText.util.transaction(currency, txHash)}"
+              s"Deposit ${RichText.small(coinbaseId)}${RichText.nl}${RichText.util.transaction(currency, txHash)}"
 
           val deposit = Deposit(
             date = date
-            , id = id
+            , id = coinbaseId
             , amount = amount
             , currency = currency
             , exchanger = GDAX
@@ -181,13 +124,13 @@ object GDAX extends Exchanger {
         } else {
           val desc =
             if(currency==Currency.euro)
-              s"Withdrawal ${transferPaymentMethod.take(20)}..."
+              s"Withdrawal ${RichText.small(coinbaseId)}${RichText.nl}${RichText.small(transferPaymentMethod.take(40))}..."
             else
-              s"Withdrawal ${RichText.util.transaction(currency, txHash, to)}"
+              s"Withdrawal ${RichText.small(coinbaseId)}${RichText.nl}${RichText.util.transaction(currency, txHash, to)}"
 
           val withdrawal = Withdrawal(
             date = date
-            , id = id
+            , id = coinbaseId
             , amount = amount.abs
             , currency = currency
             , exchanger = GDAX

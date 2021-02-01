@@ -26,8 +26,16 @@ object QTrade extends Exchanger {
   private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
-    override def lineScanner(line: String) =
-      QuotedScanner(line, '\"', ',')
+    lazy val header = {
+      // manually remove BOM if present in UTF8 file
+      val UTF8_BOM = "\uFEFF"
+      val line = skippedLines(0)
+      if(line.startsWith(UTF8_BOM)) line.substring(1) else line
+    }
+
+    private lazy val provider = AssociativeQuotedScannerProvider(header, '\"', ',')
+    override def lineScanner(line: String): Scanner =
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val orderId = scLn.next("Order ID")
@@ -37,12 +45,10 @@ object QTrade extends Exchanger {
       val tradeId = scLn.next("Trade ID")
       val marketAmount = scLn.nextDouble("Market Amount")
       val baseAmount = scLn.nextDouble("Base Amount")
-      val price = scLn.nextDouble("Price")
-      val taker = scLn.next("Taker")
       val baseFee = scLn.nextDouble("Base Fee")
       val date = LocalDateTime.parse(scLn.next("Creation Date"), "yyyy-MM-dd'T'HH:mm:ss.SSSSSSX") // includes a zone-offset 'Z' at the end
 
-      val id = s"$orderId-$tradeId"
+      val id = s"$orderId/$tradeId"
       val desc = RichText(s"Order: $id")
       val isBuy = orderType.startsWith("buy")
 
@@ -95,7 +101,7 @@ object QTrade extends Exchanger {
                 , amount = feeAmount
                 , currency = currency
                 , exchanger = QTrade
-                , description = RichText(s"QTrade withdrawal fee $currency $hash")
+                , description = RichText(s"QTrade withdrawal of ${Format.asCurrency(amount-feeAmount, currency)} fee")
               )
             else
               NonTaxableFee(
@@ -104,7 +110,7 @@ object QTrade extends Exchanger {
                 , amount = feeAmount
                 , currency = currency
                 , exchanger = QTrade
-                , description = RichText(s"QTrade non taxable withdrawal fee $currency $hash")
+                , description = RichText(s"QTrade withdrawal of ${Format.asCurrency(amount-feeAmount, currency)}non taxable fee")
               )
 
           val withdrawal = Withdrawal(

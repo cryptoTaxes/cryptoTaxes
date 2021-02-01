@@ -64,6 +64,9 @@ GRS:transaction -> https://chainz.cryptoid.info/grs/tx.dws?*
 LBC:address -> https://explorer.lbry.com/address/*
 LBC:transaction -> https://explorer.lbry.com/tx/*
 
+LINK:address -> https://etherscan.io/address/*
+LINK:transaction -> https://etherscan.io/tx/*
+
 LTC:address -> https://live.blockcypher.com/ltc/address/*
 LTC:transaction -> https://live.blockcypher.com/ltc/tx/*
 
@@ -82,8 +85,11 @@ NLG:transaction -> https://nlg.tokenview.com/en/tx/*
 NXT:address -> https://nxtportal.org/accounts/*
 NXT:transaction -> https://nxtportal.org/transactions/*
 
-NYZO:address -> https://nyzo.co/wallet?id=*
-NYZO:transaction -> https://nyzo.co
+// NYZO:address -> https://nyzo.co/wallet?id=*
+// NYZO:transaction -> https://nyzo.co
+
+NYZO:address -> https://nyzo.today/explorer/*
+NYZO:transaction -> https://nyzo.today/explorer/*
 
 PAY:address -> https://etherscan.io/address/*
 PAY:transaction -> https://etherscan.io/tx/*

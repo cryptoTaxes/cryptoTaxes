@@ -36,8 +36,22 @@ object Parse {
   def isComment(line: String): Boolean =
     line.isEmpty || line.startsWith("//")
 
+  def trim(str: String, p: Char => Boolean): String = {
+    var len = str.length
+    var st = 0
+
+    while ((st < len) && p(str(st)))
+      st += 1
+    while ((st < len) && p(str(len - 1) ))
+      len -= 1
+    return if ((st > 0) || (len < str.length))
+      str.substring(st, len)
+    else
+      str
+  }
+
   def trimSpaces(str: String): String =
-    str.dropWhile(_.isSpaceChar).reverse.dropWhile(_.isSpaceChar).reverse
+    trim(str, _ == ' ')
 
   def split(str: String, separator: String): (String, String) = {
     val idx = str.indexOf(separator)
@@ -79,14 +93,17 @@ object Parse {
     else
       None
 
-  def unquote(str: String, delimiter: String): Option[String] =
+  def unquote(str: String, begin: String, end: String): Option[String] =
     for {
-      str1 <- removePrefix(str, delimiter)
-    ; str2 <- {
-        val idx = str1.indexOf(delimiter)
+      str1 <- removePrefix(str, begin)
+      ; str2 <- {
+        val idx = str1.indexOf(end)
         if(idx < 0) None else Some(str1.take(idx))
       }
     } yield (str2)
+
+  def unquote(str: String, delimiter: String): Option[String] =
+    unquote(str, delimiter, delimiter)
 
   def skipUntil(str: String, prefix: String): Option[String] = {
     val idx = str.indexOf(prefix)

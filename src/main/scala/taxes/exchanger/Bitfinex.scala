@@ -301,7 +301,7 @@ object Bitfinex extends Exchanger {
       val updated = LocalDateTime.parseAsUTC(scLn.next("Updated"), "yyyy-MM-dd HH:mm:ss")
 
       if(completed) {
-        val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txid, address)}")
+        val desc = RichText(s"Deposit ${RichText.small(reference)}${RichText.nl}${RichText.util.transaction(currency, txid, address)}")
         val deposit = Deposit(
           date = created
           , id = txid
@@ -334,7 +334,7 @@ object Bitfinex extends Exchanger {
       val updated = LocalDateTime.parseAsUTC(scLn.next("Updated"), "yyyy-MM-dd HH:mm:ss")
 
       if(completed) {
-        val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
+        val desc = RichText(s"Withdrawal ${RichText.small(reference)}${RichText.nl}${RichText.util.transaction(currency, txid, address)}")
         val withdrawal = Withdrawal(
           date = created
           , id = txid

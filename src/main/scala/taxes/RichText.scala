@@ -20,6 +20,7 @@ object RichText {
   private val tkURL = "url"
   private val tkNl = "nl"
   private val tkReport = "report"
+  private val tkSmall = "small"
 
 
   type Elem = String
@@ -29,6 +30,9 @@ object RichText {
 
   def bold(text: String): Elem =
     s"$tkBegin$tkBold$tkSep$text$tkEnd"
+
+  def small(text: String): Elem =
+    s"$tkBegin$tkSmall$tkSep$text$tkEnd"
 
   def transaction(currency: Currency, txid: String): Elem =
     s"$tkBegin$tkTransaction$tkSep$currency$tkSep$txid$tkEnd"
@@ -72,6 +76,8 @@ object RichText {
       addr
     case List(`tkBold`, text) =>
       text
+    case List(`tkSmall`, text) =>
+      text
     case List(`tkTransaction`, currency, txid) =>
       txid
     case List(`tkURL`, text, url) =>
@@ -88,16 +94,22 @@ object RichText {
 
   private def elemToHTML(richElem: Elem): HTML = parseElem(richElem) match {
     case List(`tkAddress`, currency, addr) =>
+      val maxLen = 45
+      val truncatedAddr = if(addr.length>maxLen) addr.take(maxLen) + "..." else addr
       BlockExplorer.addressURL(currency, addr) match {
-        case None => <span>{addr}</span>
-        case Some(url) => <a href={s"$url"} class='addr'>{addr}</a>
+        case None => <span class='addr'>{truncatedAddr}</span>
+        case Some(url) => <a href={s"$url"} class='addr'>{truncatedAddr}</a>
       }
     case List(`tkBold`, text) =>
       <b>{text}</b>
+    case List(`tkSmall`, text) =>
+      <span class="small1">{text}</span>
     case List(`tkTransaction`, currency, txid) =>
+      val maxLen = 70
+      val truncatedTxid = if(txid.length>maxLen) txid.take(maxLen) + "..." else txid
       BlockExplorer.transactionURL(currency, txid) match {
-        case None => <span>{txid}</span>
-        case Some(url) => <a href={s"$url"} class='tx'>{txid}</a>
+        case None => <span class='tx'>{truncatedTxid}</span>
+        case Some(url) => <a href={s"$url"} class='tx'>{truncatedTxid}</a>
       }
     case List(`tkURL`, text, url) =>
       <a href={s"$url"} class='noDecor'>{text}</a>
@@ -151,6 +163,20 @@ object RichText {
 
     def transaction(currency: Currency, txid: String): Elem =
       s"${RichText.transaction(currency, txid)}"
+
+    def onlineExchange(inCurrency: Currency, inTxid: String, outCurrency: Currency, outTxid: String): Elem = {
+      val in = BlockExplorer.transactionURL(inCurrency, inTxid) match {
+          case None => inCurrency
+          case Some(url) => RichText.url(inCurrency, url)
+      }
+
+      val out = BlockExplorer.transactionURL(outCurrency, outTxid) match {
+        case None => outCurrency
+        case Some(url) => RichText.url(outCurrency, url)
+      }
+
+      return s"($in ➞ $out)"
+    }
   }
 }
 

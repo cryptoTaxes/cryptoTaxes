@@ -18,33 +18,36 @@ object BitcoinCom extends Exchanger {
     }
   )
 
+  private def getDateOffset(dateKey: String): String = {
+    val inParenthesis = Parse.trim(dateKey, !"()".contains(_))
+    val offset  = Parse.unquote(inParenthesis, "(", ")").get
+    if(offset=="UTC") "+00" else offset
+  }
+
   private def operationsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
-    override def lineScanner(line: String): Scanner =
-      QuotedScanner(line, '\"', ',')
+    private lazy val provider = AssociativeSeparatedScannerProvider(skippedLines(0), "[,]")
+    override def lineScanner(line: String) =
+      provider.scannerFor(line)
 
-    // Bitcoin.com shows time offset used for dates in csv header line. We take it from there
-    private lazy val offset = {
-        val str = skippedLines(0).dropWhile(_ != '(').tail.takeWhile(_ != ')')
-        if(str=="UTC") "+00" else str
-      }
+    private lazy val dateKey = provider.keys.find(_.startsWith("Date")).get
+
+    // Bitcoin.com stores time offset used for dates in csv header line. We take it from there
+    private lazy val dateOffset = getDateOffset(dateKey)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val email = scLn.next("Email")
-      val date = LocalDateTime.parse(scLn.next("Date") + offset, "yyyy-MM-dd [H][HH]:mm:ssX")
+      val date = LocalDateTime.parse(scLn.next(dateKey) + dateOffset, "yyyy-MM-dd [H][HH]:mm:ssX")
       val instrument = scLn.next("Instrument")
       val tradeID = scLn.next("Trade ID")
       val orderID = scLn.next("Order ID")
       val side = scLn.next("Side")
       val quantity = scLn.nextDouble("Quantity")
       val price = scLn.nextDouble("Price")
-      val volume = scLn.nextDouble("Volume")
       val fee = scLn.nextDouble("Fee")
       val rebate = scLn.nextDouble("Rebate")
-      val total = scLn.nextDouble("Total")
 
-      val desc = RichText(s"Order: $tradeID / $orderID")
+      val desc = RichText(s"Order: $orderID/$tradeID")
 
       val (m1, m2) = Parse.split(instrument, "/")
       val baseCurrency = Currency.normalize(m1)
@@ -54,7 +57,7 @@ object BitcoinCom extends Exchanger {
       if (side == "sell") {
         val exchange = Exchange(
           date = date
-          , id = tradeID + "/" + orderID
+          , id = s"$orderID/$tradeID"
           , fromAmount = quantity, fromCurrency = baseCurrency
           , toAmount = quantity*price - fee + rebate, toCurrency = quoteCurrency //todo check rebate
           , fees = List(FeePair(fee, quoteCurrency))
@@ -65,7 +68,7 @@ object BitcoinCom extends Exchanger {
       } else if(side == "buy") {
         val exchange = Exchange(
           date = date
-          , id = tradeID + "/" + orderID
+          , id = s"$orderID/$tradeID"
           , fromAmount = quantity*price - rebate, fromCurrency = quoteCurrency //todo check rebate
           , toAmount = quantity, toCurrency = baseCurrency
           , fees = List(FeePair(fee, quoteCurrency))
@@ -81,23 +84,21 @@ object BitcoinCom extends Exchanger {
   private def paymentsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
-    override def lineScanner(line: String): Scanner =
-      QuotedScanner(line, '\"', ',')
+    private lazy val provider = AssociativeSeparatedScannerProvider(skippedLines(0), "[,]")
+    override def lineScanner(line: String) =
+      provider.scannerFor(line)
 
-    // Bitcoin.com shows time offset used for dates in csv header line. We take it from there
-    private lazy val offset = {
-      val str = skippedLines(0).dropWhile(_ != '(').tail.takeWhile(_ != ')')
-      if(str=="UTC") "+00" else str
-    }
+    private lazy val dateKey = provider.keys.find(_.startsWith("Date")).get
+
+    // Bitcoin.com stores time offset used for dates in csv header line. We take it from there
+    private lazy val dateOffset = getDateOffset(dateKey)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val email = scLn.next("Email")
-      val date = LocalDateTime.parse(scLn.next("Date")+offset, "yyyy-MM-dd [H][HH]:mm:ssX")
+      val date = LocalDateTime.parse(scLn.next(dateKey)+dateOffset, "yyyy-MM-dd [H][HH]:mm:ssX")
       val operationId = scLn.next("Operation id")
       val what = scLn.next("Type")
       val amount = scLn.nextDouble("Amount")
-      val txHash = scLn.next("Transaction Hash")
-      val mainAccountBalance = scLn.nextDouble("Main account balance")
+      val txHash = scLn.next("Transaction hash")
       val currency = Currency.normalize(scLn.next("Currency"))
 
       if(what=="Deposit") {
