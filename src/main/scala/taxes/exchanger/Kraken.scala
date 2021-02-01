@@ -89,23 +89,20 @@ object Kraken extends Exchanger {
 
     override val linesToSkip = 1
 
+    private lazy val provider = AssociativeQuotedScannerProvider(skippedLines(0), '\"', ',')
     override def lineScanner(line: String): Scanner =
-      QuotedScanner(line, '\"', ',')
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val txid = scLn.next("Transaction ID")
-      val ordertxid = scLn.next("Order ID")
-      val pair = scLn.next("Pair")
-      val time = scLn.next("Time")
-      val sellBuy = scLn.next("Sell/Buy")
-      val ordertype = scLn.next("Order Type")
-      val price = scLn.nextDouble("Price")
-      val cost = scLn.nextDouble("Cost")
-      val fee0 = scLn.nextDouble("Fee")
-      val vol = scLn.nextDouble("Volume")
-      val margin = scLn.nextDouble("Margin")
-      val misc = scLn.next("Misc")
-      val ledgers = scLn.next("Ledgers")
+      val txid = scLn.next("txid")
+      val ordertxid = scLn.next("ordertxid")
+      val pair = scLn.next("pair")
+      val time = scLn.next("time")
+      val ordertype = scLn.next("type")
+      val cost = scLn.nextDouble("cost")
+      val vol = scLn.nextDouble("vol")
+      val margin = scLn.nextDouble("margin")
+      val ledgers = scLn.next("ledgers")
 
       val date = LocalDateTime.parseAsUTC(time, "yyyy-MM-dd HH:mm:ss.[SSSS][SSS][SS][S]") // kraken trades.csv uses UTC time zone
       val (baseCurrency, quoteCurrency) = parsePair(pair) // already normalized
@@ -113,8 +110,8 @@ object Kraken extends Exchanger {
       val id = txid + "/" + ordertxid
       val desc = RichText(s"Order: $id")
 
-      val isSell = sellBuy == "sell"
-      val isBuy = sellBuy == "buy"
+      val isSell = ordertype == "sell"
+      val isBuy = ordertype == "buy"
       val isMargin = isMarginCache(ordertxid)
 
       val ledgersTxids = Parse.sepBy(ledgers, ",")
@@ -273,24 +270,18 @@ object Kraken extends Exchanger {
     override val linesToSkip = 1
     lazy val header = skippedLines(0)
 
+    private lazy val provider = AssociativeQuotedScannerProvider(skippedLines(0), '\"', ',')
     override def lineScanner(line: String): Scanner =
-      QuotedScanner(line, '\"', ',')
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-      val txid = scLn.next("Transaction ID")
-      val refid = scLn.next("Reference ID")
-      val time = scLn.next("Time")
-      val txType = scLn.next("Transaction Type")
-      val txSubtype =
-        if(header.contains("subtype"))
-          scLn.next("Transaction Subtype")
-        else
-          ""
-      val aclass = scLn.next("Class")
-      val asset = scLn.next("Asset")
-      val amount = scLn.nextDouble("Amount")
-      val feeAmount = scLn.nextDouble("Fee")
-      val balance = scLn.next("Balance")
+      val txid = scLn.next("txid")
+      val refid = scLn.next("refid")
+      val time = scLn.next("time")
+      val txType = scLn.next("type")
+      val asset = scLn.next("asset")
+      val amount = scLn.nextDouble("amount")
+      val feeAmount = scLn.nextDouble("fee")
 
       val currency = Currency.normalize(conversions.getOrElse(asset, asset))
 
@@ -344,8 +335,8 @@ object Kraken extends Exchanger {
           results ++= List(nonTaxableFee)
         }
         return CSVReader.Ok(results)
-      }  else if(txType == "deposit"
-        && txid.nonEmpty) { // kraken annotates deposits twice. Only valid one has a non-empty txid
+      } else if(txType == "deposit" && txid.nonEmpty) {
+        // kraken annotates deposits twice. The only valid one has a non-empty txid
         val date = LocalDateTime.parseAsUTC(time, "yyyy-MM-dd HH:mm:ss") // kraken ledgers.csv uses UTC time zone
         val id = txid + "/" + refid
 
@@ -423,25 +414,15 @@ object Kraken extends Exchanger {
   private def isMarginPreprocessReader(fileName: String) = new CSVReader[Nothing](fileName) {
     override val linesToSkip = 1
 
+    private lazy val provider = AssociativeQuotedScannerProvider(skippedLines(0), '\"', ',')
     override def lineScanner(line: String): Scanner =
-      QuotedScanner(line, '\"', ',')
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Nothing] = {
-      val txid = scLn.next("Transaction ID")
-      val ordertxid = scLn.next("Order ID")
-      val pair = scLn.next("Pair")
-      val time = scLn.next("Time")
-      val sellBuy = scLn.next("Sell/Buy")
-      val ordertype = scLn.next("Order Type")
-      val price = scLn.nextDouble("Price")
-      val cost = scLn.nextDouble("Cost")
-      val fee0 = scLn.nextDouble("Fee")
-      val vol = scLn.nextDouble("Volume")
-      val margin = scLn.nextDouble("Margin")
-      val misc = scLn.next("Misc")
-      val ledgers = scLn.next("Ledgers")
+      val ordertxid = scLn.next("ordertxid")
+      val margin = scLn.nextDouble("margin")
 
-      // only one txId for the OrderId need to have margin for it to be a margin order
+      // only one txId for the OrderId needs to include margin for it to be a margin order
       isMarginCache(ordertxid) = isMarginCache.getOrElse(ordertxid, false) || (margin != 0)
       return CSVReader.Ignore
     }

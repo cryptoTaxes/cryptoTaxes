@@ -47,8 +47,9 @@ object Bittrex extends Exchanger {
       else
         "UTF-8"
 
+    private lazy val provider = AssociativeSeparatedScannerProvider(skippedLines(0), "[,]")
     override def lineScanner(line: String) =
-      AssociativeSeparatedScanner(skippedLines(0), "[,]")(line)
+      provider.scannerFor(line)
 
     private val header2014_2017 = "OrderUuid,Exchange,Type,Quantity,Limit,CommissionPaid,Price,Opened,Closed"
     private val header2018 = "Uuid,Exchange,TimeStamp,OrderType,Limit,Quantity,QuantityRemaining,Commission,Price,PricePerUnit,IsConditional,Condition,ConditionTarget,ImmediateOrCancel,Closed"

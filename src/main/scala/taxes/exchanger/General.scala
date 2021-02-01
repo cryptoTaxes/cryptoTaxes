@@ -2,7 +2,7 @@ package taxes.exchanger
 
 import taxes._
 import taxes.date._
-import taxes.util.parse.{AssociativeSeparatedScanner, CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
+import taxes.util.parse.{AssociativeSeparatedScannerProvider, CSVReader, CSVSortedOperationReader, Scanner, SeparatedScanner}
 
 
 case class General(name: String) extends Exchanger {
@@ -51,8 +51,9 @@ object General extends Exchanger {
   private def exchangesReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
+    private lazy val provider = AssociativeSeparatedScannerProvider(skippedLines(0), "[,]")
     override def lineScanner(line: String) =
-      AssociativeSeparatedScanner(skippedLines(0), "[,]")(line)
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = parseDate(scLn.next("Date"))
@@ -82,8 +83,9 @@ object General extends Exchanger {
   private def gainsLossesReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
+    private lazy val provider = AssociativeSeparatedScannerProvider(skippedLines(0), "[,]")
     override def lineScanner(line: String) =
-      AssociativeSeparatedScanner(skippedLines(0), "[,]")(line)
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = parseDate(scLn.next("Date"))
@@ -133,8 +135,9 @@ object General extends Exchanger {
   private def networkFeesReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
+    private lazy val provider = AssociativeSeparatedScannerProvider(skippedLines(0), "[,]")
     override def lineScanner(line: String) =
-      AssociativeSeparatedScanner(skippedLines(0), "[,]")(line)
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = parseDate(scLn.next("Date"))
@@ -171,8 +174,9 @@ object General extends Exchanger {
   private def ledgerReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
+    private lazy val provider = AssociativeSeparatedScannerProvider(skippedLines(0), "[,]")
     override def lineScanner(line: String) =
-      AssociativeSeparatedScanner(skippedLines(0), "[,]")(line)
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = LocalDateTime.parse(scLn.next("Operation Date"), "yyyy-MM-dd'T'HH:mm:ss.SSSX")
