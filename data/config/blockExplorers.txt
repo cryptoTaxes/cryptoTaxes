@@ -73,11 +73,17 @@ LUN:transaction -> https://etherscan.io/tx/*
 MAID:address -> https://www.omniexplorer.info/address/*
 MAID:transaction -> https://www.omniexplorer.info/tx/*
 
+NANO:address -> https://nanocrawler.cc/explorer/account/*
+NANO:transaction -> https://nanocrawler.cc/explorer/block/*
+
 NLG:address -> https://nlg.tokenview.com/en/address/*
 NLG:transaction -> https://nlg.tokenview.com/en/tx/*
 
 NXT:address -> https://nxtportal.org/accounts/*
 NXT:transaction -> https://nxtportal.org/transactions/*
+
+NYZO:address -> https://nyzo.co/wallet?id=*
+NYZO:transaction -> https://nyzo.co
 
 PAY:address -> https://etherscan.io/address/*
 PAY:transaction -> https://etherscan.io/tx/*
@@ -117,6 +123,9 @@ XMY:transaction -> https://chainz.cryptoid.info/xmy/tx.dws?*
 
 XRP:address -> https://xrpcharts.ripple.com/#/graph/*
 XRP:transaction -> https://xrpcharts.ripple.com/#/transactions/*
+
+XRP:address -> https://bithomp.com/explorer/*
+XRP:transaction -> https://bithomp.com/explorer/*
 
 XTZ:address -> https://tzstats.com/*
 XTZ:transaction -> https://tzstats.com/*
