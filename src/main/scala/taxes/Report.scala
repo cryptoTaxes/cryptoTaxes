@@ -269,6 +269,18 @@ object Report {
           stock.disposals.printToCSV(ps)
       }
 
+      val htmlAcquiredStocksFile = s"${FileSystem.userOutputFolder(year)}/AcquiredStocks$year.html"
+      val htmlAcquiredStocksTitle = s"Acquired Stocks $year"
+      val htmlAcquiredStocks = HTMLDoc(htmlAcquiredStocksFile, htmlAcquiredStocksTitle)
+
+      htmlAcquiredStocks += <div class='header'>{htmlAcquiredStocksTitle}</div>
+      for(stock <- state.allStocks.toList.sortBy(_.currency))
+        stock.acquisitions.toHTML match {
+          case None => ;
+          case Some(html) => htmlAcquiredStocks += html
+        }
+      htmlAcquiredStocks.close()
+
       for(exchanger <- Exchanger.allExchangers) {
         val htmlExchangerLedgersFile = s"${FileSystem.userOutputFolder(year)}/Exchanger.$exchanger.Ledgers$year.html"
         val htmlExchangerLedgersTitle = s"$exchanger Ledgers $year"

@@ -97,6 +97,9 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
   lazy val disposals: DisposedStocksQueue =
     new DisposedStocksQueue(currency, baseCurrency)
 
+  lazy val acquisitions =
+    new AcquiredStocks(currency, baseCurrency)
+
   val eps: Double =
     if(Config.config.deprecatedUp2017Version) {
       // this is really a bug, fixed below for non-deprecated version
@@ -114,11 +117,13 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
   def insert(stock: Stock, description: RichText): Unit = {
     ledger += Ledger.Entry(stock.date, stock.amount, stock.exchanger, description)
     insert(stock)
+    acquisitions.insert(stock.copy())
   }
 
   def insert(stock: Stock, eq: (Stock,Stock) => Boolean, combine: (Stock,Stock) => Stock, description: RichText): Unit = {
     ledger += Ledger.Entry(stock.date, stock.amount, stock.exchanger, description)
     insert(stock, eq, combine)
+    acquisitions.insert(stock.copy())
   }
 
   def removeAndGetBasis(amount: Double)(date: LocalDateTime, exchanger: Exchanger, description: RichText): (Price, Double, StockContainer) = {
@@ -423,3 +428,4 @@ case class StackStockPool() extends StockPool {
   def newContainer(id: String, currency: Currency, baseCurrency: Currency) =
     new StockStack(id, currency, baseCurrency)
 }
+
