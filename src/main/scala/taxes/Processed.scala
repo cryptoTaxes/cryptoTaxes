@@ -3,7 +3,6 @@ package taxes
 import taxes.HTMLDoc._
 import taxes.date._
 import taxes.exchanger.Exchanger
-
 import spray.json._
 import spray.json.JsonProtocol._
 

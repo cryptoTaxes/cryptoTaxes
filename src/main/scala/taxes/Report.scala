@@ -6,7 +6,6 @@ import taxes.io.FileSystem
 import taxes.util.Logger
 
 import scala.collection.mutable.ListBuffer
-
 import spray.json._
 import spray.json.JsonProtocol._
 
@@ -172,9 +171,8 @@ object Report {
       htmlReport += HTMLDoc.reportResults(year, Realized)
       htmlReport.close()
 
-
-      val csvlReportFile = FileSystem.report(year, "csv")
-      operationTracker.printToCSVFile(csvlReportFile, year, baseCurrency)
+      val csvReportFile = FileSystem.report(year, "csv")
+      operationTracker.printToCSVFile(csvReportFile, year, baseCurrency)
 
       reportPortfolio(year)
 
@@ -219,9 +217,6 @@ object Report {
         </div>
       }
       htmlExtra.close()
-
-
-
 
       val htmlLedgersFile = s"${FileSystem.userOutputFolder(year)}/Ledgers$year.html"
       val htmlLedgersTitle = s"Ledgers $year"
@@ -269,17 +264,67 @@ object Report {
           stock.disposals.printToCSV(ps)
       }
 
-      val htmlAcquiredStocksFile = s"${FileSystem.userOutputFolder(year)}/AcquiredStocks$year.html"
-      val htmlAcquiredStocksTitle = s"Acquired Stocks $year"
-      val htmlAcquiredStocks = HTMLDoc(htmlAcquiredStocksFile, htmlAcquiredStocksTitle)
+      {
+        val htmlAcquiredStocksFile = s"${FileSystem.userOutputFolder(year)}/AcquiredStocks$year.html"
+        val htmlAcquiredStocksTitle = s"Acquired Stocks $year"
+        val htmlAcquiredStocks = HTMLDoc(htmlAcquiredStocksFile, htmlAcquiredStocksTitle)
 
-      htmlAcquiredStocks += <div class='header'>{htmlAcquiredStocksTitle}</div>
-      for(stock <- state.allStocks.toList.sortBy(_.currency))
-        stock.acquisitions.toHTML match {
-          case None => ;
-          case Some(html) => htmlAcquiredStocks += html
+        htmlAcquiredStocks += <div class='header'>
+          {htmlAcquiredStocksTitle}
+        </div>
+        for (stock <- state.allStocks.toList.sortBy(_.currency))
+          stock.acquisitions.toHTML match {
+            case None => ;
+            case Some(html) => htmlAcquiredStocks += html
+          }
+        htmlAcquiredStocks.close()
+      }
+
+      FileSystem.withPrintStream(FileSystem.processedOperationsFile(year) + ".disposed.txt") { ps =>
+        val map = scala.collection.mutable.Map[Currency, List[Stock]]()
+
+        def process(op: Processed): Unit = {
+          op match {
+            case ex: Processed.Exchange =>
+              for (stock <- ex.usedStocks) {
+                map(ex.usedStocks.currency) = stock :: map.getOrElse(ex.usedStocks.currency, List())
+              }
+            case co: Processed.Composed =>
+              for (op2 <- co.processed)
+                process(op2)
+            case fe: Processed.Fee =>
+              for (stock <- fe.usedStocks) {
+                map(fe.usedStocks.currency) = stock :: map.getOrElse(fe.usedStocks.currency, List())
+              }
+            case lo: Processed.Loss =>
+              for (stock <- lo.usedStocks) {
+                map(lo.usedStocks.currency) = stock :: map.getOrElse(lo.usedStocks.currency, List())
+              }
+            case _ =>
+              ;
+
+          }
         }
-      htmlAcquiredStocks.close()
+
+        for (op <- processedOperations)
+          process(op)
+
+
+        for ((c, ls) <- map) {
+          ps.println(c)
+          for (s <- ls.reverse)
+            ps.println(s)
+          ps.println()
+        }
+      }
+
+      val acquisitions = report.Acquisitions(baseCurrency, processedOperations)
+
+      val htmlAcquiredStocksFile = s"${FileSystem.userOutputFolder(year)}/AcquiredStocks.$year.html"
+      acquisitions.printToHTMLFile(htmlAcquiredStocksFile, year)
+
+      val csvAcquiredStocksFile = s"${FileSystem.userOutputFolder(year)}/AcquiredStocks.$year.csv"
+      acquisitions.printToCSVFile(csvAcquiredStocksFile, year)
 
       for(exchanger <- Exchanger.allExchangers) {
         val htmlExchangerLedgersFile = s"${FileSystem.userOutputFolder(year)}/Exchanger.$exchanger.Ledgers$year.html"
@@ -315,7 +360,7 @@ object Report {
       // save some more information
       Currency.saveToFile(FileSystem.currencyFile(year))
       Config.config.saveToFile(FileSystem.configFile(year))
-      FileSystem.withPrintStream(FileSystem.operationsFile(year)){ ps =>
+      FileSystem.withPrintStream(FileSystem.operationsFile(year)) { ps =>
         spray.json.PrintStream.prettyPrintOn(ps, thisYearOperations)
       }
 
@@ -324,7 +369,7 @@ object Report {
       }
     }
 
-    def simplify(processed: Seq[Processed]): Processed =
+  def simplify(processed: Seq[Processed]): Processed =
       if(processed.length>1)
         Processed.Composed(operationNumber, processed)
       else

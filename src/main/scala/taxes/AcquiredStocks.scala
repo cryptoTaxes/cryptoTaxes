@@ -1,5 +1,7 @@
 package taxes
 
+import taxes.collection.Queue
+
 case class AcquiredStocks(currency: Currency, baseCurrency: Currency) extends Queue[Stock] {
   def toHTML: Option[HTML] = {
     var numEntries = 0

@@ -5,7 +5,6 @@ import taxes.io.FileSystem
 import taxes.util.Logger
 
 import scala.collection.mutable.ListBuffer
-
 import spray.json._
 
 trait Exchanger {

@@ -1,5 +1,4 @@
-package taxes
-
+package taxes.collection
 
 class DoubleEndedContainer[T] extends Iterable[T] {
   private case class Node[E](var x: E, var next: Node[E])

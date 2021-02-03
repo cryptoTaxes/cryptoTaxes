@@ -1,11 +1,12 @@
 package taxes
 
+import spray.json.JsonProtocol._
+import spray.json._
+import taxes.collection.{Container, Queue, Stack}
 import taxes.date._
 import taxes.exchanger.Exchanger
-import taxes.util.Logger
-import spray.json._
-import spray.json.JsonProtocol._
 import taxes.io.FileSystem
+import taxes.util.Logger
 
 object Stock {
   implicit val stockJson = jsonFormat7(Stock.apply)
@@ -62,9 +63,9 @@ object StockContainer {
             val container: StockContainer = containerType match {
               case `_stack` =>
                 isStack = true
-                StockStack(id, currency, baseCurrency, ledger)
+                taxes.StockStack(id, currency, baseCurrency, ledger)
               case `_queue` =>
-                StockQueue(id, currency, baseCurrency, ledger)
+                taxes.StockQueue(id, currency, baseCurrency, ledger)
               case _ =>
                 Logger.fatal(s"StockContainer.read: expecting a stack or a queue $containerType.")
             }

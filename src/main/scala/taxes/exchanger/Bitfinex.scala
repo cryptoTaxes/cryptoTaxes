@@ -1,6 +1,6 @@
 package taxes.exchanger
 
-import taxes._
+import taxes.{StackStockPool, _}
 import taxes.date._
 import taxes.io.FileSystem
 import taxes.util.parse._

@@ -2,7 +2,8 @@ package taxes
 
 import spray.json._
 import spray.json.JsonProtocol._
-import taxes.StockContainer.stockContainerJson.{_baseCurrency, _currency}
+import taxes.collection.Queue
+import StockContainer.stockContainerJson.{_baseCurrency, _currency}
 import taxes.date._
 import taxes.exchanger.Exchanger
 import taxes.io.FileSystem

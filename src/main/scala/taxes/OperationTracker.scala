@@ -68,7 +68,7 @@ case class OperationTracker() extends Iterable[(Int,OperationTracker.CSVEntry)] 
 
       ps.println(header.mkString(sep))
       for ((operationNumber, entry) <- this)
-        ps.println(List[Any](operationNumber, entry.date.format(Format.shortDf), entry.exchanger, entry.description, entry.costBasis, entry.proceeds, entry.fee).mkString(sep))
+        ps.println(List[Any](operationNumber, entry.date.format(Format.df), entry.exchanger, entry.description, entry.costBasis, entry.proceeds, entry.fee).mkString(sep))
     }
   }
 }
