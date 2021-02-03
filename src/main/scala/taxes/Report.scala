@@ -176,7 +176,7 @@ object Report {
 
       reportPortfolio(year)
 
-      val htmlExtraFile = s"${FileSystem.userOutputFolder(year)}/Extra$year.html"
+      val htmlExtraFile = s"${FileSystem.userOutputFolder(year)}/Extra.$year.html"
       val htmlExtraTitle = s"$year Statistics"
       val htmlExtra = HTMLDoc(htmlExtraFile, htmlExtraTitle)
 
@@ -218,30 +218,9 @@ object Report {
       }
       htmlExtra.close()
 
-      val htmlLedgersFile = s"${FileSystem.userOutputFolder(year)}/Ledgers$year.html"
-      val htmlLedgersTitle = s"Ledgers $year"
-      val htmlLedgers = HTMLDoc(htmlLedgersFile, htmlLedgersTitle)
-
-      htmlLedgers += <div class='header'>{htmlLedgersTitle}</div>
-
-      htmlLedgers += <div class='header'>Spot currencies</div>
-      for(stock <- state.allStocks.toList.sortBy(_.currency))
-        stock.ledger.toHTML(year) match {
-          case None => ;
-          case Some(html) => htmlLedgers += html
-        }
-
-      for(exchanger <- Exchanger.allExchangers)
-        for((stockPool, title) <- List((exchanger.marginLongs, "Margin Longs"), (exchanger.marginShorts, "Margin Shorts"))) {
-          val htmls = stockPool.toList.sortBy(_.id).flatMap(_.ledger.toHTML(year))
-
-          if(htmls.nonEmpty) {
-            htmlLedgers += <div class='header'>{exchanger + "  " + title}</div>
-            for(html <- htmls)
-              htmlLedgers += html
-          }
-        }
-      htmlLedgers.close()
+      val ledgersReport = report.Ledgers(state.allStocks, Exchanger.allExchangers, year)
+      val htmlLedgersFile = s"${FileSystem.userOutputFolder(year)}/Ledgers.$year.html"
+      ledgersReport.printToHTMLFile(htmlLedgersFile)
 
       val htmlDisposedStocksFile = s"${FileSystem.userOutputFolder(year)}/DisposedStocks$year.html"
       val htmlDisposedStocksTitle = s"Disposed Stocks $year"
@@ -286,19 +265,19 @@ object Report {
         def process(op: Processed): Unit = {
           op match {
             case ex: Processed.Exchange =>
-              for (stock <- ex.usedStocks) {
-                map(ex.usedStocks.currency) = stock :: map.getOrElse(ex.usedStocks.currency, List())
+              for (stock <- ex.disposedStocks) {
+                map(ex.disposedStocks.currency) = stock :: map.getOrElse(ex.disposedStocks.currency, List())
               }
             case co: Processed.Composed =>
               for (op2 <- co.processed)
                 process(op2)
             case fe: Processed.Fee =>
-              for (stock <- fe.usedStocks) {
-                map(fe.usedStocks.currency) = stock :: map.getOrElse(fe.usedStocks.currency, List())
+              for (stock <- fe.disposedStocks) {
+                map(fe.disposedStocks.currency) = stock :: map.getOrElse(fe.disposedStocks.currency, List())
               }
             case lo: Processed.Loss =>
-              for (stock <- lo.usedStocks) {
-                map(lo.usedStocks.currency) = stock :: map.getOrElse(lo.usedStocks.currency, List())
+              for (stock <- lo.disposedStocks) {
+                map(lo.disposedStocks.currency) = stock :: map.getOrElse(lo.disposedStocks.currency, List())
               }
             case _ =>
               ;
@@ -318,16 +297,15 @@ object Report {
         }
       }
 
-      val acquisitions = report.Acquisitions(baseCurrency, processedOperations)
+      val acquisitions = report.Acquisitions(baseCurrency, processedOperations, year)
+      acquisitions.printToHTMLFile()
+      acquisitions.printToCSVFile()
 
-      val htmlAcquiredStocksFile = s"${FileSystem.userOutputFolder(year)}/AcquiredStocks.$year.html"
-      acquisitions.printToHTMLFile(htmlAcquiredStocksFile, year)
-
-      val csvAcquiredStocksFile = s"${FileSystem.userOutputFolder(year)}/AcquiredStocks.$year.csv"
-      acquisitions.printToCSVFile(csvAcquiredStocksFile, year)
+      val disposals = report.Disposals(baseCurrency, processedOperations, year)
+      disposals.printToHTMLFile()
 
       for(exchanger <- Exchanger.allExchangers) {
-        val htmlExchangerLedgersFile = s"${FileSystem.userOutputFolder(year)}/Exchanger.$exchanger.Ledgers$year.html"
+        val htmlExchangerLedgersFile = s"${FileSystem.userOutputFolder(year)}/Exchanger.$exchanger.Ledgers.$year.html"
         val htmlExchangerLedgersTitle = s"$exchanger Ledgers $year"
         val htmlExchangerLedgers = HTMLDoc(htmlExchangerLedgersFile, htmlExchangerLedgersTitle)
 
@@ -369,7 +347,7 @@ object Report {
       }
     }
 
-  def simplify(processed: Seq[Processed]): Processed =
+    def simplify(processed: Seq[Processed]): Processed =
       if(processed.length>1)
         Processed.Composed(operationNumber, processed)
       else
@@ -549,9 +527,9 @@ object Report {
           , gainInBaseCurrency = gainInBaseCurrency
           , boughtSoldExchangeRate = boughtSoldExchangeRate
           , soldBoughtExchangeRate = soldBoughtExchangeRate
-          , usedStocks = usedStocks
-          , buys = state.allStocks(boughtCurrency)(baseCurrency).copy
-          , sells = state.allStocks(soldCurrency)(baseCurrency).copy
+          , disposedStocks = usedStocks
+          , toStocks = state.allStocks(boughtCurrency)(baseCurrency).copy
+          , fromStocks = state.allStocks(soldCurrency)(baseCurrency).copy
         )
 
 
@@ -600,7 +578,7 @@ object Report {
         operationNumber = operationNumber
         , fee = fee
         , feeInBaseCurrency = feeInBaseCurrency
-        , usedStocks = usedStocks
+        , disposedStocks = usedStocks
         , stocks = state.allStocks(fee.currency)(baseCurrency).copy
       )
     }
@@ -627,7 +605,7 @@ object Report {
         operationNumber = operationNumber
         , loss = loss
         , lossInBaseCurrency = lossBasisInBaseCurrency
-        , usedStocks = usedStocks
+        , disposedStocks = usedStocks
         , stocks = state.allStocks(loss.currency)(baseCurrency).copy
       )
     }
@@ -758,9 +736,9 @@ object Report {
             , toAmount = boughtAmount, toCurrency = boughtCurrency
             , exchangeRate = boughtSoldExchangeRate
             , description = margin.description
-            , usedStocksOpt = None
-            , marginLongs = marginLongs(currencyKey)(marginBaseCurrency).copy
-            , marginShorts = marginShorts(currencyKey)(marginBaseCurrency).copy
+            , disposedStocksOpt = None
+            , longsStocks = marginLongs(currencyKey)(marginBaseCurrency).copy
+            , shortsStocks = marginShorts(currencyKey)(marginBaseCurrency).copy
           )
 
         processed :::= processFees(fees, poloniexConversion = false)
@@ -784,9 +762,9 @@ object Report {
             , toAmount = boughtAmount, toCurrency = boughtCurrency
             , exchangeRate = soldBoughtExchangeRate
             , description = margin.description
-            , usedStocksOpt = None
-            , marginLongs = marginLongs(currencyKey)(marginBaseCurrency).copy
-            , marginShorts = marginShorts(currencyKey)(marginBaseCurrency).copy
+            , disposedStocksOpt = None
+            , longsStocks = marginLongs(currencyKey)(marginBaseCurrency).copy
+            , shortsStocks = marginShorts(currencyKey)(marginBaseCurrency).copy
           )
 
         processed :::= processFees(fees, poloniexConversion = true)
@@ -817,9 +795,9 @@ object Report {
               , toAmount = closedBoughtAmount, toCurrency = boughtCurrency
               , exchangeRate = boughtSoldExchangeRate
               , description = margin.description
-              , usedStocksOpt = Some(usedStocks)
-              , marginLongs = marginLongs(currencyKey)(marginBaseCurrency).copy
-              , marginShorts = marginShorts(currencyKey)(marginBaseCurrency).copy
+              , disposedStocksOpt = Some(usedStocks)
+              , longsStocks = marginLongs(currencyKey)(marginBaseCurrency).copy
+              , shortsStocks = marginShorts(currencyKey)(marginBaseCurrency).copy
             )
 
           val gain = closedBoughtAmount - basis
@@ -864,9 +842,9 @@ object Report {
               , toAmount = closedBoughtAmount, toCurrency = boughtCurrency
               , exchangeRate = soldBoughtExchangeRate
               , description = margin.description
-              , usedStocksOpt = Some(usedStocks)
-              , marginLongs = marginLongs(currencyKey)(marginBaseCurrency).copy
-              , marginShorts = marginShorts(currencyKey)(marginBaseCurrency).copy
+              , disposedStocksOpt = Some(usedStocks)
+              , longsStocks = marginLongs(currencyKey)(marginBaseCurrency).copy
+              , shortsStocks = marginShorts(currencyKey)(marginBaseCurrency).copy
             )
 
           val gain = basis - closedSoldAmount
@@ -1128,9 +1106,9 @@ object Report {
           , gainInBaseCurrency = gainInBaseCurrency
           , boughtSoldExchangeRate = boughtSoldExchangeRate
           , soldBoughtExchangeRate = soldBoughtExchangeRate
-          , usedStocks = usedStocks
-          , buys = state.allStocks(boughtCurrency)(baseCurrency).copy
-          , sells = state.allStocks(soldCurrency)(baseCurrency).copy
+          , disposedStocks = usedStocks
+          , toStocks = state.allStocks(boughtCurrency)(baseCurrency).copy
+          , fromStocks = state.allStocks(soldCurrency)(baseCurrency).copy
         )
 
       var processed = List[Processed]()

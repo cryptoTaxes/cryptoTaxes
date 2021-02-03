@@ -87,7 +87,7 @@ object RichText {
     case List(`tkReport`, year, operationNumber) =>
       operationNumber.toString
     case List(`tkReport`, year, operationNumber, showYear) =>
-      if(showYear=="true") operationNumber.toString+s"($year)" else operationNumber.toString
+      if(showYear=="true") s"$operationNumber ($year)" else s"$operationNumber"
     case _ =>
       richElem
   }

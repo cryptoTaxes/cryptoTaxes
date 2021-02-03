@@ -23,7 +23,7 @@ case class AcquiredStocks(currency: Currency, baseCurrency: Currency) extends Qu
         </caption>{map { stock => {
         numEntries += 1
         totalAcquiredAmount += stock.amount
-        totalCostBasis += stock.amount * stock.costBasis
+        totalCostBasis += stock.amount * stock.costBasisPrice
         <tr>
           <td class='alignR'>
             {numEntries}
@@ -39,7 +39,7 @@ case class AcquiredStocks(currency: Currency, baseCurrency: Currency) extends Qu
           </td>
 
           <td>
-            {HTMLDoc.asRate(stock.costBasis, baseCurrency, currency)}
+            {HTMLDoc.asRate(stock.costBasisPrice, baseCurrency, currency)}
           </td>
           <td>
             {HTMLDoc.asRate(stock.exchangeRate, stock.exchangeCurrency, currency)}

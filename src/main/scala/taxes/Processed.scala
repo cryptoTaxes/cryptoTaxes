@@ -28,21 +28,21 @@ object Processed {
   def operationNumberAnchor(operationNumber: Int): HTML =
     <span class='opNumber' id={s"$operationNumber"}>{operationNumber}</span>
 
-  case class Exchange( operationNumber: Int
-                     , exchange: taxes.Exchange
-                     , baseCurrencyProxy: Currency, baseCurrencyProxyRate: Double
-                     , boughtBasisPriceInBaseCurrency: Double
-                     , soldPriceInBaseCurrency: Double
-                     , proceedsInBaseCurrency: Double
-                     , soldBasisInBaseCurrency: Double
-                     , _deprecated_feeAmount: Double
-                     , _deprecated_feeCurrency: Currency
-                     , _deprecated_feeInBaseCurrency: Double
-                     , gainInBaseCurrency: Double
-                     , boughtSoldExchangeRate: Double, soldBoughtExchangeRate: Double
-                     , usedStocks: StockContainer
-                     , buys: StockContainer
-                     , sells: StockContainer
+  case class Exchange(operationNumber: Int
+                      , exchange: taxes.Exchange
+                      , baseCurrencyProxy: Currency, baseCurrencyProxyRate: Price
+                      , boughtBasisPriceInBaseCurrency: Price
+                      , soldPriceInBaseCurrency: Price
+                      , proceedsInBaseCurrency: Double
+                      , soldBasisInBaseCurrency: Double
+                      , _deprecated_feeAmount: Double
+                      , _deprecated_feeCurrency: Currency
+                      , _deprecated_feeInBaseCurrency: Double
+                      , gainInBaseCurrency: Double
+                      , boughtSoldExchangeRate: Price, soldBoughtExchangeRate: Price
+                      , disposedStocks: StockContainer
+                      , toStocks: StockContainer // current state of involved stocks
+                      , fromStocks: StockContainer
                      ) extends Processed {
 
     override def headerToHTML: HTML =
@@ -124,10 +124,10 @@ object Processed {
           <span>
             {asCurrency(soldBasisInBaseCurrency, baseCurrency)}
           </span>
-          {if(Config.verbosity(Verbosity.showRates) && usedStocks.nonEmpty && exchange.fromCurrency != baseCurrency)
+          {if(Config.verbosity(Verbosity.showRates) && disposedStocks.nonEmpty && exchange.fromCurrency != baseCurrency)
           <span class='stock'>. Used
-            {s"${if(usedStocks.size > 1) "batches" else "batch"}:"}
-            ({usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
+            {s"${if(disposedStocks.size > 1) "batches" else "batch"}:"}
+            ({disposedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
           </span>
           }
         </div>
@@ -157,9 +157,9 @@ object Processed {
         {if(Config.verbosity(Verbosity.showStocks))
         <div class='stock marginTopBottom20'>
           <div class='embold'>Bought:</div>
-          <div>{buys.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
+          <div>{toStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
           <div class='embold'>Sold:</div>
-          <div>{sells.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
+          <div>{fromStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
         </div>
         }
       </span>
@@ -169,7 +169,7 @@ object Processed {
   case class Gain( operationNumber: Int
                  , gain: taxes.Gain
                  , gainInBaseCurrency: Double
-                 , basePrice: Double
+                 , basePrice: Price
                  , stocks: StockContainer
                  ) extends Processed {
 
@@ -214,11 +214,11 @@ object Processed {
   }
 
 
-  case class Loss( operationNumber: Int
-                 , loss: taxes.Loss
-                 , lossInBaseCurrency: Double
-                 , usedStocks: StockContainer
-                 , stocks: StockContainer
+  case class Loss(operationNumber: Int
+                  , loss: taxes.Loss
+                  , lossInBaseCurrency: Double
+                  , disposedStocks: StockContainer
+                  , stocks: StockContainer
                  ) extends Processed {
 
     override def headerToHTML: HTML =
@@ -245,10 +245,10 @@ object Processed {
           <span>
             {if(Config.verbosity(Verbosity.showRates))
             <span class='small2'>
-              {if(usedStocks.nonEmpty)
+              {if(disposedStocks.nonEmpty)
               <span>(Used
-                {s"${if(usedStocks.iterator.length > 1) "batches" else "batch"}:"}
-                {usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
+                {s"${if(disposedStocks.iterator.length > 1) "batches" else "batch"}:"}
+                {disposedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
               </span>
             else
               ""
@@ -269,11 +269,11 @@ object Processed {
   }
 
 
-  case class Fee( operationNumber: Int
-                , fee: taxes.Fee
-                , feeInBaseCurrency: Double
-                , usedStocks: StockContainer
-                , stocks: StockContainer
+  case class Fee(operationNumber: Int
+                 , fee: taxes.Fee
+                 , feeInBaseCurrency: Double
+                 , disposedStocks: StockContainer
+                 , stocks: StockContainer
                 ) extends Processed {
 
     override def headerToHTML: HTML =
@@ -310,10 +310,10 @@ object Processed {
           <span>
             {if(fee.currency != baseCurrency && Config.verbosity(Verbosity.showRates))
             <span class='small2'>
-              {if(usedStocks.nonEmpty)
+              {if(disposedStocks.nonEmpty)
               <span>
-                (Used {s"${if(usedStocks.iterator.length > 1) "batches" else "batch"}:"}
-                {usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
+                (Used {s"${if(disposedStocks.iterator.length > 1) "batches" else "batch"}:"}
+                {disposedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
               </span>
             else
               ""
@@ -334,17 +334,17 @@ object Processed {
   }
 
 
-  case class Margin( operationNumber: Int
-                   , date: LocalDateTime
-                   , exchanger: Exchanger
-                   , what: String
-                   , fromAmount: Double, fromCurrency: Currency
-                   , toAmount: Double, toCurrency: Currency
-                   , exchangeRate: Double
-                   , description: RichText
-                   , usedStocksOpt: Option[StockContainer]
-                   , marginLongs: StockContainer
-                   , marginShorts: StockContainer
+  case class Margin(operationNumber: Int
+                    , date: LocalDateTime
+                    , exchanger: Exchanger
+                    , what: String
+                    , fromAmount: Double, fromCurrency: Currency
+                    , toAmount: Double, toCurrency: Currency
+                    , exchangeRate: Price
+                    , description: RichText
+                    , disposedStocksOpt: Option[StockContainer]
+                    , longsStocks: StockContainer
+                    , shortsStocks: StockContainer
                    ) extends Processed {
 
     private val isLong = what.toLowerCase.contains("long")
@@ -382,14 +382,14 @@ object Processed {
           </span>
         </div>
         }
-        {usedStocksOpt match {
+        {disposedStocksOpt match {
         case Some(usedStocks) =>
           <div>
             <span class='embold'>Cost basis:</span>
             <span>{asCurrency(usedStocks.totalCost, usedStocks.baseCurrency)}</span>
-            {if(Config.verbosity(Verbosity.showRates) && usedStocksOpt.nonEmpty)
+            {if(Config.verbosity(Verbosity.showRates) && disposedStocksOpt.nonEmpty)
             <span class='small2'>. Used
-              {s"${if(usedStocksOpt.iterator.length > 1) "batches" else "batch"}:"}
+              {s"${if(disposedStocksOpt.iterator.length > 1) "batches" else "batch"}:"}
               ({usedStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))})
             </span>
             }
@@ -400,9 +400,9 @@ object Processed {
         {if(Config.verbosity(Verbosity.showStocks))
         <div class='stock marginTopBottom20'>
           <div class='embold'>Margin buys:</div>
-          <div>{marginLongs.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
+          <div>{longsStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
           <div class='embold'>Margin sells:</div>
-          <div>{marginShorts.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
+          <div>{shortsStocks.toHTML(showTotal = Config.verbosity(Verbosity.showAll))}</div>
         </div>
         }
       </span>

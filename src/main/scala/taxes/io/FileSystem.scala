@@ -132,7 +132,7 @@ object FileSystem {
 
   private def reportName(year: Int, extension: String): String = {
     val method = taxes.Accounting.toString(Config.config.accountingMethod)
-    s"$method$year.$extension"
+    s"$method.$year.$extension"
   }
 
   def report(year: Int, extension: String = "html"): String =

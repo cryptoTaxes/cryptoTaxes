@@ -12,10 +12,10 @@ object Stock {
   implicit val stockJson = jsonFormat7(Stock.apply)
 }
 
-// basis is expressed in base unit. exchanger is where it was bought
-case class Stock(var amount: Double, costBasis: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeCurrency: Currency, operationNumber: Int) {
+// costBasisPrice is expressed in base currency. exchanger is where it was bought
+case class Stock(var amount: Double, costBasisPrice: Price, exchanger: Exchanger, date: LocalDateTime, exchangeRate: Price, exchangeCurrency: Currency, operationNumber: Int) {
   override def toString: String =
-    f"Stock($amount%.4f, $costBasis%.8f, $exchanger, $exchangeRate%.8f, $exchangeCurrency, ${Format.df.format(date)} $operationNumber)"
+    f"Stock($amount%.4f, $costBasisPrice%.8f, $exchanger, $exchangeRate%.8f, $exchangeCurrency, ${Format.df.format(date)} $operationNumber)"
 }
 
 object StockContainer {
@@ -135,7 +135,7 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
     while(!this.isEmpty && !done) {
       val stock = this.first
       if(stock.amount >= toRemove) {
-        basis += toRemove * stock.costBasis
+        basis += toRemove * stock.costBasisPrice
         stock.amount -= toRemove
         usedStocks.insert(stock.copy(amount = toRemove))
         var remaining = stock.amount
@@ -143,15 +143,15 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
           this.removeFirst()
           remaining = 0
         }
-        disposals.insert(DisposedStock(date, toRemove, exchanger, description, stock.date, remaining, stock.exchanger, stock.costBasis, stock.operationNumber))
+        disposals.insert(DisposedStock(date, toRemove, exchanger, description, stock.date, remaining, stock.exchanger, stock.costBasisPrice, stock.operationNumber))
         toRemove = 0
         done = true
       } else {
-        basis += stock.amount * stock.costBasis
+        basis += stock.amount * stock.costBasisPrice
         toRemove -= stock.amount
         this.removeFirst()
         usedStocks.insert(stock.copy())
-        disposals.insert(DisposedStock(date, stock.amount, exchanger, description, stock.date, 0, stock.exchanger, stock.costBasis, stock.operationNumber))
+        disposals.insert(DisposedStock(date, stock.amount, exchanger, description, stock.date, 0, stock.exchanger, stock.costBasisPrice, stock.operationNumber))
       }
     }
     val removed = amount - toRemove
@@ -163,7 +163,7 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
     this.iterator.map(_.amount).sum
 
   def totalCost: Double =
-    this.iterator.map(p => p.amount * p.costBasis).sum
+    this.iterator.map(p => p.amount * p.costBasisPrice).sum
 
   override def toHTML: HTML = toHTML()
 
@@ -202,7 +202,7 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
              else
               ""
             }
-            {HTMLDoc.asRate(stock.costBasis, baseCurrency, currency)}
+            {HTMLDoc.asRate(stock.costBasisPrice, baseCurrency, currency)}
               {if(i < size - 1) "," else ""}
           </span>
         </span>
@@ -284,7 +284,7 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
 
     container.insert(
       Stock(boughtAmount, costBasis, exchanger, date, exchangeRate, exchangeCurrency, operationNumber)
-      , (x: Stock, y: Stock) => (x.costBasis - y.costBasis).abs < container.eps && x.exchanger == y.exchanger
+      , (x: Stock, y: Stock) => (x.costBasisPrice - y.costBasisPrice).abs < container.eps && x.exchanger == y.exchanger
           && x.date.sameDayAs(y.date)
           && x.exchangeCurrency == y.exchangeCurrency && (x.exchangeRate - y.exchangeRate).abs < container.eps
       , (x: Stock, y: Stock) => x.copy(amount = x.amount + y.amount)
@@ -317,7 +317,7 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
         var cost = 0.0
         for(stock: Stock <- stockContainer) {
           amount += stock.amount
-          cost += stock.amount * stock.costBasis
+          cost += stock.amount * stock.costBasisPrice
         }
         totalCost += cost
         if(totalCost > 0) {
@@ -373,11 +373,11 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
         var cost = 0.0
         for(stock: Stock <- stockContainer) {
           amount += stock.amount
-          val subtotal = stock.amount * stock.costBasis
+          val subtotal = stock.amount * stock.costBasisPrice
           cost += subtotal
           val line = List[Any](stock.date.format(Format.df), stock.exchanger
             , Format.formatDecimal(stock.amount, decimals)
-            , Format.formatDecimal(stock.costBasis, decimals)
+            , Format.formatDecimal(stock.costBasisPrice, decimals)
             , Format.formatDecimal(subtotal, decimals)
             , Format.formatDecimal(amount, decimals)
             , Format.formatDecimal(cost, decimals)

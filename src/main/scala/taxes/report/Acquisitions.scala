@@ -18,13 +18,15 @@ object Acquisitions {
     )
 }
 
-case class Acquisitions(baseCurrency: Currency, processedOperations: Seq[Processed]) {
+case class Acquisitions(baseCurrency: Currency, processedOperations: Seq[Processed], year: Int) {
   import Acquisitions._
 
-  def preprocess(): Unit =
-    processedOperations.foreach(process)
-
   private val grouped = Grouped[Currency, Acquisition]()
+
+  preprocess()
+
+  private def preprocess(): Unit =
+    processedOperations.foreach(process)
 
   private def process(processed: Processed): Unit ={
     processed match {
@@ -51,17 +53,21 @@ case class Acquisitions(baseCurrency: Currency, processedOperations: Seq[Process
     }
   }
 
-  preprocess()
-
-  private def titleFor(year: Int): String =
+  private val title =
     s"Acquired Stocks $year"
 
-  def printToCSVFile(path: String, year: Int): Unit =
+  private def defaultFile(ext: String): String =
+    s"${FileSystem.userOutputFolder(year)}/AcquiredStocks.$year.$ext"
+
+  def printToCSVFile(): Unit =
+    printToCSVFile(defaultFile("csv"))
+
+  def printToCSVFile(path: String): Unit =
     FileSystem.withPrintStream(path) { ps =>
-      ps.println(titleFor(year))
+      ps.println(title)
       ps.println()
       val sep = ", "
-      val header = Seq("Date Adquired","Amount","Exchanger","Cost Basis","","Exchange Rate","","Description")
+      val header = Seq("Date Acquired","Amount","Exchanger","Cost Basis","","Exchange Rate","","Reference")
       for((currency, acquisitions) <- grouped) {
         ps.println(Currency.fullName(currency))
         ps.println(header.mkString(sep))
@@ -78,8 +84,10 @@ case class Acquisitions(baseCurrency: Currency, processedOperations: Seq[Process
       }
     }
 
-  def printToHTMLFile(path: String, year: Int): Unit = {
-    val title = titleFor(year)
+  def printToHTMLFile(): Unit =
+    printToHTMLFile(defaultFile("html"))
+
+  def printToHTMLFile(path: String): Unit = {
     val htmlDoc = HTMLDoc(path, title)
 
     htmlDoc += <div class='header'>{title}</div>
@@ -99,12 +107,12 @@ case class Acquisitions(baseCurrency: Currency, processedOperations: Seq[Process
       <table id='tableStyle1'>
         <tr>
           <th></th>
-          <th>Date Adquired</th>
+          <th>Date Acquired</th>
           <th>Amount</th>
           <th class='alignL paddingL'>Exchanger</th>
           <th class='alignR paddingL'>Cost Basis</th>
           <th class='alignR paddingL'>Exchange Rate</th>
-          <th class='alignL'>Description</th>
+          <th class='alignL'>Reference</th>
         </tr>
         <caption>
           {Currency.fullName(currency)}

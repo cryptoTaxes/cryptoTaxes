@@ -17,19 +17,23 @@ object HTMLDoc {
 
   lazy val baseCurrency = Config.config.baseCurrency.currency
 
-  def asCurrency(amount: Double, currencyUnit: Currency, decimals: Int = Config.config.decimalPlaces): HTML =
+  private def smallClass(cls: String, small: Boolean): String =
+    if(small) cls+" small2" else cls
+
+  def asCurrency(amount: Double, currencyUnit: Currency, decimals: Int = Config.config.decimalPlaces, small: Boolean = false): HTML =
     <span class='noLineBreak'>
       {Format.formatDecimal(amount, decimals)}
-      <span class='currency'>{currencyUnit}</span>
+      <span class={smallClass("currency", small)}>{currencyUnit}</span>
     </span>
 
 
-  def asRate(rate: Double, currencyUnit0: Currency, currencyUnit1: Currency, decimals: Int = Config.config.decimalPlaces): HTML =
+  def asRate(rate: Double, currencyUnit0: Currency, currencyUnit1: Currency, decimals: Int = Config.config.decimalPlaces, small: Boolean = false): HTML =
     <span class='noLineBreak'>
-      {asCurrency(rate, currencyUnit0, decimals)}
-      / <span class="currency">{currencyUnit1}</span>
+      {Format.formatDecimal(rate, decimals)}
+      <span class={smallClass("currency", small)}>{currencyUnit0}</span
+      ><span class={smallClass("", small)}>&#x2006;/&#x2006;</span
+      ><span class={smallClass("currency", small)}>{currencyUnit1}</span>
     </span>
-
 
   def box(header: Any, boxBody: Any): HTML =
     <div class='boxed'>
@@ -216,12 +220,14 @@ case class HTMLDoc(fileName: String, title: String) {
       | table#tableStyle1 tr.caption { border: 1px solid black; border-bottom: 0px solid black; font-weight: bold; text-align: left; }
       | table#tableStyle1 tr:nth-child(odd) { background-color: #f0f0f0;  }
       | table#tableStyle1 tr:hover { background-color: #c5c5c5; }
-      | table#tableStyle1 td, th { text-align: right; vertical-align: top; }
+      | table#tableStyle1 td, th { text-align: left; vertical-align: center; }
       | table#tableStyle1 td:first-child, th:first-child { text-align: left; }
       | table#tableStyle1 td.alignL, th.alignL { text-align: left; }
       | table#tableStyle1 td.alignR, th.alignR { text-align: right; }
       | table#tableStyle1 td.caption { border: 1px solid black; border-bottom: 0px solid black; font-weight: bold; text-align: left; }
-      | table#tableStyle1 td.paddingL, th.paddingL { padding-left: 15px }
+      | table#tableStyle1 td.padding, th.padding { padding-left: 5px; padding-right: 5px; }
+      | table#tableStyle1 td.paddingL, th.paddingL { padding-left: 5px; }
+      | table#tableStyle1 td.paddingR, th.paddingR { padding-right: 5px; }
       |
       | @media print {
       |  body{
