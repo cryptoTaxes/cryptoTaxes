@@ -13,27 +13,6 @@ trait ToHTML {
 
 
 object HTMLDoc {
-  val df = Format.shortDf
-
-  lazy val baseCurrency = Config.config.baseCurrency.currency
-
-  private def smallClass(cls: String, small: Boolean): String =
-    if(small) cls+" small2" else cls
-
-  def asCurrency(amount: Double, currencyUnit: Currency, decimals: Int = Config.config.decimalPlaces, small: Boolean = false): HTML =
-    <span class='noLineBreak'>
-      {Format.formatDecimal(amount, decimals)}
-      <span class={smallClass("currency", small)}>{currencyUnit}</span>
-    </span>
-
-
-  def asRate(rate: Double, currencyUnit0: Currency, currencyUnit1: Currency, decimals: Int = Config.config.decimalPlaces, small: Boolean = false): HTML =
-    <span class='noLineBreak'>
-      {Format.formatDecimal(rate, decimals)}
-      <span class={smallClass("currency", small)}>{currencyUnit0}</span
-      ><span class={smallClass("", small)}>&#x2006;/&#x2006;</span
-      ><span class={smallClass("currency", small)}>{currencyUnit1}</span>
-    </span>
 
   def box(header: Any, boxBody: Any): HTML =
     <div class='boxed'>
@@ -70,66 +49,6 @@ object HTMLDoc {
 
     def toHTML: HTML =
       box(headerToHTML, bodyToHTML)
-  }
-
-
-  def reportResults(year: Int, realized: Report.Realized): HTML = {
-    val proceeds = realized.proceeds.sum
-    val costs = realized.costBasis.sum
-    val fees = realized.perCurrencyPaidFees.sum
-
-    val net = proceeds - costs - fees
-    val netMsg = s"Net ${if(net > 0) "gain" else "loss"}:"
-    <table id='tableStyle1'>
-      <caption>{s"$year Resume"}</caption>
-      <tr>
-        <td><span class='embold'>Total proceeds:</span></td>
-        <td>{asCurrency(proceeds, baseCurrency)}</td>
-      </tr>
-      <tr>
-        <td><span class='embold'>Total cost bases:</span></td>
-        <td>{asCurrency(costs, baseCurrency)}</td>
-      </tr>
-      <tr>
-        <td><span class='embold'>Total fees:</span></td>
-        <td>{asCurrency(fees, baseCurrency)}</td>
-      </tr>
-      <tr>
-        <td><span class='embold'>{netMsg}</span></td>
-        <td>{asCurrency(net, baseCurrency)}</td>
-      </tr>
-    </table>
-  }
-
-
-  def reportYear(year: Int, realized: Report.Realized): HTML = {
-    <div>
-      <div>{realized.perCurrencyGains.toHTML("Gains per currency")}</div>
-      <div>{realized.perCurrencyLooses.toHTML("Looses per currency")}</div>
-      <div>{realized.perCurrencyPaidFees.toHTML("Paid fees per currency")}</div>
-      <div class='marginTopBottom20'>
-        <span class='embold'>Net result:</span>
-        {asCurrency(realized.perCurrencyGains.sum - realized.perCurrencyLooses.sum - realized.perCurrencyPaidFees.sum, baseCurrency)}
-      </div>
-
-      <div>{realized.costBasis.toHTML("Cost bases per currency")}</div>
-      <div>{realized.proceeds.toHTML("Proceeds per currency")}</div>
-      {val realizedGains = {
-         val keys = realized.costBasis.keys.toSet union realized.proceeds.keys.toSet
-         val list = keys.map(k => (k, realized.proceeds(k) - realized.costBasis(k)))
-         val valueTracker = ValueTracker(baseCurrency)
-         for((k,v) <- list)
-           valueTracker.record(k,v)
-         valueTracker
-         }
-       <div>{realizedGains.toHTML("Realized Gains per currency")}</div>
-      }
-
-      <div class='marginTopBottom20'>
-        <span class='embold'>Net result:</span>
-        {asCurrency(realized.proceeds.sum - realized.costBasis.sum - realized.perCurrencyPaidFees.sum, baseCurrency)}
-      </div>
-    </div>
   }
 }
 
@@ -222,6 +141,7 @@ case class HTMLDoc(fileName: String, title: String) {
       | table#tableStyle1 tr:hover { background-color: #c5c5c5; }
       | table#tableStyle1 td, th { text-align: left; vertical-align: center; }
       | table#tableStyle1 td:first-child, th:first-child { text-align: left; }
+      | table#tableStyle1 td.alignT, th.alignL { vertical-align: top; }
       | table#tableStyle1 td.alignL, th.alignL { text-align: left; }
       | table#tableStyle1 td.alignR, th.alignR { text-align: right; }
       | table#tableStyle1 td.caption { border: 1px solid black; border-bottom: 0px solid black; font-weight: bold; text-align: left; }

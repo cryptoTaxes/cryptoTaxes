@@ -23,7 +23,7 @@ object Changelly extends Exchanger {
 
   private var txCounter = 0
   case class Key(fromAmount: Double, toAmount: Double, txOrder: Int)
-  private val descriptions = collection.mutable.Map[Key, RichText]()
+  private val descriptions = scala.collection.mutable.Map[Key, RichText]()
 
   override val sources = Seq(
     new FilteredUserInputFolderSource[Operation]("changelly/2017/depositsWithdrawals", ".txt") {

@@ -80,7 +80,7 @@ case class Disposals(baseCurrency: Currency, processedOperations: Seq[Processed]
             , stock.exchanger
             , stock.costBasisPrice
             , RichText(RichText.report(stock.date.getYear, stock.operationNumber, showYear = true))
-            , -(stock.amount * stock.costBasisPrice)
+            , if(currency==baseCurrency) 0 else -(stock.amount * stock.costBasisPrice)
           )
           grouped.append(currency, disposal)
         }
@@ -98,7 +98,7 @@ case class Disposals(baseCurrency: Currency, processedOperations: Seq[Processed]
             , stock.exchanger
             , stock.costBasisPrice
             , RichText(RichText.report(stock.date.getYear, stock.operationNumber, showYear = true))
-            , -(stock.amount * stock.costBasisPrice)
+            , if(currency==baseCurrency) 0 else -(stock.amount * stock.costBasisPrice)
           )
           grouped.append(currency, disposal)
         }
@@ -173,36 +173,36 @@ case class Disposals(baseCurrency: Currency, processedOperations: Seq[Processed]
             <td class='alignR small1'>
               {numEntries}
             </td>
-            <td class='alignR small1'>
-              {Format.df.format(disposal.date)}
+            <td>
+              {report.Format.asDate(disposal.date)}
             </td>
-            <td class='alignR darkRed'>
-              {Format.formatDecimal(-disposal.amount, report.decimalPlaces(currency))}
+            <td class='alignR'>
+              {report.Format.asAmount(-disposal.amount, currency)}
             </td>
             <td class='exchanger'>
               {disposal.exchanger}
             </td>
             <td class='alignR'>
-              {HTMLDoc.asRate(disposal.priceDisposed, baseCurrency, currency, decimals = report.decimalPlaces(baseCurrency), small = true)}
+              {report.Format.asRate(disposal.priceDisposed, baseCurrency, currency)}
             </td>
             <td class='small1 paddingR'>
               {disposal.reference.toHTML}
             </td>
 
-            <td class='paddingL small1 barL'>
-              {Format.df.format(disposal.dateAcquired)}
+            <td class='barL'>
+              {report.Format.asDate(disposal.dateAcquired)}
             </td>
             <td class='exchanger'>
               {disposal.exchangerAcquired}
             </td>
             <td class='alignR'>
-              {HTMLDoc.asRate(disposal.costBasisPrice, baseCurrency, currency, decimals = report.decimalPlaces(baseCurrency), small = true)}
+              {report.Format.asRate(disposal.costBasisPrice, baseCurrency, currency)}
             </td>
             <td class='small1 alignR paddingR'>
               {disposal.referenceAcquired.toHTML}
             </td>
-            <td class={"alignR barL "+(if(disposal.gainLoss>=0) "darkBlue" else "darkRed")}>
-              {HTMLDoc.asCurrency(disposal.gainLoss, baseCurrency, report.decimalPlaces(baseCurrency), small = true)}
+            <td class='alignR barL'>
+              {report.Format.asAmount(disposal.gainLoss, baseCurrency)}
             </td>
           </tr>
         }
@@ -211,21 +211,21 @@ case class Disposals(baseCurrency: Currency, processedOperations: Seq[Processed]
           <th></th>
           <th>Total disposed:</th>
           <th class='alignR'>
-            {Format.formatDecimal(report.showBalance(totalDisposedAmount), report.decimalPlaces(currency))}
+            {report.Format.asAmount(-totalDisposedAmount, currency)}
           </th>
           <th>Average:</th>
           <th class='alignR'>
-            {HTMLDoc.asRate(totalProceeds / totalDisposedAmount, baseCurrency, currency, report.decimalPlaces(baseCurrency), small = true)}
+            {report.Format.asRate(totalProceeds / totalDisposedAmount, baseCurrency, currency)}
           </th>
           <th></th>
           <th class='barL'></th>
           <th>Average:</th>
           <th class='alignR'>
-            {HTMLDoc.asRate(totalCostBasis / totalDisposedAmount, baseCurrency, currency, decimals = report.decimalPlaces(baseCurrency), small = true)}
+            {report.Format.asRate(totalCostBasis / totalDisposedAmount, baseCurrency, currency)}
           </th>
           <th></th>
-          <th class={"barL alignR "+(if(totalGainLoss>=0) "darkBlue" else "darkRed")}>
-            {HTMLDoc.asCurrency(totalGainLoss, baseCurrency, report.decimalPlaces(baseCurrency), small = true)}
+          <th class='barL alignR'>
+            {report.Format.asAmount(totalGainLoss, baseCurrency)}
           </th>
         </tr>}
       </table>

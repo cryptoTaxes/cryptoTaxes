@@ -1,6 +1,7 @@
 package taxes
 
 import taxes.collection.Queue
+import taxes.report.Format.asRate
 
 case class AcquiredStocks(currency: Currency, baseCurrency: Currency) extends Queue[Stock] {
   def toHTML: Option[HTML] = {
@@ -39,10 +40,10 @@ case class AcquiredStocks(currency: Currency, baseCurrency: Currency) extends Qu
           </td>
 
           <td>
-            {HTMLDoc.asRate(stock.costBasisPrice, baseCurrency, currency)}
+            {asRate(stock.costBasisPrice, baseCurrency, currency)}
           </td>
           <td>
-            {HTMLDoc.asRate(stock.exchangeRate, stock.exchangeCurrency, currency)}
+            {asRate(stock.exchangeRate, stock.exchangeCurrency, currency)}
           </td>
           <td>
             {RichText(RichText.report(stock.date.getYear, stock.operationNumber, showYear = true)).toHTML}
@@ -58,7 +59,7 @@ case class AcquiredStocks(currency: Currency, baseCurrency: Currency) extends Qu
           </th>
           <th>Average:</th>
           <th>
-            {HTMLDoc.asRate(totalCostBasis / totalAcquiredAmount, baseCurrency, currency)}
+            {asRate(totalCostBasis / totalAcquiredAmount, baseCurrency, currency)}
           </th>
           <th></th>
           <th></th>

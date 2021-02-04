@@ -7,6 +7,7 @@ import StockContainer.stockContainerJson.{_baseCurrency, _currency}
 import taxes.date._
 import taxes.exchanger.Exchanger
 import taxes.io.FileSystem
+import taxes.report.Format.asRate
 
 object DisposedStock {
   implicit val disposedStockJson = jsonFormat9(DisposedStock.apply)
@@ -93,7 +94,7 @@ class DisposedStocksQueue(
               {if(stock.remaining>0) Format.formatDecimal(stock.remaining, DisposedStocksQueue.decimalPlaces)}
             </td>
             <td class='exchanger alignL paddingL'>{stock.acquiredExchanger}</td>
-            <td>{HTMLDoc.asRate(stock.costBasis, baseCurrency, currency)}</td>
+            <td>{asRate(stock.costBasis, baseCurrency, currency)}</td>
             <td>
               {RichText(RichText.report(stock.acquiredDate.getYear, stock.acquiredOperationNumber, showYear = true)).toHTML}
             </td>

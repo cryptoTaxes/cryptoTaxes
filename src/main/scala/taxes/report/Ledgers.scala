@@ -4,6 +4,7 @@ import taxes.{HTMLDoc, StockPool}
 import taxes.exchanger.Exchanger
 
 case class Ledgers(allStocks: StockPool, allExchangers: List[Exchanger], year: Int) {
+
   def printToHTMLFile(path: String): Unit = {
     val title = s"Ledgers $year"
     val htmlDoc = HTMLDoc(path, title)

@@ -1,5 +1,7 @@
 package taxes
 
+import taxes.report.Format.asCurrency
+
 case class ValueTracker(baseCurrency: Currency) extends Iterable[(Currency, Double)] with ToHTML {
   private val map = scala.collection.mutable.Map[Currency,Double]()
 
@@ -39,13 +41,13 @@ case class ValueTracker(baseCurrency: Currency) extends Iterable[(Currency, Doub
       sum += total
       <tr>
         <td ><span class='currency'>{label}</span></td>
-        <td>{HTMLDoc.asCurrency(total, baseCurrency)}</td>
-        <td>{HTMLDoc.asCurrency(sum, baseCurrency)}</td>
+        <td>{asCurrency(total, baseCurrency)}</td>
+        <td>{asCurrency(sum, baseCurrency)}</td>
       </tr>
     }
       }
       <td class='embold'>Total:</td>
       <td></td>
-      <td>{HTMLDoc.asCurrency(map.values.sum, baseCurrency)}</td>
+      <td>{asCurrency(map.values.sum, baseCurrency)}</td>
     </table>
 }

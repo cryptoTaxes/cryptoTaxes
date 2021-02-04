@@ -94,17 +94,17 @@ case class Ledger(currency: Currency, private var _initialBalance: Double = 0) {
         <tr>
           <th></th>
           <th>Date</th>
-          <th>Amount</th>
-          <th>Balance</th>
-          <th class='alignL paddingL'>Exchanger</th>
-          <th class='alignL'>Description</th>
+          <th class='alignR'>Amount</th>
+          <th class='alignR'>Balance</th>
+          <th>Exchanger</th>
+          <th>Description</th>
         </tr>
         <caption>{Currency.fullName(currency)}</caption>
         <tr>
           <th></th>
           <th>Initial balance:</th>
           <th></th>
-          <th>{Format.formatDecimal(Ledger.showBalance(_initialBalance), Ledger.decimalPlaces)}</th>
+          <th class='alignR'>{report.Format.asAmount(Ledger.showBalance(_initialBalance), currency, colored = false)}</th>
           <th></th>
           <th></th>
         </tr>
@@ -113,22 +113,22 @@ case class Ledger(currency: Currency, private var _initialBalance: Double = 0) {
           if(entry.date.getYear == year) {
             numEntries += 1
             <tr>
-              <td class='alignR'>{numEntries}</td>
-              <td class='paddingL'>{Format.df.format(entry.date)}</td>
-              <td class={s"paddingL ${if(entry.amount < 0) "darkRed" else "darkBlue"}"}>
-                {(if(entry.amount > 0) "+" else "") + Format.formatDecimal(entry.amount, Ledger.decimalPlaces)}
+              <td class='small1'>{numEntries}</td>
+              <td>{report.Format.asDate(entry.date)}</td>
+              <td class='alignR'>
+                {report.Format.asAmount(entry.amount, currency, signed = true)}
               </td>
               {val bal = Ledger.showBalance(balance)
-               <td class={s"paddingL ${
+               <td class={s"alignR ${
                   if(bal < 0) "darkRed"
                   else if(bal == 0) "darkMagenta"
                   else ""}"
                }>
-                 {Format.formatDecimal(bal, Ledger.decimalPlaces)}
+                 {report.Format.asAmount(bal,currency, colored = false)}
                </td>
               }
-              <td class='exchanger alignL paddingL'>{entry.exchanger}</td>
-              <td class='alignL'>{entry.description.toHTML}</td>
+              <td class='exchanger'>{entry.exchanger}</td>
+              <td class='alignR small1'>{entry.description.toHTML}</td>
             </tr>
           }
         }}
@@ -138,7 +138,7 @@ case class Ledger(currency: Currency, private var _initialBalance: Double = 0) {
             <th></th>
             <th>Final balance:</th>
             <th></th>
-            <th>{Format.formatDecimal(Ledger.showBalance(balance), Ledger.decimalPlaces)}</th>
+            <th class='alignR'>{report.Format.asAmount(Ledger.showBalance(balance), currency, colored = false)}</th>
             <th></th>
             <th></th>
           </tr>

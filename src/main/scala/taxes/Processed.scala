@@ -5,6 +5,7 @@ import taxes.date._
 import taxes.exchanger.Exchanger
 import spray.json._
 import spray.json.JsonProtocol._
+import taxes.report.Format.{asCurrency, asRate}
 
 trait Processed extends Boxed with ToHTML {
   val operationNumber: Int
@@ -13,6 +14,10 @@ trait Processed extends Boxed with ToHTML {
 
 object Processed {
   import HTMLDoc._
+
+  private lazy val baseCurrency = Config.config.baseCurrency.currency
+
+  private val df = Format.shortDf
 
   private val headerDecimals = 4
 
@@ -52,11 +57,11 @@ object Processed {
         , <span>
           {s"${if(exchange.isSettlement) "Settlement " else ""} Exchange of"}
           <span>
-            {asCurrency(exchange.fromAmount, exchange.fromCurrency, decimals = headerDecimals)}
+            {asCurrency(exchange.fromAmount, exchange.fromCurrency, decimals = headerDecimals, small = false)}
           </span>
           for
           <span>
-            {asCurrency(exchange.toAmount, exchange.toCurrency, decimals = headerDecimals)}
+            {asCurrency(exchange.toAmount, exchange.toCurrency, decimals = headerDecimals, small = false)}
           </span>
         </span>
         , <span class='exchanger'>{exchange.exchanger}</span>
@@ -178,7 +183,7 @@ object Processed {
         operationNumberAnchor(operationNumber)
         , gain.date.format(df)
         , <span> Gain of
-          {asCurrency(gain.amount, gain.currency, decimals = headerDecimals)}
+          {asCurrency(gain.amount, gain.currency, decimals = headerDecimals, small = false)}
         </span>
         , <span class='exchanger'>{gain.exchanger}</span>
       )
@@ -226,7 +231,7 @@ object Processed {
         operationNumberAnchor(operationNumber)
         , loss.date.format(df)
         , <span> Loss of
-          {asCurrency(loss.amount, loss.currency, decimals = headerDecimals)}
+          {asCurrency(loss.amount, loss.currency, decimals = headerDecimals, small = false)}
         </span>
         , <span class='exchanger'>{loss.exchanger}</span>
       )
@@ -282,8 +287,8 @@ object Processed {
         , fee.date.format(df)
         , <span> Fee of
           {fee.alt match {
-            case None => asCurrency(fee.amount, fee.currency, decimals = headerDecimals)
-            case Some((amount, currency)) => asCurrency(amount, currency, decimals = headerDecimals)
+            case None => asCurrency(fee.amount, fee.currency, decimals = headerDecimals, small = false)
+            case Some((amount, currency)) => asCurrency(amount, currency, decimals = headerDecimals, small = false)
           }
           }
         </span>
@@ -360,9 +365,9 @@ object Processed {
         operationNumberAnchor(operationNumber)
         , date.format(df)
         , <span> {what}
-          {asCurrency(amount1, currency1, decimals = headerDecimals)}
+          {asCurrency(amount1, currency1, decimals = headerDecimals, small = false)}
           for
-          {asCurrency(amount2, currency2, decimals = headerDecimals)}
+          {asCurrency(amount2, currency2, decimals = headerDecimals, small = false)}
         </span>
         , <span class='exchanger'>{exchanger}</span>
       )

@@ -6,6 +6,7 @@ import taxes.collection.{Container, Queue, Stack}
 import taxes.date._
 import taxes.exchanger.Exchanger
 import taxes.io.FileSystem
+import taxes.report.Format.{asCurrency, asRate}
 import taxes.util.Logger
 
 object Stock {
@@ -171,8 +172,8 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
     <span>
       {if(showTotal) {
         <span>
-          {HTMLDoc.asCurrency(totalAmount, currency)}.
-          {HTMLDoc.asCurrency(totalCost, baseCurrency)}.
+          {asCurrency(totalAmount, currency)}.
+          {asCurrency(totalCost, baseCurrency)}.
         </span>
        }
       }
@@ -192,7 +193,7 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
                else
                 ""
               }
-              {HTMLDoc.asRate(stock.exchangeRate, stock.exchangeCurrency, currency)}
+              {asRate(stock.exchangeRate, stock.exchangeCurrency, currency)}
               =
             </span>
           }
@@ -202,7 +203,7 @@ sealed trait StockContainer extends Container[Stock] with ToHTML {
              else
               ""
             }
-            {HTMLDoc.asRate(stock.costBasisPrice, baseCurrency, currency)}
+            {asRate(stock.costBasisPrice, baseCurrency, currency)}
               {if(i < size - 1) "," else ""}
           </span>
         </span>
@@ -327,16 +328,16 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
             </td>
           </tr>
           <tr>
-            <th>Units</th>
-            <th>Total cost</th>
-            <th>Average cost</th>
-            <th>Stock</th>
+            <th class='alignR'>Units</th>
+            <th class='alignR'>Total cost</th>
+            <th class='alignR'>Average cost</th>
+            <th class='alignR'>Stock</th>
           </tr>
           <tr>
-            <td>{HTMLDoc.asCurrency(amount, stockContainer.currency, decimals = 4.max(Config.config.decimalPlaces))}</td>
-            <td>{HTMLDoc.asCurrency(cost, stockContainer.baseCurrency)}</td>
-            <td class='noLineBreak'>{HTMLDoc.asCurrency(cost / amount, stockContainer.baseCurrency)} / <span class='currency'>{stockContainer.currency}</span></td>
-            <td class='small2'>{stockContainer.toHTML(showTotal = false, showExchangeRates = true)}</td>
+            <td class='alignR alignT'>{report.Format.asCurrency(amount, stockContainer.currency)}</td>
+            <td class='alignR alignT'>{report.Format.asCurrency(cost, stockContainer.baseCurrency)}</td>
+            <td class='alignR alignT'>{report.Format.asRate(cost / amount, stockContainer.baseCurrency, stockContainer.currency)}</td>
+            <td class='alignR small2'>{stockContainer.toHTML(showTotal = false, showExchangeRates = true)}</td>
           </tr>
         }
        }
@@ -346,7 +347,7 @@ trait StockPool extends Iterable[StockContainer] with ToHTML{
      if(sameBaseCurrencies)
         <tr class='caption'>
           <td>Total:</td>
-          <td>{HTMLDoc.asCurrency(totalCost, baseCurrencies.head)}</td>
+          <td>{asCurrency(totalCost, baseCurrencies.head)}</td>
           <td></td>
           <td></td>
         </tr>

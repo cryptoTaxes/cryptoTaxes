@@ -135,112 +135,58 @@ object Report {
     }
 
     def reportPortfolio(year: Int, beginOfYear: Boolean = false): Unit = {
-      val when = if(beginOfYear) "Beginning" else "End"
-      val title = s"$year $when of year portfolio"
-
-      val csvFileName = FileSystem.userOutputFolder(year)+s"/Portfolio.$when.$year.csv"
-      state.allStocks.printToCSVFile(csvFileName, year, title)
-
-      val htmlPortfolioFile = s"${FileSystem.userOutputFolder(year)}/Portfolio.$when.$year.html"
-      val htmlPortfolioTitle = title
-      val htmlPortfolio = HTMLDoc(htmlPortfolioFile, htmlPortfolioTitle)
-
-      htmlPortfolio += state.allStocks.toHTML(htmlPortfolioTitle)
-
-      for(exchanger <- Exchanger.allExchangers.sortBy(_.id))
-        exchanger.ledgerPool.summaryToHTML(beginOfYear) match {
-          case None => ;
-          case Some(html) => htmlPortfolio += html
-        }
-
-      htmlPortfolio.close()
+      val portfolioReport = report.Portfolio(state.allStocks, year, beginOfYear)
+      portfolioReport.printToHTMLFile()
+      portfolioReport.printToCSVFile()
     }
 
     def reportYear(year: Int): Unit = {
-      val method = Accounting.toString(Config.config.accountingMethod)
-
-      val htmlReportFile = FileSystem.report(year, "html")
-      val htmlReportTitle = s"$year $method Report"
-      val htmlReport = HTMLDoc(htmlReportFile, htmlReportTitle)
-
-      htmlReport += <div class='header'>{htmlReportTitle}</div>
-
-      for(processed <- processedOperations)
-        htmlReport += processed
-
-      htmlReport += HTMLDoc.reportResults(year, Realized)
-      htmlReport.close()
-
-      val csvReportFile = FileSystem.report(year, "csv")
-      operationTracker.printToCSVFile(csvReportFile, year, baseCurrency)
+      val accountingReport = report.Accounting(baseCurrency, processedOperations, Realized, operationTracker, year)
+      accountingReport.printToHTMLFile()
+      accountingReport.printToCSVFile()
 
       reportPortfolio(year)
 
-      val htmlExtraFile = s"${FileSystem.userOutputFolder(year)}/Extra.$year.html"
-      val htmlExtraTitle = s"$year Statistics"
-      val htmlExtra = HTMLDoc(htmlExtraFile, htmlExtraTitle)
-
-      htmlExtra += <div class='header'>{htmlExtraTitle}</div>
-      htmlExtra += HTMLDoc.reportYear(year, Realized)
-
-      if(Config.verbosity(Verbosity.showMoreDetails)) {
-        {htmlExtra += <div>Frees:</div>}
-        <div>
-          {for(f <- partiallyFrees)
-          htmlExtra += <div>{f}</div>
-          }
-        </div>
-
-        {htmlExtra += <div>Priced0:</div>}
-        <div>
-          {for(op <- frees)
-          htmlExtra += <div>{op}</div>
-          }
-        </div>
-
-        {htmlExtra += <div>Opened margin longs:</div>}
-        <div>
-          {for(stockPool <- Exchanger.allExchangers.map(_.marginLongs))
-          for(stock <- stockPool)
-            if(stock.totalAmount>0)
-              htmlExtra += <div>{stock.toHTML(showTotal = true)}</div>
-          }
-        </div>
-
-        {htmlExtra += <div>Opened margin shorts:</div>}
-        <div>
-          {for(stockPool <- Exchanger.allExchangers.map(_.marginShorts))
-          for(stock <- stockPool)
-            if(stock.totalAmount>0)
-              htmlExtra += <div>{stock.toHTML(showTotal = true)}</div>
-          }
-        </div>
-      }
-      htmlExtra.close()
+      val extraReport = report.Extra(baseCurrency, partiallyFrees, frees, Realized, year)
+      extraReport.printToHTMLFile()
 
       val ledgersReport = report.Ledgers(state.allStocks, Exchanger.allExchangers, year)
       val htmlLedgersFile = s"${FileSystem.userOutputFolder(year)}/Ledgers.$year.html"
       ledgersReport.printToHTMLFile(htmlLedgersFile)
 
-      val htmlDisposedStocksFile = s"${FileSystem.userOutputFolder(year)}/DisposedStocks$year.html"
-      val htmlDisposedStocksTitle = s"Disposed Stocks $year"
-      val htmlDisposedStocks = HTMLDoc(htmlDisposedStocksFile, htmlDisposedStocksTitle)
+      val exchangersReports = report.ExchangersLedgers(Exchanger.allExchangers, year)
+      exchangersReports.printToHTMLFile()
 
-      htmlDisposedStocks += <div class='header'>{htmlDisposedStocksTitle}</div>
-      for(stock <- state.allStocks.toList.sortBy(_.currency))
-        stock.disposals.toHTML match {
-          case None => ;
-          case Some(html) => htmlDisposedStocks += html
+      val acquisitions = report.Acquisitions(baseCurrency, processedOperations, year)
+      acquisitions.printToHTMLFile()
+      acquisitions.printToCSVFile()
+
+      val disposals = report.Disposals(baseCurrency, processedOperations, year)
+      disposals.printToHTMLFile()
+
+      {
+        val htmlDisposedStocksFile = s"${FileSystem.userOutputFolder(year)}/DisposedStocks$year.html"
+        val htmlDisposedStocksTitle = s"Disposed Stocks $year"
+        val htmlDisposedStocks = HTMLDoc(htmlDisposedStocksFile, htmlDisposedStocksTitle)
+
+        htmlDisposedStocks += <div class='header'>
+          {htmlDisposedStocksTitle}
+        </div>
+        for (stock <- state.allStocks.toList.sortBy(_.currency))
+          stock.disposals.toHTML match {
+            case None => ;
+            case Some(html) => htmlDisposedStocks += html
+          }
+        htmlDisposedStocks.close()
+
+        val csvDisposedStocksFile = s"${FileSystem.userOutputFolder(year)}/DisposedStocks$year.csv"
+        val csvDisposedStocksTitle = s"Disposed Stocks $year"
+        FileSystem.withPrintStream(csvDisposedStocksFile) { ps =>
+          ps.println(csvDisposedStocksTitle)
+          ps.println()
+          for (stock <- state.allStocks.toList.sortBy(_.currency))
+            stock.disposals.printToCSV(ps)
         }
-      htmlDisposedStocks.close()
-
-      val csvDisposedStocksFile = s"${FileSystem.userOutputFolder(year)}/DisposedStocks$year.csv"
-      val csvDisposedStocksTitle = s"Disposed Stocks $year"
-      FileSystem.withPrintStream(csvDisposedStocksFile) { ps =>
-        ps.println(csvDisposedStocksTitle)
-        ps.println()
-        for(stock <- state.allStocks.toList.sortBy(_.currency))
-          stock.disposals.printToCSV(ps)
       }
 
       {
@@ -257,75 +203,6 @@ object Report {
             case Some(html) => htmlAcquiredStocks += html
           }
         htmlAcquiredStocks.close()
-      }
-
-      FileSystem.withPrintStream(FileSystem.processedOperationsFile(year) + ".disposed.txt") { ps =>
-        val map = scala.collection.mutable.Map[Currency, List[Stock]]()
-
-        def process(op: Processed): Unit = {
-          op match {
-            case ex: Processed.Exchange =>
-              for (stock <- ex.disposedStocks) {
-                map(ex.disposedStocks.currency) = stock :: map.getOrElse(ex.disposedStocks.currency, List())
-              }
-            case co: Processed.Composed =>
-              for (op2 <- co.processed)
-                process(op2)
-            case fe: Processed.Fee =>
-              for (stock <- fe.disposedStocks) {
-                map(fe.disposedStocks.currency) = stock :: map.getOrElse(fe.disposedStocks.currency, List())
-              }
-            case lo: Processed.Loss =>
-              for (stock <- lo.disposedStocks) {
-                map(lo.disposedStocks.currency) = stock :: map.getOrElse(lo.disposedStocks.currency, List())
-              }
-            case _ =>
-              ;
-
-          }
-        }
-
-        for (op <- processedOperations)
-          process(op)
-
-
-        for ((c, ls) <- map) {
-          ps.println(c)
-          for (s <- ls.reverse)
-            ps.println(s)
-          ps.println()
-        }
-      }
-
-      val acquisitions = report.Acquisitions(baseCurrency, processedOperations, year)
-      acquisitions.printToHTMLFile()
-      acquisitions.printToCSVFile()
-
-      val disposals = report.Disposals(baseCurrency, processedOperations, year)
-      disposals.printToHTMLFile()
-
-      for(exchanger <- Exchanger.allExchangers) {
-        val htmlExchangerLedgersFile = s"${FileSystem.userOutputFolder(year)}/Exchanger.$exchanger.Ledgers.$year.html"
-        val htmlExchangerLedgersTitle = s"$exchanger Ledgers $year"
-        val htmlExchangerLedgers = HTMLDoc(htmlExchangerLedgersFile, htmlExchangerLedgersTitle)
-
-        exchanger.ledgerPool.toHTML(year) match {
-          case None => ;
-          case Some(html) =>
-            htmlExchangerLedgers += <div class='header'>{htmlExchangerLedgersTitle}</div>
-            htmlExchangerLedgers += html
-        }
-
-        for((marginStockPool, title) <- List((exchanger.marginLongs, "Margin Longs"), (exchanger.marginShorts, "Margin Shorts"))) {
-          val htmls = marginStockPool.toList.sortBy(_.id).flatMap(_.ledger.toHTML(year))
-
-          if(htmls.nonEmpty) {
-            htmlExchangerLedgers += <div class='header'>{title}</div>
-            for(html <- htmls)
-              htmlExchangerLedgers += html
-          }
-        }
-        htmlExchangerLedgers.close()
       }
     }
 

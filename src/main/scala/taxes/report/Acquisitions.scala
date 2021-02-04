@@ -1,7 +1,7 @@
 package taxes.report
 
 import taxes.collection.Grouped
-import taxes.{Config, Currency, Format, HTML, HTMLDoc, Processed, RichText, report}
+import taxes.{Config, Currency, HTML, HTMLDoc, Processed, RichText, report}
 import taxes.date.LocalDateTime
 import taxes.exchanger.Exchanger
 import taxes.io.FileSystem
@@ -14,7 +14,7 @@ object Acquisitions {
     , exchanger: Exchanger
     , exchangeRate:Double
     , exchangeCurrency: Currency
-    , operationNumber: Int
+    , reference: RichText
     )
 }
 
@@ -39,15 +39,34 @@ case class Acquisitions(baseCurrency: Currency, processedOperations: Seq[Process
             if(pair.currency == currency)
               amount += pair.amount
         if(amount>0) {
-          val acquisition = Acquisition(exchange.exchange.date, amount, exchange.boughtBasisPriceInBaseCurrency, exchange.exchange.exchanger, exchange.soldBoughtExchangeRate, exchange.exchange.fromCurrency, exchange.operationNumber)
+          val acquisition = Acquisition(
+            exchange.exchange.date
+            , amount
+            , exchange.boughtBasisPriceInBaseCurrency
+            , exchange.exchange.exchanger
+            , exchange.soldBoughtExchangeRate
+            , exchange.exchange.fromCurrency
+            , RichText(s"Exchange ${RichText.report(exchange.exchange.date.getYear, exchange.operationNumber, showYear = false)}")
+          )
           grouped.append(currency, acquisition)
         }
+
       case gain: Processed.Gain =>
         val currency = gain.gain.currency
-        val acquisition = Acquisition(gain.gain.date, gain.gain.amount, gain.basePrice, gain.gain.exchanger, gain.basePrice, baseCurrency, gain.operationNumber)
+        val acquisition = Acquisition(
+          gain.gain.date
+          , gain.gain.amount
+          , gain.basePrice
+          , gain.gain.exchanger
+          , gain.basePrice
+          , baseCurrency
+          , RichText(s"Gain ${RichText.report(gain.gain.date.getYear, gain.operationNumber, showYear = false)}")
+        )
         grouped.append(currency, acquisition)
+
       case composed: Processed.Composed =>
         composed.processed.foreach(process)
+
       case _ =>
         ;
     }
@@ -72,10 +91,14 @@ case class Acquisitions(baseCurrency: Currency, processedOperations: Seq[Process
         ps.println(Currency.fullName(currency))
         ps.println(header.mkString(sep))
         acquisitions.foreach{ acquisition =>
-          val line = Seq(acquisition.date.format(Format.df), acquisition.amount, acquisition.exchanger
-            , acquisition.costBasis, s"$baseCurrency / $currency"
-            , acquisition.exchangeRate, s"${acquisition.exchangeCurrency} / $currency"
-            , RichText(RichText.report(acquisition.date.getYear, acquisition.operationNumber, showYear = true)).toString
+          val line = Seq(acquisition.date.format(taxes.Format.df)
+            , acquisition.amount
+            , acquisition.exchanger
+            , acquisition.costBasis
+            , s"$baseCurrency / $currency"
+            , acquisition.exchangeRate
+            , s"${acquisition.exchangeCurrency} / $currency"
+            , acquisition.reference.toString
           )
           ps.println(line.mkString(sep))
         }
@@ -108,11 +131,11 @@ case class Acquisitions(baseCurrency: Currency, processedOperations: Seq[Process
         <tr>
           <th></th>
           <th>Date Acquired</th>
-          <th>Amount</th>
-          <th class='alignL paddingL'>Exchanger</th>
-          <th class='alignR paddingL'>Cost Basis</th>
-          <th class='alignR paddingL'>Exchange Rate</th>
-          <th class='alignL'>Reference</th>
+          <th class='alignR'>Amount</th>
+          <th>Exchanger</th>
+          <th class='alignR'>Cost Basis</th>
+          <th class='alignR'>Exchange Rate</th>
+          <th class='alignR'>Reference</th>
         </tr>
         <caption>
           {Currency.fullName(currency)}
@@ -122,27 +145,26 @@ case class Acquisitions(baseCurrency: Currency, processedOperations: Seq[Process
         totalAcquiredAmount += acquisition.amount
         totalCostBasis += acquisition.amount * acquisition.costBasis
         <tr>
-          <td class='alignR'>
+          <td class='alignR small1'>
             {numEntries}
           </td>
-          <td class='paddingL'>
-            {Format.df.format(acquisition.date)}
+          <td>
+            {report.Format.asDate(acquisition.date)}
           </td>
-          <td class='paddingL darkBlue'>
-            {Format.formatDecimal(acquisition.amount, report.decimalPlaces)}
+          <td class='alignR'>
+            {report.Format.asAmount(acquisition.amount, currency)}
           </td>
-          <td class='exchanger alignL paddingL'>
+          <td class='exchanger'>
             {acquisition.exchanger}
           </td>
-
-          <td>
-            {HTMLDoc.asRate(acquisition.costBasis, baseCurrency, currency)}
+          <td class='alignR'>
+            {report.Format.asRate(acquisition.costBasis, baseCurrency, currency)}
           </td>
-          <td>
-            {HTMLDoc.asRate(acquisition.exchangeRate, acquisition.exchangeCurrency, currency)}
+          <td class='alignR'>
+            {report.Format.asRate(acquisition.exchangeRate, acquisition.exchangeCurrency, currency)}
           </td>
-          <td>
-            {RichText(RichText.report(acquisition.date.getYear, acquisition.operationNumber, showYear = true)).toHTML}
+          <td class='small1'>
+            {acquisition.reference.toHTML}
           </td>
         </tr>
       }
@@ -150,12 +172,12 @@ case class Acquisitions(baseCurrency: Currency, processedOperations: Seq[Process
         <tr>
           <th></th>
           <th>Total acquired:</th>
-          <th>
-            {Format.formatDecimal(report.showBalance(totalAcquiredAmount), report.decimalPlaces)}
+          <th class='alignR'>
+            {report.Format.asAmount(totalAcquiredAmount, currency)}
           </th>
           <th>Average:</th>
-          <th>
-            {HTMLDoc.asRate(totalCostBasis / totalAcquiredAmount, baseCurrency, currency)}
+          <th class='alignR'>
+            {report.Format.asRate(totalCostBasis / totalAcquiredAmount, currency, baseCurrency)}
           </th>
           <th></th>
           <th></th>
