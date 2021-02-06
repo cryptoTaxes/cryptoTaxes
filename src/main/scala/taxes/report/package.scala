@@ -1,6 +1,6 @@
 package taxes
 
-import taxes.date.LocalDateTime
+import taxes.date._
 
 package object report {
   val decimalPlaces = 4.max(Config.config.decimalPlaces)
@@ -47,6 +47,11 @@ package object report {
     def asDate(date: LocalDateTime) =
       <span class='paddingL small1'>
         {taxes.Format.df.format(date)}
+      </span>
+
+    def asTimeDiff(to: LocalDateTime, from: LocalDateTime) =
+      <span class={if(to.atLeast1YearFrom(from)) "" else "darkRed"}>
+        {taxes.Format.asTimeDiff(to.difference(from))}
       </span>
   }
 }

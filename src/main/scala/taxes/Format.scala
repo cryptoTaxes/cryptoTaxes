@@ -1,5 +1,7 @@
 package taxes
 
+import taxes.date.LocalDateTimeDiff
+
 import java.math.RoundingMode
 import java.text.DecimalFormat
 
@@ -95,4 +97,27 @@ object Format {
 
   def asCurrency(amount: Double, currencyUnit: Currency, decimals: Int = Config.config.decimalPlaces): String =
     Format.formatDecimal(amount, decimals) + " " + currencyUnit
+
+  def asTimeDiff(lDTD: LocalDateTimeDiff, toShowItems: Int = 2) = {
+    val longLabels = Array("years", "month", "day", "hour", "minute", "second")
+    val labels = Array("Y", "M", "D", "h", "m", "s")
+    val values = Array(lDTD.years, lDTD.months, lDTD.days, lDTD.hours, lDTD.minutes, lDTD.seconds)
+
+    var items = 0
+    var str = ""
+    var i = 0
+    while(items < toShowItems && i < values.length) {
+      if(values(i)>0) {
+        items += 1
+        if(items > 1)
+          str += "/"
+        str += s"${values(i)}${labels(i)}"
+      }
+      i += 1
+    }
+
+    if(str.isEmpty)
+      str = s"0${labels.last}"
+    str
+  }
 }

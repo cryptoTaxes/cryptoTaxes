@@ -71,6 +71,7 @@ class DisposedStocksQueue(
           <th class='alignL paddingL'>Exchanger</th>
           <th class='alignL'>Description</th>
           <th class='barL'>Date Acquired</th>
+          <th>Hold</th>
           <th>Remaining</th>
           <th class='alignL paddingL'>Exchanger</th>
           <th class='alignR'>Cost Basis</th>
@@ -90,6 +91,10 @@ class DisposedStocksQueue(
             <td class='exchanger alignL paddingL'>{stock.exchanger}</td>
             <td class='alignL'>{stock.description.toHTML}</td>
             <td class='paddingL barL'>{Format.df.format(stock.acquiredDate)}</td>
+            <td class='alignR'>{
+              val diff = stock.date.difference(stock.acquiredDate)
+              s"$diff.years years, $diff.days days"}
+            </td>
             <td class='paddingL darkBlue'>
               {if(stock.remaining>0) Format.formatDecimal(stock.remaining, DisposedStocksQueue.decimalPlaces)}
             </td>
@@ -106,6 +111,7 @@ class DisposedStocksQueue(
           <th></th>
           <th>Total disposed:</th>
           <th>{Format.formatDecimal(Ledger.showBalance(totalDisposedAmount), DisposedStocksQueue.decimalPlaces)}</th>
+          <th></th>
           <th></th>
           <th></th>
           <th></th>

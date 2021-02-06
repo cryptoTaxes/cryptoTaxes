@@ -2,7 +2,7 @@ package taxes.report
 
 import taxes.collection.Grouped
 import taxes.{Config, Currency, Format, HTML, HTMLDoc, Price, Processed, RichText, report}
-import taxes.date.LocalDateTime
+import taxes.date._
 import taxes.exchanger.Exchanger
 import taxes.io.FileSystem
 
@@ -36,17 +36,18 @@ case class Disposals(baseCurrency: Currency, processedOperations: Seq[Processed]
       case exchange: Processed.Exchange =>
         for (stock <- exchange.disposedStocks) {
           val currency = exchange.exchange.fromCurrency
+          val soldPriceInBaseCurrency = if(stock.amount==0 || exchange.soldPriceInBaseCurrency.isNaN) 0.0 else exchange.soldPriceInBaseCurrency
           val disposal = Disposal(
               exchange.exchange.date
             , stock.amount
             , exchange.exchange.exchanger
-            , exchange.soldPriceInBaseCurrency
+            , soldPriceInBaseCurrency
             , RichText(s"Exchange ${RichText.report(exchange.exchange.date.getYear, exchange.operationNumber, showYear = true)}")
             , stock.date
             , stock.exchanger
             , stock.costBasisPrice
             , RichText(RichText.report(stock.date.getYear, stock.operationNumber, showYear = true))
-            , stock.amount * (exchange.soldPriceInBaseCurrency - stock.costBasisPrice)
+            , stock.amount * (soldPriceInBaseCurrency - stock.costBasisPrice)
             )
           grouped.append(currency, disposal)
         }
@@ -157,6 +158,7 @@ case class Disposals(baseCurrency: Currency, processedOperations: Seq[Processed]
           <th class='alignR'>Cost Basis</th>
           <th class='alignL'>Reference</th>
           <th class='alignR barL'>Gain/Loss</th>
+          <th class='alignR'>Holding</th>
         </tr>
         <caption>
           {Currency.fullName(currency)}
@@ -202,7 +204,10 @@ case class Disposals(baseCurrency: Currency, processedOperations: Seq[Processed]
               {disposal.referenceAcquired.toHTML}
             </td>
             <td class='alignR barL'>
-              {report.Format.asAmount(disposal.gainLoss, baseCurrency)}
+              {report.Format.asCurrency(disposal.gainLoss, baseCurrency)}
+            </td>
+            <td class='alignR small1'>
+              {report.Format.asTimeDiff(disposal.date, disposal.dateAcquired)}
             </td>
           </tr>
         }
@@ -225,8 +230,9 @@ case class Disposals(baseCurrency: Currency, processedOperations: Seq[Processed]
           </th>
           <th></th>
           <th class='barL alignR'>
-            {report.Format.asAmount(totalGainLoss, baseCurrency)}
+            {report.Format.asCurrency(totalGainLoss, baseCurrency)}
           </th>
+          <th></th>
         </tr>}
       </table>
     if (numEntries > 0)
