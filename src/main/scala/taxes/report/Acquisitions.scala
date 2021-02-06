@@ -83,15 +83,18 @@ case class Acquisitions(baseCurrency: Currency, processedOperations: Seq[Process
 
   def printToCSVFile(path: String): Unit =
     FileSystem.withPrintStream(path) { ps =>
-      ps.println(title)
-      ps.println()
       val sep = ", "
-      val header = Seq("Date Acquired","Amount","Exchanger","Cost Basis","","Exchange Rate","","Reference")
+      ps.println(s"$sep$title")
+      ps.println()
+      val header = Seq("", "Date Acquired","Amount","Exchanger","Cost Basis","","Exchange Rate","","Reference")
       for((currency, acquisitions) <- grouped) {
-        ps.println(Currency.fullName(currency))
+        ps.println(s"$currency$sep${Currency.nameOf(currency).getOrElse("")}")
         ps.println(header.mkString(sep))
+        var i = 0
         acquisitions.foreach{ acquisition =>
-          val line = Seq(acquisition.date.format(taxes.Format.df)
+          i += 1
+          val line = Seq(i
+            , acquisition.date.format(taxes.Format.df)
             , acquisition.amount
             , acquisition.exchanger
             , acquisition.costBasis

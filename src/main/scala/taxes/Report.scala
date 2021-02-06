@@ -163,6 +163,7 @@ object Report {
 
       val disposals = report.Disposals(baseCurrency, processedOperations, year)
       disposals.printToHTMLFile()
+      disposals.printToCSVFile()
 
       {
         val htmlDisposedStocksFile = s"${FileSystem.userOutputFolder(year)}/DisposedStocks$year.html"

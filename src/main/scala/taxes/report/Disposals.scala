@@ -120,8 +120,43 @@ case class Disposals(baseCurrency: Currency, processedOperations: Seq[Processed]
   def printToCSVFile(): Unit =
     printToCSVFile(defaultFile("csv"))
 
-  def printToCSVFile(path: String): Unit = {
-  }
+  def printToCSVFile(path: String): Unit =
+    FileSystem.withPrintStream(path) { ps =>
+      val sep = ", "
+      ps.println(s"$sep$title")
+      ps.println()
+      val header = Seq("", "Date Disposed","Amount","Exchanger","Proceeds","","Reference",
+        "Date Acquired","Exchanger","Cost Basis","", "Reference",
+        "Gain/Loss", "", "Holding", "")
+      for((currency, disposals) <- grouped) {
+        ps.println(s"$currency$sep${Currency.nameOf(currency).getOrElse("")}")
+        ps.println(header.mkString(sep))
+        var i = 0
+        disposals.foreach{ disposal =>
+          i += 1
+          val line = Seq( i
+            , disposal.date.format(taxes.Format.df)
+            , -disposal.amount
+            , disposal.exchanger
+            , disposal.priceDisposed
+            , s"$baseCurrency / $currency"
+            , disposal.reference.toString
+            , disposal.dateAcquired.format(taxes.Format.df)
+            , disposal.exchangerAcquired
+            , disposal.costBasisPrice
+            , s"$baseCurrency / $currency"
+            , disposal.referenceAcquired.toString
+            , disposal.gainLoss
+            , baseCurrency
+            , taxes.Format.asTimeDiff(disposal.date.difference(disposal.dateAcquired))
+            , if(disposal.date.atLeast1YearFrom(disposal.dateAcquired)) "*" else ""
+          )
+          ps.println(line.mkString(sep))
+        }
+        ps.println()
+        ps.println()
+      }
+    }
 
   def printToHTMLFile(): Unit =
     printToHTMLFile(defaultFile("html"))
