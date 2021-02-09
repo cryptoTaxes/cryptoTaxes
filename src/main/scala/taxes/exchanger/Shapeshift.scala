@@ -74,10 +74,12 @@ object Shapeshift extends Exchanger {
 
               val deposit = Deposit(
                 date = date
-                , id = fromTxId
+                , id = orderId
                 , amount = fromAmount + fromTxInfo.fee
                 , currency = fromCurrency
                 , exchanger = Shapeshift
+                , address = Some(depositAddress)
+                , txid = Some(fromTxId)
                 , description = RichText(s"Deposit ${RichText.url(orderId,orderUrl)}${RichText.nl}${RichText.util.transaction(fromCurrency, fromTxId, depositAddress)}")
               )
 
@@ -101,6 +103,8 @@ object Shapeshift extends Exchanger {
                 , amount = toAmount
                 , currency = toCurrency
                 , exchanger = Shapeshift
+                , address = Some(withdrawalAddress)
+                , txid = Some(toTxId)
                 , description = RichText(s"Withdrawal ${RichText.url(orderId,orderUrl)}${RichText.nl}${RichText.util.transaction(toCurrency, toTxId, withdrawalAddress)}")
               )
 

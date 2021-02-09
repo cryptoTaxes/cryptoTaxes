@@ -109,6 +109,8 @@ object BitcoinCom extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = BitcoinCom
+          , address = None
+          , txid = Some(txHash)
           , description = desc
         )
         return CSVReader.Ok(deposit)
@@ -120,6 +122,8 @@ object BitcoinCom extends Exchanger {
           , amount = amount.abs
           , currency = currency
           , exchanger = BitcoinCom
+          , address = None
+          , txid = Some(txHash)
           , description = desc
         )
         // todo Withdrawal fees are not currently implemented. They could be

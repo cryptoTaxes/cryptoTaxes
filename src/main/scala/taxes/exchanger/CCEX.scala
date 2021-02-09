@@ -72,6 +72,8 @@ object CCEX extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = CCEX
+          , address = None
+          , txid = Some(txid)
           , description = desc
         )
         return CSVReader.Ok(deposit)
@@ -95,6 +97,8 @@ object CCEX extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = CCEX
+          , address = Some(address)
+          , txid = Some(txid)
           , description = desc
         )
         return CSVReader.Ok(withdrawal)

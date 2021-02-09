@@ -221,10 +221,12 @@ object Bittrex extends Exchanger {
 
       val deposit = Deposit(
         date = lastUpdatedDate
-        , id = txid
+        , id = depositId
         , amount = amount
         , currency = currency
         , exchanger = Bittrex
+        , address = Some(address)
+        , txid = Some(txid)
         , description = desc
       )
       return CSVReader.Ok(deposit)
@@ -263,6 +265,8 @@ object Bittrex extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = Bittrex
+          , address = Some(address)
+          , txid = Some(txid)
           , description = desc
         )
 
@@ -318,10 +322,12 @@ object Bittrex extends Exchanger {
 
         val deposit = Deposit(
           date = date
-          , id = txid
+          , id = s"$address $txid"
           , amount = amount
           , currency = currency
           , exchanger = Bittrex
+          , address = Some(address)
+          , txid = Some(txid)
           , description = desc
         )
 
@@ -353,6 +359,8 @@ object Bittrex extends Exchanger {
             , amount = amount
             , currency = currency
             , exchanger = Bittrex
+            , address = Some(address)
+            , txid = Some(txid)
             , description = desc
           )
 

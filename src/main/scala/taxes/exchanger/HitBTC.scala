@@ -100,6 +100,8 @@ object HitBTC extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = HitBTC
+          , address = None
+          , txid = Some(txHash)
           , description = desc
         )
         return CSVReader.Ok(deposit)
@@ -111,6 +113,8 @@ object HitBTC extends Exchanger {
           , amount = amount.abs
           , currency = currency
           , exchanger = HitBTC
+          , address = None
+          , txid = Some(txHash)
           , description = desc
         )
         return CSVReader.Ok(withdraw)

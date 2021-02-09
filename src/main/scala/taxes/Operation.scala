@@ -44,8 +44,8 @@ object Operation {
   implicit val feeJson = jsonFormat7(Fee)
   implicit val feeJLoss = jsonFormat6(Loss)
   implicit val gainJson = jsonFormat6(Gain)
-  implicit val depositJson = jsonFormat6(Deposit)
-  implicit val withdrawalJson = jsonFormat6(Withdrawal)
+  implicit val depositJson = jsonFormat8(Deposit)
+  implicit val withdrawalJson = jsonFormat8(Withdrawal)
   implicit val nonTaxableFeeJson = jsonFormat6(NonTaxableFee)
 
   implicit object operationJson extends RootJsonFormat[Operation] {
@@ -186,12 +186,12 @@ case class Gain(date: LocalDateTime, id: String, amount: Double, currency: Curre
 }
 
 
-case class Deposit(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: RichText) extends Operation {
+case class Deposit(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, address: Option[String], txid: Option[String], description: RichText) extends Operation {
   override def toString: String =
     f"Deposit($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }
 
-case class Withdrawal(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, description: RichText) extends Operation {
+case class Withdrawal(date: LocalDateTime, id: String, amount: Double, currency: Currency, exchanger: Exchanger, address: Option[String], txid: Option[String], description: RichText) extends Operation {
   override def toString: String =
     f"Withdrawal($dateFormatted $amount%18.8f $currency%-5s $shortDescription)"
 }

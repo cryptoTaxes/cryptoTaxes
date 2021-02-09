@@ -296,11 +296,18 @@ object Kraken extends Exchanger {
         val date = LocalDateTime.parseAsUTC(time, "yyyy-MM-dd HH:mm:ss") // kraken ledgers.csv uses UTC time zone
         val id = txid + "/" + refid
 
-        val desc = depositsWithdrawalsInfo.get(refid) match {
+        val (addressOpt, txHash) = depositsWithdrawalsInfo.get(refid) match {
+          case None =>
+            (None, id)
+          case Some(Kraken.OnChainInfo(address, txHash)) =>
+            (Some(address), txHash)
+        }
+
+        val desc = addressOpt match {
           case None =>
             RichText(s"$currency withdrawal${RichText.nl}${RichText.small(id)}")
-          case Some(Kraken.OnChainInfo(address, tx)) =>
-            RichText(s"Withdrawal ${RichText.small(id)}${RichText.nl}${RichText.util.transaction(currency, tx, address)}")
+          case Some(address) =>
+            RichText(s"Withdrawal ${RichText.small(id)}${RichText.nl}${RichText.util.transaction(currency, txHash, address)}")
         }
 
         val withdrawal = Withdrawal(
@@ -309,6 +316,8 @@ object Kraken extends Exchanger {
           , amount = amount.abs
           , currency = currency
           , exchanger = Kraken
+          , address = addressOpt
+          , txid = Some(txHash)
           , description = desc
         )
 
@@ -340,11 +349,18 @@ object Kraken extends Exchanger {
         val date = LocalDateTime.parseAsUTC(time, "yyyy-MM-dd HH:mm:ss") // kraken ledgers.csv uses UTC time zone
         val id = txid + "/" + refid
 
-        val desc = depositsWithdrawalsInfo.get(refid) match {
+        val (addressOpt, txHash) = depositsWithdrawalsInfo.get(refid) match {
+          case None =>
+            (None, id)
+          case Some(Kraken.OnChainInfo(address, txHash)) =>
+            (Some(address), txHash)
+        }
+
+        val desc = addressOpt match {
           case None =>
             RichText(s"$currency deposit${RichText.nl}${RichText.small(id)}")
-          case Some(Kraken.OnChainInfo(address, tx)) =>
-            RichText(s"Deposit ${RichText.small(id)}${RichText.nl}${RichText.util.transaction(currency, tx, address)}")
+          case Some(addr) =>
+            RichText(s"Deposit ${RichText.small(id)}${RichText.nl}${RichText.util.transaction(currency, txHash, addr)}")
         }
 
         val deposit = Deposit(
@@ -353,6 +369,8 @@ object Kraken extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = Kraken
+          , address = addressOpt
+          , txid = Some(txHash)
           , description = desc
         )
         var results = List[Operation](deposit)
@@ -374,6 +392,8 @@ object Kraken extends Exchanger {
               , amount = -feeAmount
               , currency = currency
               , exchanger = Kraken
+              , address = addressOpt
+              , txid = Some(txHash)
               , description = RichText(s"$currency deposit${RichText.nl}${RichText.small(id)}")
             )
             results ++= List(deposit)
@@ -403,6 +423,8 @@ object Kraken extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = Kraken
+          , address = None
+          , txid = Some(s"Transfer $id")
           , description = RichText(s"$currency Transfer ${RichText.small(id)}")
         )
         return CSVReader.Ok(deposit)

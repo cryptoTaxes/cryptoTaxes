@@ -176,7 +176,9 @@ object Changelly extends Exchanger {
           , amount = inAmount
           , currency = inCurrency
           , exchanger = Changelly
-          , description = RichText(s"Deposit ${RichText.small(orderId)}${RichText.nl}${RichText.util.transaction(inCurrency, inHash)}")
+          , address = Some(receiver)
+          , txid = Some(inHash)
+          , description = RichText(s"Deposit ${RichText.small(orderId)}${RichText.nl}${RichText.util.transaction(inCurrency, inHash, receiver)}")
         )
 
         val desc = RichText(s"Order: $orderId ${RichText.util.onlineExchange(inCurrency, inHash, outCurrency, outHash)}")
@@ -197,6 +199,8 @@ object Changelly extends Exchanger {
           , amount = outAmount
           , currency = outCurrency
           , exchanger = Changelly
+          , address = None
+          , txid = Some(outHash)
           , description = RichText(s"Withdrawal ${RichText.small(orderId)}${RichText.nl}${RichText.util.transaction(outCurrency, outHash, receiver)}")
         )
         operations += deposit
@@ -255,7 +259,9 @@ object Changelly extends Exchanger {
           , amount = inAmount
           , currency = inCurrency
           , exchanger = Changelly
-          , description = RichText(s"Deposit ${RichText.small(orderId)}${RichText.nl}${RichText.util.transaction(inCurrency, inHash)}")
+          , address = Some(receiver)
+          , txid = Some(inHash)
+          , description = RichText(s"Deposit ${RichText.small(orderId)}${RichText.nl}${RichText.util.transaction(inCurrency, inHash, receiver)}")
         )
         /*
         val exchange = Exchange(
@@ -274,6 +280,8 @@ object Changelly extends Exchanger {
           , amount = outAmount
           , currency = outCurrency
           , exchanger = Changelly
+          , address = None
+          , txid = Some(outHash)
           , description = RichText(s"Withdrawal ${RichText.small(orderId)}${RichText.nl}${RichText.util.transaction(outCurrency, outHash, receiver)}")
         )
         operations += deposit
@@ -303,7 +311,9 @@ object Changelly extends Exchanger {
           , amount = inAmount
           , currency = inCurrency
           , exchanger = Changelly
-          , description = RichText(s"Deposit ${RichText.util.transaction(inCurrency, inHash)}")
+          , address = Some(receiver)
+          , txid = Some(inHash)
+          , description = RichText(s"Deposit ${RichText.util.transaction(inCurrency, inHash, receiver)}")
         )
 
         val withdrawal = Withdrawal(
@@ -312,6 +322,8 @@ object Changelly extends Exchanger {
           , amount = outAmount
           , currency = outCurrency
           , exchanger = Changelly
+          , address = None
+          , txid = Some(outHash)
           , description = RichText(s"Withdrawal ${RichText.util.transaction(outCurrency, outHash, receiver)}")
         )
         operations += deposit

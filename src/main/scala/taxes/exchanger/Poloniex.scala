@@ -245,6 +245,8 @@ object Poloniex extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = Poloniex
+          , address = Some(address)
+          , txid = None
           , description = RichText(s"Deposit ${RichText.util.address(currency, address)}")
         )
         return CSVReader.Ok(deposit)
@@ -283,6 +285,8 @@ object Poloniex extends Exchanger {
             , amount = amountMinusFee
             , currency = currency
             , exchanger = Poloniex
+            , address = Some(address)
+            , txid = Some(txid)
             , description = desc
           )
           var operations = ListBuffer[Operation]()

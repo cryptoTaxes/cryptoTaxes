@@ -304,10 +304,12 @@ object Bitfinex extends Exchanger {
         val desc = RichText(s"Deposit ${RichText.small(reference)}${RichText.nl}${RichText.util.transaction(currency, txid, address)}")
         val deposit = Deposit(
           date = created
-          , id = txid
+          , id = s"$address $txid"
           , amount = amount
           , currency = currency
           , exchanger = Bitfinex
+          , address = Some(address)
+          , txid = Some(txid)
           , description = desc
         )
         return CSVReader.Ok(deposit)
@@ -341,6 +343,8 @@ object Bitfinex extends Exchanger {
           , amount = amount.abs
           , currency = currency
           , exchanger = Bitfinex
+          , address = Some(address)
+          , txid = Some(txid)
           , description = desc
         )
         return CSVReader.Ok(withdrawal)

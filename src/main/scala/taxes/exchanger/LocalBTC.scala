@@ -49,6 +49,8 @@ object LocalBTC extends Exchanger {
           , amount = fiat_amount
           , currency = currency
           , exchanger = LocalBTC
+          , address = None
+          , txid = Some(s"$orderId / $reference")
           , description = RichText(s"Deposit: ${RichText.small(s"$orderId / $reference")}")
         )
 
@@ -102,6 +104,8 @@ object LocalBTC extends Exchanger {
               , amount = amount
               , currency = Currency.bitcoin
               , exchanger = LocalBTC
+              , address = Some(address)
+              , txid = Some(txHash)
               , description = desc
             )
             withdraw

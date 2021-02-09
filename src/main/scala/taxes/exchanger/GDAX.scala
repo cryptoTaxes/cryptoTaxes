@@ -118,6 +118,8 @@ object GDAX extends Exchanger {
             , amount = amount
             , currency = currency
             , exchanger = GDAX
+            , address = None
+            , txid = Some(if(currency==Currency.euro) transferPaymentMethod else txHash)
             , description = RichText(desc)
           )
           return CSVReader.Ok(deposit)
@@ -134,6 +136,8 @@ object GDAX extends Exchanger {
             , amount = amount.abs
             , currency = currency
             , exchanger = GDAX
+            , address = if(currency==Currency.euro) None else Some(to)
+            , txid = Some(if(currency==Currency.euro) transferPaymentMethod else txHash)
             , description = RichText(desc)
           )
           return CSVReader.Ok(withdrawal)

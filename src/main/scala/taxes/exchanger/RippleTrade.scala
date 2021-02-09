@@ -140,6 +140,8 @@ object RippleTrade extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = RippleTrade
+          , address = Some(from)
+          , txid = Some(txHash)
           , description = desc
         )
         return CSVReader.Ok(deposit)
@@ -151,6 +153,8 @@ object RippleTrade extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = RippleTrade
+          , address = Some(to)
+          , txid = Some(txHash)
           , description = desc
         )
         return CSVReader.Ok(withdrawal)

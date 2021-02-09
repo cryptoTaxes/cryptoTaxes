@@ -112,6 +112,8 @@ object Yobit extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = Yobit
+          , address= Some(address)
+          , txid = Some(txHash)
           , description = RichText(desc)
         )
         return CSVReader.Ok(deposit)
@@ -153,6 +155,8 @@ object Yobit extends Exchanger {
           , amount = amount
           , currency = currency
           , exchanger = Yobit
+          , address= Some(address)
+          , txid = Some(txHash)
           , description = RichText(desc)
         )
         return CSVReader.Ok(withdrawal)

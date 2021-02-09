@@ -165,6 +165,9 @@ object Report {
       disposals.printToHTMLFile()
       disposals.printToCSVFile()
 
+      val depositsWithdrawals = report.DepositsWithdrawals(operations, year)
+      depositsWithdrawals.printToHTMLFile()
+
       {
         val htmlDisposedStocksFile = s"${FileSystem.userOutputFolder(year)}/DisposedStocks$year.html"
         val htmlDisposedStocksTitle = s"Disposed Stocks $year"

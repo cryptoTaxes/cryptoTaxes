@@ -146,10 +146,12 @@ object Binance extends Exchanger {
           val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txid, address)}")
           val deposit = Deposit(
             date = date
-            , id = address
+            , id = s"$address $txid"
             , amount = amount
             , currency = currency
             , exchanger = Binance
+            , address = Some(address)
+            , txid = Some(txid)
             , description = desc
           )
           return CSVReader.Ok(deposit)
@@ -176,6 +178,8 @@ object Binance extends Exchanger {
             , amount = amount
             , currency = currency
             , exchanger = Binance
+            , address = Some(address)
+            , txid = Some(txid)
             , description = desc
           )
           return CSVReader.Ok(withdrawal)
