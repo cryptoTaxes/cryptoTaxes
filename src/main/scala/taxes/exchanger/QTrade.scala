@@ -115,26 +115,26 @@ object QTrade extends Exchanger {
 
           val withdrawal = Withdrawal(
             date = date
-            , id = hash
+            , id = ""
             , amount = amount - feeAmount
             , currency = currency
             , exchanger = QTrade
             , address = Some(address)
             , txid = Some(hash)
-            , description = RichText(s"Withdrawal ${RichText.util.transaction(currency, hash, address)}")
+            , description = RichText("")
           )
           operations += withdrawal
           operations += fee
         } else {
           val deposit = Deposit(
             date = date
-            , id = s"$address $hash"
+            , id = ""
             , amount = amount
             , currency = currency
             , exchanger = QTrade
             , address = Some(address)
             , txid = Some(hash)
-            , description = RichText(s"Deposit ${RichText.util.transaction(currency, hash, address)}")
+            , description = RichText("")
           )
           operations += deposit
         }

@@ -24,7 +24,7 @@ case class DepositsWithdrawals(operations: Seq[Operation], year: Int) {
   }
 
   private val title =
-    s"Exchanges Deposits and Withdrawals $year"
+    s"Exchangers Deposits and Withdrawals $year"
 
   private def defaultFile(ext: String): String =
     s"${FileSystem.userOutputFolder(year)}/DepositsWithdrawals.$year.$ext"
@@ -73,8 +73,8 @@ case class DepositsWithdrawals(operations: Seq[Operation], year: Int) {
         <td class='exchanger'>
           {deposit.exchanger}
         </td>
-        <td>
-          {description(deposit.currency, deposit.txid, deposit.address)}
+        <td class='small1'>
+          {(RichText(s"Deposit ")+deposit.description+RichText.nl+RichText.util.transaction(deposit.currency, deposit.txid, deposit.address)).toHTML}
         </td>
       </tr>
 
@@ -88,8 +88,8 @@ case class DepositsWithdrawals(operations: Seq[Operation], year: Int) {
         <td class='exchanger'>
           {withdrawal.exchanger}
         </td>
-        <td>
-          {description(withdrawal.currency, withdrawal.txid, withdrawal.address)}
+        <td class='small1'>
+          {(RichText(s"Withdrawal ")+withdrawal.description+RichText.nl+RichText.util.transaction(withdrawal.currency, withdrawal.txid, withdrawal.address)).toHTML}
         </td>
       </tr>
   }
@@ -103,7 +103,7 @@ case class DepositsWithdrawals(operations: Seq[Operation], year: Int) {
           <th>What</th>
           <th class='alignR'>Amount</th>
           <th class='alignR'>Exchanger</th>
-          <th class='alignR'>Reference</th>
+          <th>Reference</th>
         </tr>
         <caption>
           {Currency.fullName(currency)}

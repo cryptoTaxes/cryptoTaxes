@@ -301,16 +301,15 @@ object Bitfinex extends Exchanger {
       val updated = LocalDateTime.parseAsUTC(scLn.next("Updated"), "yyyy-MM-dd HH:mm:ss")
 
       if(completed) {
-        val desc = RichText(s"Deposit ${RichText.small(reference)}${RichText.nl}${RichText.util.transaction(currency, txid, address)}")
         val deposit = Deposit(
           date = created
-          , id = s"$address $txid"
+          , id = reference
           , amount = amount
           , currency = currency
           , exchanger = Bitfinex
           , address = Some(address)
           , txid = Some(txid)
-          , description = desc
+          , description = RichText(reference)
         )
         return CSVReader.Ok(deposit)
       } else
@@ -336,16 +335,15 @@ object Bitfinex extends Exchanger {
       val updated = LocalDateTime.parseAsUTC(scLn.next("Updated"), "yyyy-MM-dd HH:mm:ss")
 
       if(completed) {
-        val desc = RichText(s"Withdrawal ${RichText.small(reference)}${RichText.nl}${RichText.util.transaction(currency, txid, address)}")
         val withdrawal = Withdrawal(
           date = created
-          , id = txid
+          , id = reference
           , amount = amount.abs
           , currency = currency
           , exchanger = Bitfinex
           , address = Some(address)
           , txid = Some(txid)
-          , description = desc
+          , description = RichText(reference)
         )
         return CSVReader.Ok(withdrawal)
       } else

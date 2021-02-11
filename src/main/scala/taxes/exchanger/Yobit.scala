@@ -114,7 +114,7 @@ object Yobit extends Exchanger {
           , exchanger = Yobit
           , address= Some(address)
           , txid = Some(txHash)
-          , description = RichText(desc)
+          , description = RichText("")
         )
         return CSVReader.Ok(deposit)
       } else
@@ -140,14 +140,6 @@ object Yobit extends Exchanger {
       val txHash = scLn.next("Tx Hash")
       val address = scLn.next("Address")
 
-      val desc =
-        if(txHash=="?")
-          "Withdrawal from Yobit"
-        else if(address=="?")
-          s"Withdrawal ${RichText.util.transaction(currency, txHash)}"
-        else
-          s"Withdrawal ${RichText.util.transaction(currency, txHash, address)}"
-
       if(completed) {
         val withdrawal = Withdrawal(
           date = date
@@ -157,7 +149,7 @@ object Yobit extends Exchanger {
           , exchanger = Yobit
           , address= Some(address)
           , txid = Some(txHash)
-          , description = RichText(desc)
+          , description = RichText("")
         )
         return CSVReader.Ok(withdrawal)
       } else

@@ -28,6 +28,13 @@ object Scanner {
     } catch {
       case _: Exception => orElse
     }
+
+  def mapOrElse[T,R](get: => T, f: T => R, orElse: => R): R =
+    try {
+      f(get)
+    } catch {
+      case _: Exception => orElse
+    }
 }
 
 
@@ -38,6 +45,9 @@ trait Scanner {
 
   def nextOrElse(what: String, orElse: => String): String =
     Scanner.orElse(next(what), orElse)
+
+  def nextMapOrElse[R](what: String, f: String => R, orElse: => R): R =
+    Scanner.mapOrElse(next(what), f, orElse)
 
   def nextDouble(what: String): Double =
     Scanner.asDouble(what, next(what), this.getClass)

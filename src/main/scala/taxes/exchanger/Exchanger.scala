@@ -55,7 +55,7 @@ object Exchanger {
       , Changelly
       , Coinbase
       , General
-      , GDAX
+      , CoinbasePro
       , HitBTC
       , Idex
       , Kraken

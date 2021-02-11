@@ -217,8 +217,6 @@ object Bittrex extends Exchanger {
       val txid = scLn.next("TxId")
       val address = scLn.next("CryptoAddress")
 
-      val desc = RichText(s"Deposit ${RichText.small(depositId)}${RichText.nl}${RichText.util.transaction(currency, txid, address)}")
-
       val deposit = Deposit(
         date = lastUpdatedDate
         , id = depositId
@@ -227,7 +225,7 @@ object Bittrex extends Exchanger {
         , exchanger = Bittrex
         , address = Some(address)
         , txid = Some(txid)
-        , description = desc
+        , description = RichText(depositId)
       )
       return CSVReader.Ok(deposit)
     }
@@ -241,7 +239,6 @@ object Bittrex extends Exchanger {
       provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
-
       val currency = Currency.normalize(scLn.next("Currency"))
       val amount = scLn.nextDouble("Amount")
       val address = scLn.next("Address")
@@ -257,17 +254,16 @@ object Bittrex extends Exchanger {
 
       if(authorized && !cancelled) {
         val txid = scLn.next("TxId")
-        val desc = RichText(s"Withdrawal ${RichText.small(paymentUuid)}${RichText.nl}${RichText.util.transaction(currency, txid, address)}")
 
         val withdrawal = Withdrawal(
           date = dateOpen
-          , id = txid
+          , id = paymentUuid
           , amount = amount
           , currency = currency
           , exchanger = Bittrex
           , address = Some(address)
           , txid = Some(txid)
-          , description = desc
+          , description = RichText(paymentUuid)
         )
 
         val fee =
@@ -318,17 +314,15 @@ object Bittrex extends Exchanger {
         val currency = Currency.normalize(currencyStr)
         val amount = TxtUtils.parseAmount(amountStr)
 
-        val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txid, address)}")
-
         val deposit = Deposit(
           date = date
-          , id = s"$address $txid"
+          , id = ""
           , amount = amount
           , currency = currency
           , exchanger = Bittrex
           , address = Some(address)
           , txid = Some(txid)
-          , description = desc
+          , description = RichText("")
         )
 
         operations += deposit
@@ -351,17 +345,15 @@ object Bittrex extends Exchanger {
           val amount = TxtUtils.parseAmount(amountStr)
           val feeAmount = TxtUtils.parseAmount(feeStr)
 
-          val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
-
           val withdrawal = Withdrawal(
             date = date
-            , id = txid
+            , id = ""
             , amount = amount
             , currency = currency
             , exchanger = Bittrex
             , address = Some(address)
             , txid = Some(txid)
-            , description = desc
+            , description = RichText("")
           )
 
           val fee =

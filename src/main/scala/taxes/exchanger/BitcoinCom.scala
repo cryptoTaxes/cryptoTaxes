@@ -102,7 +102,6 @@ object BitcoinCom extends Exchanger {
       val currency = Currency.normalize(scLn.next("Currency"))
 
       if(what=="Deposit") {
-        val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txHash)}")
         val deposit = Deposit(
           date = date
           , id = operationId
@@ -111,11 +110,10 @@ object BitcoinCom extends Exchanger {
           , exchanger = BitcoinCom
           , address = None
           , txid = Some(txHash)
-          , description = desc
+          , description = RichText(operationId)
         )
         return CSVReader.Ok(deposit)
       } else if(what=="Withdraw" || what=="") { // seems there's a bug a what for withdrawals are empty
-        val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txHash)}")
         val withdraw = Withdrawal(
           date = date
           , id = operationId
@@ -124,7 +122,7 @@ object BitcoinCom extends Exchanger {
           , exchanger = BitcoinCom
           , address = None
           , txid = Some(txHash)
-          , description = desc
+          , description = RichText(operationId)
         )
         // todo Withdrawal fees are not currently implemented. They could be
         // calculated using main account balance prior to withdrawal,

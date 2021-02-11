@@ -143,16 +143,15 @@ object Binance extends Exchanger {
         val completed = scLn.next("Status") == "Completed"
 
         if(completed) {
-          val desc = RichText(s"Deposit ${RichText.util.transaction(currency, txid, address)}")
           val deposit = Deposit(
             date = date
-            , id = s"$address $txid"
+            , id = ""
             , amount = amount
             , currency = currency
             , exchanger = Binance
             , address = Some(address)
             , txid = Some(txid)
-            , description = desc
+            , description = RichText("")
           )
           return CSVReader.Ok(deposit)
         } else
@@ -171,16 +170,15 @@ object Binance extends Exchanger {
         val completed = scLn.next("Status") == "Completed"
 
         if(completed) {
-          val desc =  RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
           val withdrawal = Withdrawal(
             date = date
-            , id = address
+            , id = ""
             , amount = amount
             , currency = currency
             , exchanger = Binance
             , address = Some(address)
             , txid = Some(txid)
-            , description = desc
+            , description = RichText("")
           )
           return CSVReader.Ok(withdrawal)
         } else

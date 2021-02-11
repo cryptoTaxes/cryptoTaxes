@@ -225,8 +225,9 @@ object Poloniex extends Exchanger {
   private def depositsReader(fileName: String) = new CSVSortedOperationReader(fileName) {
     override val linesToSkip = 1
 
+    private lazy val provider = AssociativeSeparatedScannerProvider(skippedLines(0), "[,]")
     override def lineScanner(line: String) =
-      SeparatedScanner(line, "[,%]")
+      provider.scannerFor(line)
 
     override def readLine(line: String, scLn: Scanner): CSVReader.Result[Operation] = {
       val date = LocalDateTime.parseAsUTC(scLn.next("Date"), "yyyy-MM-dd HH:mm:ss") // Poloniex csv withdrawal history uses UTC time zone
@@ -234,6 +235,7 @@ object Poloniex extends Exchanger {
       val amount = scLn.nextDouble("Amount")
       val address = scLn.next("Address")
       val status = scLn.next("Status")
+      val txid = scLn.nextMapOrElse("Txid", Some(_), None)
 
       val tokenComplete = "COMPLETE"
       val isFinalized = status.startsWith(tokenComplete)
@@ -241,13 +243,13 @@ object Poloniex extends Exchanger {
       if(isFinalized) {
         val deposit = Deposit(
           date = date
-          , id = address
+          , id = ""
           , amount = amount
           , currency = currency
           , exchanger = Poloniex
           , address = Some(address)
-          , txid = None
-          , description = RichText(s"Deposit ${RichText.util.address(currency, address)}")
+          , txid = txid
+          , description = RichText("")
         )
         return CSVReader.Ok(deposit)
       } else
@@ -277,17 +279,16 @@ object Poloniex extends Exchanger {
       if(isFinalized) {
         val txid = status.drop(tokenComplete.length)
         if(txid != "ERROR") {
-
           val desc = RichText(s"Withdrawal ${RichText.util.transaction(currency, txid, address)}")
           val withdrawal = Withdrawal(
             date = date
-            , id = txid
+            , id = ""
             , amount = amountMinusFee
             , currency = currency
             , exchanger = Poloniex
             , address = Some(address)
             , txid = Some(txid)
-            , description = desc
+            , description = RichText("")
           )
           var operations = ListBuffer[Operation]()
           operations += withdrawal

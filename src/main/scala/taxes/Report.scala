@@ -796,10 +796,12 @@ object Report {
             processedOperations += processed
 
         case deposit: Deposit =>
-          deposit.exchanger.ledgerPool.record(deposit.currency)(deposit.date, deposit.amount, deposit.exchanger, deposit.description)
+          val desc = RichText(s"Deposit ")+deposit.description+RichText.nl+RichText.util.transaction(deposit.currency, deposit.txid, deposit.address)
+          deposit.exchanger.ledgerPool.record(deposit.currency)(deposit.date, deposit.amount, deposit.exchanger, desc)
 
         case withdrawal: Withdrawal =>
-          withdrawal.exchanger.ledgerPool.record(withdrawal.currency)(withdrawal.date, -withdrawal.amount, withdrawal.exchanger, withdrawal.description)
+          val desc = RichText(s"Withdrawal ")+withdrawal.description+RichText.nl+RichText.util.transaction(withdrawal.currency, withdrawal.txid, withdrawal.address)
+          withdrawal.exchanger.ledgerPool.record(withdrawal.currency)(withdrawal.date, -withdrawal.amount, withdrawal.exchanger, desc)
 
         case nonTaxableFee: NonTaxableFee =>
           nonTaxableFee.exchanger.ledgerPool.record(nonTaxableFee.currency)(nonTaxableFee.date, -nonTaxableFee.amount, nonTaxableFee.exchanger, nonTaxableFee.description)

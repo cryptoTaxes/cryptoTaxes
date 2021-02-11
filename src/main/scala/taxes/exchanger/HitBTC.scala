@@ -91,31 +91,29 @@ object HitBTC extends Exchanger {
       val amount = scLn.nextDouble("Amount")
       val txHash = scLn.next("Transaction Hash")
       val currency = Currency.normalize(scLn.next("")) // yep!, currency has an empty string as header
-
+      val address = scLn.nextMapOrElse("Address", Some(_), None)
       if(what=="Deposit") {
-        val desc = RichText(s"Deposit ${RichText.small(operationId)}${RichText.nl}${RichText.util.transaction(currency, txHash)}")
         val deposit = Deposit(
           date = date
           , id = operationId
           , amount = amount
           , currency = currency
           , exchanger = HitBTC
-          , address = None
+          , address = address
           , txid = Some(txHash)
-          , description = desc
+          , description = RichText(operationId)
         )
         return CSVReader.Ok(deposit)
       } else if(what=="Withdraw") {
-        val desc = RichText(s"Withdrawal ${RichText.small(operationId)}${RichText.nl}${RichText.util.transaction(currency, txHash)}")
         val withdraw = Withdrawal(
           date = date
           , id = operationId
           , amount = amount.abs
           , currency = currency
           , exchanger = HitBTC
-          , address = None
+          , address = address
           , txid = Some(txHash)
-          , description = desc
+          , description = RichText(operationId)
         )
         return CSVReader.Ok(withdraw)
       } else

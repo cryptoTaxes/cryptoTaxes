@@ -43,15 +43,16 @@ object LocalBTC extends Exchanger {
       val reference = scLn.next("reference")
 
       if(tradeType=="ONLINE_SELL") { // ONLINE_SELL is really a buy
+        val id = s"$orderId/$reference"
         val deposit = Deposit(  // FIAT deposit for buying
           date = date
-          , id = orderId
+          , id = id
           , amount = fiat_amount
           , currency = currency
           , exchanger = LocalBTC
           , address = None
-          , txid = Some(s"$orderId / $reference")
-          , description = RichText(s"Deposit: ${RichText.small(s"$orderId / $reference")}")
+          , txid = None
+          , description = RichText(id)
         )
 
         val exchange = Exchange(
@@ -97,7 +98,6 @@ object LocalBTC extends Exchanger {
 
         val operation = opt match {
           case Some((address, txHash)) =>
-            val desc = RichText(s"Withdrawal ${RichText.util.transaction(Currency.bitcoin, txHash, address)}")
             val withdraw = Withdrawal(
               date = created
               , id = ""
@@ -106,7 +106,7 @@ object LocalBTC extends Exchanger {
               , exchanger = LocalBTC
               , address = Some(address)
               , txid = Some(txHash)
-              , description = desc
+              , description = RichText("")
             )
             withdraw
 

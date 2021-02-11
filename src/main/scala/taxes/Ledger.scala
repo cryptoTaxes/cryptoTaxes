@@ -128,7 +128,7 @@ case class Ledger(currency: Currency, private var _initialBalance: Double = 0) {
                </td>
               }
               <td class='exchanger'>{entry.exchanger}</td>
-              <td class='alignR small1'>{entry.description.toHTML}</td>
+              <td class='small1'>{entry.description.toHTML}</td>
             </tr>
           }
         }}

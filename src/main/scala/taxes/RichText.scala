@@ -164,6 +164,19 @@ object RichText {
     def transaction(currency: Currency, txid: String): Elem =
       s"${RichText.transaction(currency, txid)}"
 
+    def transaction(currency: Currency, txid: Option[String], address: Option[String]): Elem =
+      (txid, address) match {
+        case (Some(hash), Some(adrr)) =>
+          util.transaction(currency, hash, adrr)
+        case (Some(hash), None) =>
+          util.transaction(currency, hash)
+        case (None, Some(adrr)) =>
+          util.address(currency, adrr)
+        case (None, None) =>
+          ""
+      }
+
+
     def onlineExchange(inCurrency: Currency, inTxid: String, outCurrency: Currency, outTxid: String): Elem = {
       val in = BlockExplorer.transactionURL(inCurrency, inTxid) match {
           case None => inCurrency

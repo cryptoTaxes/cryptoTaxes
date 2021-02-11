@@ -131,30 +131,33 @@ object RippleTrade extends Exchanger {
       val amount = scLn.nextDouble("Amount")
       val currency = Currency.normalize(scLn.next("Currency"))
 
+      val (desc, txid) =
+        if(currency==Currency.bitcoin)
+          (RichText(RichText.transaction(Currency.ripple, txHash)), None)
+        else
+          (RichText(""), Some(txHash))
 
       if(what=="ACTIVATED" || what=="IN") {
-        val desc = RichText(s"Deposit ${RichText.util.transaction(Currency.ripple, txHash, from)}")
         val deposit = Deposit(
           date = date
-          , id = txHash
+          , id = ""
           , amount = amount
           , currency = currency
           , exchanger = RippleTrade
           , address = Some(from)
-          , txid = Some(txHash)
+          , txid = txid
           , description = desc
         )
         return CSVReader.Ok(deposit)
       } else if(what=="OUT") {
-        val desc = RichText(s"Withdrawal ${RichText.util.transaction(Currency.ripple, txHash, to)}")
         val withdrawal = Withdrawal(
           date = date
-          , id = txHash
+          , id = ""
           , amount = amount
           , currency = currency
           , exchanger = RippleTrade
           , address = Some(to)
-          , txid = Some(txHash)
+          , txid = txid
           , description = desc
         )
         return CSVReader.Ok(withdrawal)
